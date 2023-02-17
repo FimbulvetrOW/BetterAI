@@ -2680,9 +2680,9 @@ namespace BetterAI
         //copy-paste END
 
 
-        /*####### Better Old World AI - Base DLL #######
-          ### misc                             START ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### misc                             START ###
+  ##############################################*/
         //public struct BetterAICommaListVariableGenerator : CommaListVariableGenerator
         //{
         //}

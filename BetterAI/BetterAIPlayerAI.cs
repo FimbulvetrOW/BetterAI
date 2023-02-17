@@ -157,6 +157,156 @@ namespace BetterAI
                 return iValue;
             }
 
+
+
+            protected override bool shouldRespectCitySiteOwnership(Player pOtherPlayer)
+            {
+/*####### Better Old World AI - Base DLL #######
+  ### AI: Don't treat humans differently START #
+  ##############################################*/
+                /*
+                if (!pOtherPlayer.isHuman())
+                {
+                    return false;
+                }
+                */
+/*####### Better Old World AI - Base DLL #######
+  ### AI: Don't treat humans differently END ###
+  ##############################################*/
+                if (game.isHostile(player.getTeam(), TribeType.NONE, pOtherPlayer.getTeam(), TribeType.NONE))
+                {
+                    return false;
+                }
+                if (pOtherPlayer.getTeam() != player.getTeam())
+                {
+                    if (game.isGameOption(infos.Globals.GAMEOPTION_PLAY_TO_WIN))
+                    {
+                        return false;
+                    }
+                    if (isOtherPlayerSneaky(pOtherPlayer))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            protected override bool shouldLeaveTileForOtherPlayer(Tile pTile)
+            {
+                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game.getNumPlayers(); ++eLoopPlayer)
+                {
+                    Player pLoopPlayer = game.player(eLoopPlayer);
+
+                    if (eLoopPlayer != player.getPlayer())
+                    {
+                        if (pTile.getRecentAttacks(eLoopPlayer) > pTile.getRecentAttacks(player.getPlayer()))
+                        {
+                            if (shouldRespectCitySiteOwnership(pLoopPlayer))
+                            {
+                                return true;
+                            }
+                        }
+/*####### Better Old World AI - Base DLL #######
+  ### AI: Don't hold back too much     START ###
+  ##############################################*/
+                        /*
+                        if (pTile.isCitySiteActive(player.getTeam()) && pLoopPlayer.getStartingTiles().Contains(pTile.getID()))
+                        {
+                            if (!isOtherPlayerSneaky(pLoopPlayer))
+                            {
+                                return true;
+                            }
+                        }
+                        */
+/*####### Better Old World AI - Base DLL #######
+  ### AI: Don't hold back too much       END ###
+  ##############################################*/
+                    }
+                }
+                return false;
+            }
+
+            protected override bool shouldClaimCitySite(Tile pTile)
+            {
+                //using var profileScope = new UnityProfileScope("PlayerAI.shouldClaimCitySite");
+
+                if (!canEverSettle())
+                {
+                    return false;
+                }
+
+                if (!pTile.isCitySiteActive()) // slight cheat, but humans can usually tell if the site has been settled by other means (score, surrounding tiles, etc)
+                {
+                    return false;
+                }
+
+                if (!player.canFoundCity())
+                {
+                    return false;
+                }
+
+                if (!((BetterAIPlayer)player).getStartingTiles().Contains(pTile.getID()))
+                {
+                    if (!isFoundCitySafe(pTile))
+                    {
+                        return false;
+                    }
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI: Don't hold back too much     START ###
+  ##############################################*/
+                    //why is this here?
+                    /*
+                    if (shouldLeaveTileForOtherPlayer(pTile))
+                    {
+                        return false;
+                    }
+                    */
+/*####### Better Old World AI - Base DLL #######
+  ### AI: Don't hold back too much       END ###
+  ##############################################*/
+
+                    if (pTile.getCitySite() == CitySiteType.ACTIVE_RESERVED)
+                    {
+                        // don't claim reserved sites if we already started with extra cities
+                        if (!player.isHuman() && game.hasDevelopmentCities())
+                        {
+                            // at least for a grace period
+                            if (game.getTurn() < ((game.isGameOption(infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? AI_PLAY_TO_WIN_GRACE_TURNS : AI_GRACE_TURNS))
+                            {
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI: Don't hold back too much     START ###
+  ##############################################*/
+                                //grace turns only apply for non-sneaky players, so the owner needs to be found and checked
+                                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game.getNumPlayers(); ++eLoopPlayer)
+                                {
+                                    BetterAIPlayer pLoopPlayer = (BetterAIPlayer)game.player(eLoopPlayer);
+
+                                    if (eLoopPlayer != player.getPlayer())
+                                    {
+                                        if (pTile.isCitySiteActive(player.getTeam()) && pLoopPlayer.getStartingTiles().Contains(pTile.getID()))
+                                        {
+                                            if (!isOtherPlayerSneaky(pLoopPlayer))
+                                            {
+                                                return false;
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+/*####### Better Old World AI - Base DLL #######
+  ### AI: Don't hold back too much       END ###
+  ##############################################*/
+                                
+                            }
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+
             protected override long calculateEffectCityValue(EffectCityType eEffectCity, City pCity)
             {
                 long iValue = base.calculateEffectCityValue(eEffectCity, pCity);
