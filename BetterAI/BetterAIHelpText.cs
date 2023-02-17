@@ -86,7 +86,7 @@ namespace BetterAI
                 int iTotalOutput = pGame.tileYieldOutputModified(eImprovement, eSpecialist, eLoopYield, pTile, true);
                 if (iTotalOutput != 0)
                 {
-                    builder.AddTEXT("TEXT_HELPTEXT_YIELD_PER_YEAR", buildYieldValueIconLinkVariable(infos().Helpers.finalYield(eLoopYield), iTotalOutput, true, false, Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+                    builder.AddTEXT("TEXT_HELPTEXT_YIELD_PER_YEAR", buildYieldValueIconLinkVariable(eLoopYield, iTotalOutput, true, false, Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
 
                     bool bShowModifiers = false;
 
@@ -670,7 +670,7 @@ namespace BetterAI
                                 {
                                     int iOutput = 0;
                                     infos().Helpers.yieldOutputImprovement(eImprovement, eLoopYield, ResourceType.NONE, pGame, ref iOutput);
-                                    if ((infos().yield(eLoopYield).mbWarning || bDetails) ? (iOutput != 0) : (iOutput > 0))
+                                    if (iOutput != 0)
                                     {
                                         builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
                                     }
@@ -2627,10 +2627,62 @@ namespace BetterAI
             return builder;
         }
 
+        //copy-paste START
+        public override TextBuilder buildUrbanHelp(TextBuilder builder)
+        {
+            using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
+            {
+                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_URBAN");
 
 /*####### Better Old World AI - Base DLL #######
-  ### misc                             START ###
+  ### Urban restrictions Explained     START ###
   ##############################################*/
+                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_URBAN_RESTRICTIONS");
+/*####### Better Old World AI - Base DLL #######
+  ### Urban restrictions Explained       END ###
+  ##############################################*/
+
+                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_URBAN_SPREADS_BORDERS");
+
+                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_URBAN_TRADE_NETWORK");
+
+                for (UnitTraitType eLoopUnitTrait = 0; eLoopUnitTrait < infos().unitTraitsNum(); eLoopUnitTrait++)
+                {
+                    EffectUnitType eEffectUnit = infos().unitTrait(eLoopUnitTrait).meEffectUnit;
+
+                    if (eEffectUnit != EffectUnitType.NONE)
+                    {
+                        int iValue = infos().effectUnit(eEffectUnit).miUrbanAttackModifier;
+                        if (iValue != 0)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_ENTRY_COLON_SPACE_ONE", buildUnitTraitLinkVariable(eLoopUnitTrait), buildAttackValueLinkVariable(iValue, true));
+                        }
+                    }
+                }
+
+                for (UnitTraitType eLoopUnitTrait = 0; eLoopUnitTrait < infos().unitTraitsNum(); eLoopUnitTrait++)
+                {
+                    EffectUnitType eEffectUnit = infos().unitTrait(eLoopUnitTrait).meEffectUnit;
+
+                    if (eEffectUnit != EffectUnitType.NONE)
+                    {
+                        int iValue = infos().effectUnit(eEffectUnit).miUrbanDefenseModifier;
+                        if (iValue != 0)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_ENTRY_COLON_SPACE_ONE", buildUnitTraitLinkVariable(eLoopUnitTrait), buildDefenseValueLinkVariable(iValue, true));
+                        }
+                    }
+                }
+            }
+
+            return builder;
+        }
+        //copy-paste END
+
+
+        /*####### Better Old World AI - Base DLL #######
+          ### misc                             START ###
+          ##############################################*/
         //public struct BetterAICommaListVariableGenerator : CommaListVariableGenerator
         //{
         //}

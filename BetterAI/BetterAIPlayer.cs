@@ -22,6 +22,68 @@ namespace BetterAI
 {
     public partial class BetterAIPlayer : Player
     {
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again      START ###
+  ##############################################*/
+        public override bool isCityMaxReached()
+        {
+            return ((getNumCities() + countFoundUnitsAndBuilds()) >= getCityMax());
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again        END ###
+  ##############################################*/
+        //copy-paste START
+        public virtual bool canContinueBuildUnit(UnitType eUnit)
+        {
+            if (!canEverBuildUnit(eUnit))
+            {
+                return false;
+            }
+
+            if (!isUnitUnlocked(eUnit))
+            {
+                return false;
+            }
+
+            if (isUnitObsolete(eUnit))
+            {
+                return false;
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again      START ###
+  ##############################################*/
+            //not relevant for continuing
+            /*
+            if (infos().unit(eUnit).mbFound)
+            {
+                if (game().getCitySiteLeftCount() == 0)
+                {
+                    return false;
+                }
+
+                if (isCityMaxReached())
+                {
+                    return false;
+                }
+            }
+            */
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again        END ###
+  ##############################################*/
+
+            if (infos().unit(eUnit).mbCaravan)
+            {
+                if (game().getNumPlayersInt() == 1)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        //copy-paste END
+
         public override bool isImprovementUnlocked(ImprovementType eImprovement)
         {
 

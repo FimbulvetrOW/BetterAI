@@ -119,7 +119,7 @@ namespace BetterAI
                                 yieldHeader.SetTEXT("Data", TextManager, HelpText.buildCommaData(TEXTVAR((int)CityListSortType.YIELD), TEXTVAR((int)eLoopYield)));
                                 yieldHeader.SetKey("Icon", Infos.yield(eLoopYield).mzIconName);
 
-                                if (eLoopYield == Infos.Globals.MAINTENANCE_YIELD)
+                                if (Infos.yield(eLoopYield).meAddToYield != YieldType.NONE)
                                 {
                                     yieldHeader.IsActive = false;
                                 }

@@ -54,6 +54,22 @@ namespace BetterAI
   ### Land Unit Water Movement           END ###
   ##############################################*/
 
+/*####### Better Old World AI - Base DLL #######
+  ### No Family for Enlisted Units     START ###
+  ##############################################*/
+        public override Unit convert(PlayerType ePlayer, TribeType eTribe, bool bEnlisted = false)
+        {
+            Unit pUnit = base.convert(ePlayer, eTribe, bEnlisted);
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_ENLIST_NO_FAMILY == 1)
+            {
+                pUnit.setPlayerFamily(ePlayer, FamilyType.NONE);
+            }
+            return pUnit;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### No Family for Enlisted Units     START ###
+  ##############################################*/
+
         //copy-pasted from Unit.cs START
 
         // used by pathfinder
@@ -292,7 +308,7 @@ namespace BetterAI
             {
                 if (bTestEnabled)
                 {
-                    if (pActingPlayer.getMoneyWhole() < getAgentNetworkCost(pCity))
+                    if (pActingPlayer.getMoneyWhole() < getAgentNetworkCost(pCity)) //now with a parameter
                     {
                         return false;
                     }

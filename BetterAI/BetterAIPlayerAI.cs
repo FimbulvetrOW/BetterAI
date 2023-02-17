@@ -81,7 +81,7 @@ namespace BetterAI
   ##############################################*/
             public virtual long discontentValue(City pCity)
             {
-                YieldType eYield = infos.Globals.DISCONTENT_YIELD;
+                YieldType eYield = infos.Globals.HAPPINESS_YIELD;
 
                 //copy-pasted from calculateCityValue START
                 //if (eYield == infos.Globals.DISCONTENT_YIELD)
@@ -96,7 +96,7 @@ namespace BetterAI
   ### AI fix                           START ###
   ##############################################*/
                         //iValue += getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) * AI_YIELD_TURNS * 5 / (100 * iNextThreshold);
-                        iValue += getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) * 5 / 100; //without AI_YIELD_TURNS, division by iNextThreshold moved down
+                        iValue -= getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) * 5 / 100; //without AI_YIELD_TURNS, division by iNextThreshold moved down
  /*####### Better Old World AI - Base DLL #######
    ### AI fix                             END ###
    ##############################################*/
@@ -104,12 +104,16 @@ namespace BetterAI
 
                     for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
                     {
-                        if (eLoopYield != eYield)
+                        if (eLoopYield != eYield && eLoopYield != infos.Globals.DISCONTENT_YIELD)
                         {
                             int iExtraYieldInNextLevel = 0;
                             int iCityYield = cityYield(eLoopYield, pCity);
-                            iExtraYieldInNextLevel += infos.Helpers.getDiscontentLevelYieldModifier(pCity.getDiscontentLevel() + 1, eLoopYield) * iCityYield / 100;
-                            iExtraYieldInNextLevel -= infos.Helpers.getDiscontentLevelYieldModifier(pCity.getDiscontentLevel(), eLoopYield) * iCityYield / 100;
+                            //iExtraYieldInNextLevel += infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel() + 1, eLoopYield) * iCityYield / 100;
+                            //iExtraYieldInNextLevel -= infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel(), eLoopYield) * iCityYield / 100;
+                            //more interesting to look at one level below instead, just as the original method did
+
+                            iExtraYieldInNextLevel -= infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel() - 1, eLoopYield) * iCityYield / 100;
+                            iExtraYieldInNextLevel += infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel(), eLoopYield) * iCityYield / 100;
 
                             if (iExtraYieldInNextLevel != 0)
                             {
@@ -149,6 +153,38 @@ namespace BetterAI
                 }
 /*####### Better Old World AI - Base DLL #######
   ### AI fix                             END ###
+  ##############################################*/
+                return iValue;
+            }
+
+            protected override long calculateEffectCityValue(EffectCityType eEffectCity, City pCity)
+            {
+                long iValue = base.calculateEffectCityValue(eEffectCity, pCity);
+/*####### Better Old World AI - Base DLL #######
+  ### self-aaiEffectCityYieldRate      START ###
+  ##############################################*/
+                foreach (var zTriple in infos.effectCity(eEffectCity).maaiEffectCityYieldRate)
+                {
+                    if (zTriple.First == eEffectCity)
+                    {
+                        int iCount = pCity.getEffectCityCount(zTriple.First);
+                        if (iCount == 0) continue; //unless effects can be part of multiple zTriples, I can probably break here
+
+                        //iCount++; //(x+1)^2 - x^2 - x = x+1 //but for the value of removing a current effect, I'd need to do iCount--;
+                        for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
+                        {
+                            long iSubValue = 0;
+                            if (zTriple.Second == eLoopYield)
+                            {
+                                iSubValue += zTriple.Third * iCount;
+                                iValue += ((iSubValue * cityYieldValue(eLoopYield, pCity) * AI_YIELD_TURNS) / Constants.YIELDS_MULTIPLIER);
+                            }
+                        }
+
+                    }
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### self-aaiEffectCityYieldRate        END ###
   ##############################################*/
                 return iValue;
             }

@@ -78,6 +78,105 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                         END ###
   ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again      START ###
+  ##############################################*/
+        //copy & paste START
+        protected override bool verifyBuildUnit(CityQueueData pBuild)
+        {
+            UnitType eUnit = (UnitType)(pBuild.miType);
+
+            if (pBuild.miProgress > 0)
+            {
+                return true;
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again      START ###
+  ##############################################*/
+            if (!canContinueBuildUnitCurrent(eUnit)) //ignore number limits
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again        END ###
+  ##############################################*/
+            {
+                return false;
+            }
+
+            return true;
+        }
+        public virtual bool canContinueBuildUnitCurrent(UnitType eUnit, bool bTestEnabled = true)
+        {
+            Player pPlayer = ((hasPlayer()) ? player() : lastPlayer());
+
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again      START ###
+  ##############################################*/
+            if (!(((BetterAIPlayer)pPlayer).canContinueBuildUnit(eUnit))) //ignore number limits
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again        END ###
+  ##############################################*/
+            {
+                return false;
+            }
+
+            {
+                EffectCityType eEffectCityPrereq = infos().unit(eUnit).meEffectCityPrereq;
+
+                if (eEffectCityPrereq != EffectCityType.NONE)
+                {
+                    if (!isFreeUnitEffectCityUnlock(eEffectCityPrereq))
+                    {
+                        if (getEffectCityCount(eEffectCityPrereq) == 0)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            {
+                ImprovementType eImprovementObsolete = infos().unit(eUnit).meImprovementObsolete;
+
+                if (eImprovementObsolete != ImprovementType.NONE)
+                {
+                    if (getFinishedImprovementCount(eImprovementObsolete) > 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            {
+                ReligionType eRequiresReligion = infos().unit(eUnit).meRequiresReligion;
+
+                if (eRequiresReligion != ReligionType.NONE)
+                {
+                    if (!isReligionHolyCity(eRequiresReligion) && (pPlayer.getStateReligion() != eRequiresReligion) && !(pPlayer.isBuildAllReligionsUnlock()))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            if (bTestEnabled)
+            {
+                ImprovementType eImprovementPrereq = infos().unit(eUnit).meImprovementPrereq;
+
+                if (eImprovementPrereq != ImprovementType.NONE)
+                {
+                    if (getFinishedImprovementCount(eImprovementPrereq) == 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+        //base game code paste END
+
+
         //Hurry changes START
 
         //base game code paste START
@@ -189,13 +288,16 @@ namespace BetterAI
 
                     for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                     {
-                        if (!infos().yield(eLoopYield).mbGlobal)
+                        if (infos().yield(eLoopYield).meAddToYield == YieldType.NONE)
                         {
-                            changeYieldProgress(eLoopYield, aiYieldAmounts[(int)eLoopYield]);
-                        }
-                        else
-                        {
-                            aiPlayerYieldAmounts[(int)eLoopYield] += aiYieldAmounts[(int)eLoopYield];
+                            if (!infos().yield(eLoopYield).mbGlobal)
+                            {
+                                changeYieldProgress(eLoopYield, aiYieldAmounts[(int)eLoopYield]);
+                            }
+                            else
+                            {
+                                aiPlayerYieldAmounts[(int)eLoopYield] += aiYieldAmounts[(int)eLoopYield];
+                            }
                         }
                     }
                 }
@@ -307,6 +409,36 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                         END ###
   ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### self-aaiEffectCityYieldRate      START ###
+  ##############################################*/
+        public override int getEffectCityYieldRate(EffectCityType eEffectCity, YieldType eYield, bool bComplete = false)
+        {
+            int iRate = base.getEffectCityYieldRate(eEffectCity, eYield, bComplete);
+
+            if (bComplete)
+            {
+                foreach (var p in getEffectCityCounts())
+                {
+                    EffectCityType eLoopEffectCity = p.Key;
+                    if (eLoopEffectCity == eEffectCity) //this is counted twice
+                    {
+                        int iCount = p.Value;
+                        {
+                            iRate -= (iCount * infos().effectCity(eLoopEffectCity).maaiEffectCityYieldRate[eEffectCity, eYield]);
+                        }
+                    }
+
+                }
+            }
+
+            return iRate;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### self-aaiEffectCityYieldRate        END ###
+  ##############################################*/
+
 
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
