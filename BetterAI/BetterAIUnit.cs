@@ -60,10 +60,17 @@ namespace BetterAI
         public override Unit convert(PlayerType ePlayer, TribeType eTribe, bool bEnlisted = false)
         {
             Unit pUnit = base.convert(ePlayer, eTribe, bEnlisted);
-            if (((BetterAIInfoGlobals)infos().Globals).BAI_ENLIST_NO_FAMILY == 1)
+            if (pUnit != null)
             {
-                pUnit.setPlayerFamily(ePlayer, FamilyType.NONE);
+                if ((ePlayer != PlayerType.NONE) && ((BetterAIInfoGlobals)infos().Globals).BAI_ENLIST_NO_FAMILY == 1)
+                {
+                    if (pUnit.hasFamily())
+                    {
+                        pUnit.setPlayerFamily(ePlayer, FamilyType.NONE);
+                    }
+                }
             }
+
             return pUnit;
         }
 /*####### Better Old World AI - Base DLL #######
