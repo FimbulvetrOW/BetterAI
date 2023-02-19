@@ -13,8 +13,6 @@ using Mohawk.UIInterfaces;
 using UnityEngine;
 using UnityEngine.UI;
 using static TenCrowns.ClientCore.ClientUI;
-using static TenCrowns.GameCore.Player;
-//using static BetterAI.BetterAIPlayer;
 
 
 namespace BetterAI
@@ -45,9 +43,13 @@ namespace BetterAI
         {
             return new BetterAIPlayer();
         }
-        public override PlayerAI CreatePlayerAI()
+        public override Player.PlayerAI CreatePlayerAI()
         {
             return new BetterAIPlayer.BetterAIPlayerAI();
+        }
+        public override Player.PlayerAI.UnitRoleManager CreateUnitRoleManager(Game pGame)
+        {
+            return new BetterAIPlayer.BetterAIPlayerAI.BetterAIUnitRoleManager(pGame);
         }
         public override Unit CreateUnit()
         {

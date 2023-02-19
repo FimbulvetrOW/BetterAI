@@ -82,6 +82,7 @@
     <Compile Include="BetterAIPlayerAI.cs" />
     <Compile Include="BetterAITile.cs" />
     <Compile Include="BetterAIUnit.cs" />
+    <Compile Include="BetterAIUnitRoleManager.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

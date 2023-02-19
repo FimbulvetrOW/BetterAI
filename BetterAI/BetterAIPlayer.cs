@@ -22,9 +22,58 @@ namespace BetterAI
 {
     public partial class BetterAIPlayer : Player
     {
+
 /*####### Better Old World AI - Base DLL #######
-  ### Limit Settler Numbers again      START ###
+  ### Don't defend free City Sites     START ###
   ##############################################*/
+        protected virtual UnitType getCurrentFoundUnitType()
+        {
+            //simplified, assuming there is only 1 founding Unittype at any given time
+            //copied from countFoundUnitsAndBuilds, and adapted/rearranged
+
+            //using (new UnityProfileScope("Player.countFoundUnitsAndBuilds"))
+            {
+                //int iCount = 0;
+
+                foreach (int iUnitID in getUnits())
+                {
+                    Unit pUnit = game().unit(iUnitID);
+
+                    if ((pUnit != null) && pUnit.isAlive())
+                    {
+                        if (pUnit.info().mbFound)
+                        {
+                            return pUnit.getType();
+                        }
+                    }
+                }
+
+                foreach (int iCityID in getCities())
+                {
+                    City pLoopCity = game().city(iCityID);
+
+                    for (int iIndex = 0; iIndex < pLoopCity.getBuildCount(); ++iIndex)
+                    {
+                        CityQueueData pLoopBuild = pLoopCity.getBuildQueueNode(iIndex);
+
+                        if ((pLoopBuild.meBuild == infos().Globals.UNIT_BUILD) && infos().unit((UnitType)(pLoopBuild.miType)).mbFound)
+                        {
+                            return (UnitType)(pLoopBuild.miType);
+                        }
+                    }
+                }
+
+                //return iCount;
+            }
+            return UnitType.NONE;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Don't defend free City Sites       END ###
+  ##############################################*/
+
+        /*####### Better Old World AI - Base DLL #######
+          ### Limit Settler Numbers again      START ###
+          ##############################################*/
         public override bool isCityMaxReached()
         {
             return ((getNumCities() + countFoundUnitsAndBuilds()) >= getCityMax());
