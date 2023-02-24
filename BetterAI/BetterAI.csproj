@@ -73,6 +73,7 @@
     <Compile Include="BetterAICharacter.cs" />
     <Compile Include="BetterAICity.cs" />
     <Compile Include="BetterAIClientManager.cs" />
+    <Compile Include="BetterAIClientRenderer.cs" />
     <Compile Include="BetterAIClientUI.cs" />
     <Compile Include="BetterAIEnums.cs" />
     <Compile Include="BetterAIGameFactory.cs" />

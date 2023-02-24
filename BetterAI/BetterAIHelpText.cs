@@ -24,10 +24,28 @@ namespace BetterAI
 {
     public class BetterAIHelpText : HelpText
     {
+        //lines 44-48
         public BetterAIHelpText(Infos pInfos, TextManager textManager) : base(pInfos, textManager)
         {
         }
 
+        //lines 3173-3176
+        //public virtual TextVariable buildIgnoreZOCLinkVariable()
+        //{
+        //    return buildConceptLinkVariable("CONCEPT_IGNORES_ZOC");
+        //}
+        public virtual TextVariable buildIgnoreZOCWithExceptionsLinkVariable(UnitType eUnit)
+        {
+            CommaListVariableGenerator blockerList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.AND, TextManager);
+            BetterAIInfoUnit UnitInfo = (BetterAIInfoUnit)infos().unit(eUnit);
+            foreach (EffectUnitType ZOCBlockerEffect in UnitInfo.maeBlockZOCEffectUnits)
+            {
+                blockerList.AddItem(buildEffectUnitLinkVariable(ZOCBlockerEffect));
+            }
+            return TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS", buildIgnoreZOCLinkVariable(), TEXTVAR_TYPE("TEXT_HELPTEXT_ZOC_IGNORE_BLOCKER_EFFECT_UNITS", blockerList.Finalize()));
+        }
+
+        //lines 8702-13468
         public override TextBuilder buildWidgetHelp(TextBuilder builder, WidgetData pWidget, ClientManager pManager, bool bIncludeEncyclopediaFooter = true)
         {
             if (pWidget.GetWidgetType() == ItemType.CREATE_AGENT_NETWORK)
@@ -70,7 +88,7 @@ namespace BetterAI
         }
 
         //500 lines of copy-paste START
-
+        //lines 19667-20114
         public override TextBuilder buildImprovementBreakdown(TextBuilder builder, ImprovementType eImprovement, SpecialistType eSpecialist, Tile pTile, ClientManager pManager)
         {
             Game pGame = pManager.GameClient;
@@ -548,6 +566,7 @@ namespace BetterAI
         //copy-paste END
 
         //1k lines of copy-paste START
+        //lines 20157-21137
         public override TextBuilder buildImprovementHelp(TextBuilder builder, ImprovementType eImprovement, Tile pTile, ClientManager pManager, bool bName = true, bool bCosts = true, bool bDetails = true, bool bEncyclopedia = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.NONE)
         {
             using (new UnityProfileScope("HelpText.buildImprovementHelp"))
@@ -1560,7 +1579,7 @@ namespace BetterAI
 
 
         //1k lines of copy-paste END
-
+        //lines 21172-21578
         public override void buildImprovementRequiresHelp(List<TextVariable> lRequirements, ImprovementType eImprovement, Game pGame, Player pActivePlayer, Tile pTile, bool bUpgradeImprovement = false)
         {
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
@@ -2136,6 +2155,689 @@ namespace BetterAI
             }
         }
 
+        //copy-paste START
+        //lines 21580-21935
+        public override TextBuilder buildUnitTypeHelp(TextBuilder builder, UnitType eUnit, City pCity, Player pPlayer, Game pGame, Player pActivePlayer, bool bName = true, bool bCosts = true, bool bStats = true, bool bDetails = true)
+        {
+            using (new UnityProfileScope("HelpText.buildUnitTypeHelp"))
+            {
+                if (bName)
+                {
+                    builder.Add(buildTitleVariable(buildUnitNameVariable(eUnit, pGame)));
+                }
+
+                buildUnitTraitsHelp(builder, eUnit);
+
+                using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
+                {
+                    if (bStats)
+                    {
+                        InfoUnit unit = infos().unit(eUnit);
+                        int iRangeMin = unit.miRangeMin;
+                        int iRangeMax = unit.miRangeMax;
+
+                        using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
+                        {
+                            using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                if (infos().unit(eUnit).miHPMax > 0)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_HP_MAX", TEXTVAR(unit.miHPMax));
+                                }
+
+                                if (infos().Helpers.canDamage(eUnit))
+                                {
+                                    builder.Add(buildUnitStrengthValueLinkVariable(unit.miStrength, false));
+                                }
+                                else
+                                {
+                                    builder.Add(buildDefenseValueLinkVariable(unit.miStrength, false));
+                                }
+
+                                builder.Add(buildMovementLinkVariable(unit.miMovement, bSigned: false));
+
+                                if (!(infos().unit(eUnit).mbMelee))
+                                {
+                                    if (iRangeMax > 0)
+                                    {
+                                        if (iRangeMin == 0)
+                                        {
+                                            builder.Add(buildRangeLinkVariable(iRangeMax, false));
+                                        }
+                                        else if (iRangeMin > 0)
+                                        {
+                                            builder.Add(buildRangeMinMaxLinkVariable(iRangeMin, iRangeMax));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    {
+                        int iValue = infos().unit(eUnit).miReveal;
+                        if (iValue != 0)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_REVEAL_RANGE", buildSignedTextVariable(iValue));
+                        }
+                    }
+
+                    {
+                        int iValue = (infos().unit(eUnit).miFatigue - infos().Globals.UNIT_FATIGUE_LIMIT);
+                        if (iValue != 0)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_FATIGUE_LIMIT", buildSignedTextVariable(iValue));
+                        }
+                    }
+
+                    {
+                        ReligionType eReligion = infos().unit(eUnit).meRequiresReligion;
+
+                        if (eReligion != ReligionType.NONE)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_SPREADS_RELIGION", buildReligionLinkVariable(eReligion, pGame, null));
+                        }
+                    }
+
+                    if (infos().unit(eUnit).mbAmphibious)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_AMPHIBIOUS");
+                    }
+
+                    if (infos().unit(eUnit).mbCaravan)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_CARAVAN_MISSION");
+                    }
+
+                    if (infos().unit(eUnit).mbUnlimber)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_MUST_UNLIMBER");
+                    }
+
+                    if (infos().unit(eUnit).mbFound)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_FOUND_CITY");
+                    }
+
+                    if (infos().unit(eUnit).mbHarvest)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_HARVEST_RESOURCE", buildHarvestResourceLinkVariable());
+                    }
+
+                    if (infos().unit(eUnit).mbBuild)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_BUILD_IMPROVEMENTS");
+                    }
+
+                    {
+                        ReligionType eBuildReligion = infos().unit(eUnit).meBuildReligion;
+
+                        if (eBuildReligion != ReligionType.NONE)
+                        {
+                            using (var improvementsScope = CollectionCache.GetListScoped<TextVariable>())
+                            {
+                                for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+                                {
+                                    if (infos().improvement(eLoopImprovement).meReligionPrereq == eBuildReligion)
+                                    {
+                                        improvementsScope.Value.Add(buildImprovementLinkVariable(eLoopImprovement, pGame));
+                                    }
+                                }
+
+                                if (improvementsScope.Value.Count > 0)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_BUILD_RELIGION_IMPROVEMENT");
+
+                                    using (builder.BeginScope(TextBuilder.ScopeType.INDENTED_BULLET))
+                                    {
+                                        foreach (TextVariable loopText in improvementsScope.Value)
+                                        {
+                                            builder.Add(loopText);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (bDetails)
+                    {
+                        if (infos().unit(eUnit).mbZOC)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_HAS_ZOC", buildZOCLinkVariable());
+                        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Fix ZOC display                  START ###
+  ##############################################*/
+                        if (infos().unit(eUnit).mbIgnoreZOC)
+                        {
+                            if (!((BetterAIInfoUnit)(infos().unit(eUnit))).bHasIngoreZOCBlocker)
+                            {
+                                builder.Add(buildIgnoreZOCLinkVariable());
+                            }
+                            else
+                            {
+                                builder.Add(buildIgnoreZOCWithExceptionsLinkVariable(eUnit));
+                            }
+                        }
+/*####### Better Old World AI - Base DLL #######
+  ### Fix ZOC display                    END ###
+  ##############################################*/
+                    }
+
+                    if (infos().unit(eUnit).mbFortify)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_FORTIFY");
+                    }
+
+                    if (infos().unit(eUnit).mbTestudo)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_TESTUDO");
+                    }
+
+                    {
+                        using (builder.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_STARTS_WITH")))
+                        {
+                            foreach (EffectUnitType eLoopEffectUnit in infos().unit(eUnit).maeEffectUnit)
+                            {
+                                builder.Add(buildEffectUnitLinkVariable(eLoopEffectUnit));
+                            }
+
+                            if (pCity != null)
+                            {
+                                if (infos().unit(eUnit).mbPromote)
+                                {
+                                    {
+                                        int iValue = pCity.getBuildUnitLevels(eUnit);
+                                        if (iValue > 0)
+                                        {
+                                            builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_START_LEVELS", buildSignedTextVariable(iValue));
+                                        }
+                                    }
+
+                                    {
+                                        int iValue = pCity.getBuildUnitXP(eUnit);
+                                        if (iValue > 0)
+                                        {
+                                            builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_START_XP", buildSignedTextVariable(iValue));
+                                        }
+                                    }
+
+                                    using (var hashSetScope = CollectionCache.GetHashSetScoped<PromotionType>())
+                                    {
+                                        HashSet<PromotionType> sePromotions = hashSetScope.Value;
+
+                                        foreach (EffectCityType eLoopEffectCity in pCity.getActiveEffectCity())
+                                        {
+                                            foreach (PromotionType eLoopPromotion in infos().effectCity(eLoopEffectCity).maeFreePromotion)
+                                            {
+                                                if (pGame.isEffectUnitValid(eUnit, infos().promotion(eLoopPromotion).meEffectUnit))
+                                                {
+                                                    sePromotions.Add(eLoopPromotion);
+                                                }
+                                            }
+
+                                            foreach (UnitTraitType eLoopUnitTrait in infos().unit(eUnit).maeUnitTrait)
+                                            {
+                                                PromotionType ePromotion = infos().effectCity(eLoopEffectCity).maeTraitPromotion[(int)eLoopUnitTrait];
+
+                                                if (ePromotion != PromotionType.NONE)
+                                                {
+                                                    sePromotions.Add(ePromotion);
+                                                }
+                                            }
+                                        }
+
+                                        foreach (PromotionType eLoopPromotion in sePromotions)
+                                        {
+                                            builder.Add(buildPromotionLinkVariable(eLoopPromotion));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (bDetails)
+                    {
+                        using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_CONSUMES")))
+                        {
+                            for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                            {
+                                int iValue = (infos().unit(eUnit).maiYieldConsumption[(int)eLoopYield] * Constants.YIELDS_MULTIPLIER);
+                                if (iValue != 0)
+                                {
+                                    builder.Add(buildYieldValueIconLinkVariable(eLoopYield, -(iValue), true, false, Constants.YIELDS_MULTIPLIER));
+                                }
+                            }
+                        }
+
+                        for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+                        {
+                            using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_IMPROVEMENT_YIELD", buildImprovementLinkVariable(eLoopImprovement, pGame), pGame?.turnScaleName() ?? TEXTVAR("y")))) //TODO: needs to be changed when mzScaleShort localization is added
+                            {
+                                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                                {
+                                    int iValue = infos().unit(eUnit).maaiImprovementYieldRate[eLoopImprovement, eLoopYield];
+                                    if (iValue != 0)
+                                    {
+                                        builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, true, false, Constants.YIELDS_MULTIPLIER));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (infos().Helpers.canDamage(eUnit) && !(infos().unit(eUnit).mbPromote))
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_NO_TRAIN_OR_PROMOTE");
+                    }
+                } // end BULLET
+
+                if (bCosts)
+                {
+                    // population
+                    {
+                        int iCost = infos().unit(eUnit).miPopulationCost;
+                        if (iCost > 0)
+                        {
+                            using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
+                            using (buildWarningTextScope(builder, ((pCity != null) ? (pCity.getCitizens() < iCost) : false)))
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_POPULATION_COST", TEXTVAR(iCost), buildCitizenLinkVariable(null));
+                            }
+                        }
+                    }
+
+                    // yields
+                    {
+                        TextVariable production = null;
+
+                        if (pPlayer != null)
+                        {
+                            using (var costsScoped = CollectionCache.GetDictionaryScoped<YieldType, int>())
+                            {
+                                pPlayer.getUnitYieldCost(eUnit, pCity, costsScoped.Value);
+                                buildYieldCostText(builder, costsScoped.Value, ((pPlayer == pActivePlayer) ? pPlayer : null));
+                            }
+
+                            int iProduction = pPlayer.getUnitBuildCost(eUnit, pCity);
+                            if (iProduction > 0)
+                            {
+                                production = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION", TEXTVAR((pPlayer?.getUnitBuildCost(eUnit, pCity) ?? iProduction)), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                            }
+                        }
+                        else
+                        {
+                            int iValue = infos().unit(eUnit).miProduction;
+                            if (iValue > 0)
+                            {
+                                production = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION", TEXTVAR(iValue), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                            }
+                        }
+                        if (production != null)
+                        {
+                            TextVariable output = production;
+                            if (infos().unit(eUnit).miProductionCity != 0)
+                            {
+                                TextVariable perCity = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_CITY", TEXTVAR(infos().unit(eUnit).miProductionCity, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                                output = buildCommaSpaceSeparator(output, perCity);
+                            }
+                            if (infos().unit(eUnit).miProductionPer != 0)
+                            {
+                                TextVariable perGlobal = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_GLOBAL", TEXTVAR(infos().unit(eUnit).miProductionPer, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                                output = buildCommaSpaceSeparator(output, perGlobal);
+                            }
+                            builder.Add(output);
+                        }
+                    }
+                }
+
+                {
+                    using (builder.BeginScope(TextBuilder.ScopeType.COMMA_OR, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_UPGRADES_FROM")))
+                    {
+                        for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); eLoopUnit++)
+                        {
+                            if (pPlayer == null || pPlayer.canEverBuildUnit(eLoopUnit))
+                            {
+                                if (infos().unit(eLoopUnit).maeUpgradeUnit.Contains(eUnit))
+                                {
+                                    builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, pCity: pCity));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                {
+                    using (builder.BeginScope(TextBuilder.ScopeType.COMMA_OR, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_UPGRADES_TO")))
+                    {
+                        foreach (UnitType eLoopUnit in infos().unit(eUnit).maeUpgradeUnit)
+                        {
+                            if (pPlayer == null || pPlayer.canEverBuildUnit(eLoopUnit))
+                            {
+                                builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, pCity: pCity));
+                            }
+                        }
+                    }
+                }
+
+                return builder;
+            }
+        }
+        //copy-paste END
+
+        //copy-paste START
+        //lines 22105-22369
+        public override void buildUnitTooltip(Unit pUnit, ClientManager pManager, UIUnitTooltipData outUnitData)
+        {
+            using (new UnityProfileScope("HelpText.buildUnitTooltip"))
+            {
+                Player pActivePlayer = pManager.activePlayer();
+                Game pGame = pManager.GameClient;
+
+                // Important to note that outUnitData is cleared before passed into this method!
+
+                if (pUnit == null)
+                {
+                    TextManager.TEXT(outUnitData.Title, buildTitleVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_DEAD")));
+                    return;
+                }
+
+                bool bExpand = pManager.Interfaces.Hotkeys.IsHotkeyPressed(mInfos.Globals.HOTKEY_EXPAND_TOOLTIP);
+
+                outUnitData.UnitID = pUnit.getID();
+
+                using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager, outUnitData.Title))
+                {
+                    builder.Add(buildUnitTypeLinkVariable(pUnit.getType(), pGame, pUnit));
+                }
+
+                for (TeamType eLoopTeam = 0; eLoopTeam < pGame.getNumTeams(); eLoopTeam++)
+                {
+                    if (pUnit.isRaidTeam(eLoopTeam))
+                    {
+                        outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_RAIDING"), buildTeamLinkVariable(eLoopTeam, pGame, pActivePlayer));
+                    }
+                }
+
+                if (pUnit.hasRebelPlayer())
+                {
+                    City pCity = pUnit.rebelPlayer().capitalCity();
+
+                    if (pCity != null)
+                    {
+                        outUnitData.AddStat(TextManager, buildTribeLinkVariable(infos().Globals.REBELS_TRIBE, pGame), buildPlayerLinkVariable(pUnit.rebelPlayer(), pActivePlayer));
+                    }
+                }
+
+                if (pUnit.hasCaravanMissionTarget())
+                {
+                    City pCity = pUnit.caravanMissionTarget().capitalCity();
+
+                    if (pCity != null)
+                    {
+                        outUnitData.AddStat(TextManager, buildCaravanMissionLinkVariable(), buildCityLinkVariable(pCity, pActivePlayer));
+                    }
+                }
+
+                if (pUnit.isDamaged())
+                {
+                    outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_HEALTH_LABEL"), buildSlashText(pUnit.getHP(), pUnit.getHPMax()));
+                }
+
+                if (pUnit.getFortifyBonus() > 0)
+                {
+                    outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_FORTIFIED_LABEL"), buildDefenseValueLinkVariable(pUnit.getFortifyBonus(), true));
+                }
+
+                if (pUnit.getTestudoBonus() > 0)
+                {
+                    outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_TESTUDO_LABEL"), TEXTVAR("TEXT_HELPTEXT_EFFECT_UNIT_HELP_VS_UNIT_TRAIT", TextManager, buildUnitTraitLinkVariable(infos().Globals.RANGED_TRAIT), buildDefenseValueLinkVariable(pUnit.getTestudoBonus(), true), TEXTVAR(true)));
+                }
+
+                if (pUnit.isAnchored())
+                {
+                    outUnitData.AddStat(TextManager, TEXTVAR(""), buildAnchoredLinkVariable());
+                }
+
+                if (pUnit.isUnlimbered())
+                {
+                    outUnitData.AddStat(TextManager, TEXTVAR(""), buildUnlimberedLinkVariable());
+                }
+
+                if (bExpand)
+                {
+                    using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
+                        {
+                            if (pUnit.hasZOC())
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_HAS_ZOC", buildZOCLinkVariable());
+                            }
+
+                            if (pUnit.hasIgnoreZOC(null))
+                            {
+/*####### Better Old World AI - Base DLL #######
+  ### Fix ZOC display                  START ###
+  ##############################################*/
+                                if (!((BetterAIInfoUnit)pUnit.info()).bHasIngoreZOCBlocker)
+                                {
+                                    builder.Add(buildIgnoreZOCLinkVariable());
+                                }
+                                else
+                                {
+                                    builder.Add(buildIgnoreZOCWithExceptionsLinkVariable(pUnit.getType()));
+                                }
+/*####### Better Old World AI - Base DLL #######
+  ### Fix ZOC display                    END ###
+  ##############################################*/
+                            }
+                        }
+
+                        if (builder.HasContent)
+                        {
+                            outUnitData.AddStat(TextManager, TEXTVAR(""), builder.ToTextVariable());
+                        }
+                    }
+                }
+
+                for (EffectUnitClassType eLoopEffectUnitClass = 0; eLoopEffectUnitClass < infos().effectUnitClassesNum(); eLoopEffectUnitClass++)
+                {
+                    if (pUnit.hasEffectUnitClass(eLoopEffectUnitClass))
+                    {
+                        using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                for (EffectUnitType eLoopEffectUnit = 0; eLoopEffectUnit < infos().effectUnitsNum(); eLoopEffectUnit++)
+                                {
+                                    if (infos().effectUnit(eLoopEffectUnit).meClass == eLoopEffectUnitClass)
+                                    {
+                                        if (pUnit.hasEffectUnit(eLoopEffectUnit))
+                                        {
+                                            buildEffectUnitHelp(builder, eLoopEffectUnit, pGame, bRightJustify: true);
+                                        }
+                                    }
+                                }
+                            }
+
+                            outUnitData.AddStat(TextManager, buildEffectUnitClassLinkVariable(eLoopEffectUnitClass, pUnit), builder.ToTextVariable());
+                        }
+                    }
+                }
+
+                foreach (EffectUnitType eLoopEffect in pUnit.getEffectUnits())
+                {
+                    if (infos().effectUnit(eLoopEffect).meClass == EffectUnitClassType.NONE)
+                    {
+                        if (!(pUnit.isGeneralEffectUnit(eLoopEffect)))
+                        {
+                            if (infos().effectUnit(eLoopEffect).meSourceUnitTrait == UnitTraitType.NONE)
+                            {
+                                using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
+                                {
+                                    using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
+                                    {
+                                        buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true);
+                                    }
+
+                                    outUnitData.AddStat(TextManager, buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable());
+                                }
+                            }
+                            else if (bExpand)
+                            {
+                                using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
+                                {
+                                    buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true);
+                                    outUnitData.AddStat(TextManager, buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (pUnit.hasGeneral())
+                {
+                    Character pGeneral = pUnit.general();
+
+                    outUnitData.AddStat(TextManager, buildCharacterLinkVariable(pGeneral, pActivePlayer, false), buildGeneralRatingsAllHelpVariable(pGeneral));
+
+                    foreach (EffectUnitType eLoopEffect in pUnit.getEffectUnits())
+                    {
+                        if (infos().effectUnit(eLoopEffect).meClass == EffectUnitClassType.NONE)
+                        {
+                            if (pUnit.isGeneralEffectUnit(eLoopEffect))
+                            {
+                                using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
+                                {
+                                    using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
+                                        buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true);
+                                    outUnitData.AddStat(TextManager, buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (pUnit.info().mbPromote)
+                {
+                    TextVariable levelXPVariable;
+                    if (pUnit.isLevelPromotionMax())
+                    {
+                        levelXPVariable = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_LEVEL_MAX", TEXTVAR(pUnit.getLevelPromotionString()));
+                    }
+                    else
+                    {
+                        levelXPVariable = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_LEVEL", TEXTVAR(pUnit.getLevelPromotionString()), TEXTVAR(pUnit.getXP()), TEXTVAR(pUnit.getXPThreshold()), TEXTVAR(pUnit.getLevelPromotion() < pUnit.getLevel()));
+                    }
+                    outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_LEVEL_LABEL"), levelXPVariable);
+                }
+
+                if (bExpand)
+                {
+                    if (pUnit.hasPlayer())
+                    {
+                        if (pUnit.hasFamily())
+                        {
+                            outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_FAMILY_LABEL"), buildFamilyLinkVariable(pUnit.getFamily(), pGame));
+                        }
+                        else
+                        {
+                            outUnitData.AddStat(TextManager, TEXTVAR(""), buildMercenaryLinkVariable());
+                        }
+
+                        if (pUnit.hasOriginalTribe())
+                        {
+                            outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_TRIBE_LABEL"), buildTribeLinkVariable(pUnit.getOriginalTribe(), pGame));
+                        }
+                    }
+
+                    using (TextBuilder traitsBuilder = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        buildUnitTraitsHelp(traitsBuilder, pUnit.getType());
+                        if (traitsBuilder.HasContent)
+                        {
+                            outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_TRAITS_LABEL"), traitsBuilder.ToTextVariable());
+                        }
+                    }
+
+                    for (AttackType eLoopAttack = 0; eLoopAttack < infos().attacksNum(); eLoopAttack++)
+                    {
+                        int iValue = pUnit.attackValue(eLoopAttack);
+                        if (iValue > 0)
+                        {
+                            TextVariable valueOrFalse = iValue > 1 ? TEXTVAR(iValue) : TEXTVAR(false);
+
+                            outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_ATTACK_LABEL"), TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_ATTACK_VALUE_ITEM", buildAttackLinkVariable(eLoopAttack), valueOrFalse, TEXTVAR(pUnit.attackPercent(eLoopAttack))));
+                        }
+                    }
+
+                    if (pUnit.getTurnSteps() > 0)
+                    {
+                        int iFatigueSteps = pUnit.getFatigueLimit() - pUnit.getStepsToFatigue();
+                        outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_FATIGUE_LABEL"), buildSlashText(iFatigueSteps, pUnit.getFatigueLimit()));
+                    }
+
+                    if (pUnit.hasCooldown())
+                    {
+                        outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_COOLDOWN", TEXTVAR_TYPE(pUnit.cooldown().mName)), buildTurnsTextVariable(pUnit.getCooldownTurns(), pGame));
+                    }
+
+                    using (TextBuilder yieldListBuilder = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        using (yieldListBuilder.BeginScope(TextBuilder.ScopeType.COMMA))
+                        {
+                            for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                            {
+                                int iValue = pUnit.yieldConsumption(eLoopYield);
+                                if (iValue != 0)
+                                {
+                                    yieldListBuilder.Add(buildUnitConsumesLinkVariable(buildYieldIconTextVariable(eLoopYield, -(iValue), true, false, Constants.YIELDS_MULTIPLIER), pUnit));
+                                }
+                            }
+                        }
+
+                        if (yieldListBuilder.HasContent)
+                        {
+                            outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_CONSUMPTION"), yieldListBuilder.ToTextVariable());
+                        }
+                    }
+                }
+            }
+        }
+        //copy-paste END
+
+        //lines 22864-23513
+        public override TextBuilder buildEffectUnitHelp(TextBuilder builder, EffectUnitType eEffectUnit, Game pGame, bool bSkipIcons = false, bool bRightJustify = false)
+        {
+            builder = base.buildEffectUnitHelp(builder, eEffectUnit, pGame, bSkipIcons, bRightJustify);
+
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement         START ###
+  ##############################################*/
+            BetterAIInfoEffectUnit eInfoEffectUnit = (BetterAIInfoEffectUnit)infos().effectUnit(eEffectUnit);
+            if (eInfoEffectUnit.mbAmphibious)
+            {
+                if (((BetterAIInfoGlobals)infos().Globals).BAI_AMPHIBIOUS_RIVER_CROSSING_DISCOUNT > 0 && ((BetterAIInfoGlobals)infos().Globals).RIVER_CROSSING_COST_EXTRA > 0)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_AMPHIBIOUS_RIVER_CROSSING");
+                }
+                if (((BetterAIInfoGlobals)infos().Globals).BAI_EMBARKING_COST_EXTRA > 0 && ((BetterAIInfoGlobals)infos().Globals).BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT > 0)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_AMPHIBIOUS_EMBARKING");
+                }
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement           END ###
+  ##############################################*/
+
+            return builder;
+        }
+
+
         //how to create LinkTextVariable things? idk, maybe I'll try to figure this out later.
         //but it looks like a lot of work when adding something competely new like cityBiome
         //because I need something to link to that doesn't exist yet
@@ -2165,6 +2867,7 @@ namespace BetterAI
         // and I assume a widget also needs UI components
 
         //120 lines copy&paste START
+        //lines 37104-37230
         public override TextBuilder buildResourceHelp(TextBuilder builder, ResourceType eResource, Game pGame, Player pPlayer, Tile pTile, Player pActivePlayer, bool bName = true)
         {
             using (new UnityProfileScope("HelpText.buildResourceHelp"))
@@ -2601,33 +3304,10 @@ namespace BetterAI
         }
         //120 line copy paste END
 
-        public override TextBuilder buildEffectUnitHelp(TextBuilder builder, EffectUnitType eEffectUnit, Game pGame, bool bSkipIcons = false, bool bRightJustify = false)
-        {
-            builder = base.buildEffectUnitHelp(builder, eEffectUnit, pGame, bSkipIcons, bRightJustify);
 
-/*####### Better Old World AI - Base DLL #######
-  ### Land Unit Water Movement         START ###
-  ##############################################*/
-            BetterAIInfoEffectUnit eInfoEffectUnit = (BetterAIInfoEffectUnit)infos().effectUnit(eEffectUnit);
-            if (eInfoEffectUnit.mbAmphibious)
-            {
-                if (((BetterAIInfoGlobals)infos().Globals).BAI_AMPHIBIOUS_RIVER_CROSSING_DISCOUNT > 0 && ((BetterAIInfoGlobals)infos().Globals).RIVER_CROSSING_COST_EXTRA > 0)
-                {
-                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_AMPHIBIOUS_RIVER_CROSSING");
-                }
-                if (((BetterAIInfoGlobals)infos().Globals).BAI_EMBARKING_COST_EXTRA > 0 && ((BetterAIInfoGlobals)infos().Globals).BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT > 0)
-                {
-                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_AMPHIBIOUS_EMBARKING");
-                }
-            }
-/*####### Better Old World AI - Base DLL #######
-  ### Land Unit Water Movement           END ###
-  ##############################################*/
-
-            return builder;
-        }
 
         //copy-paste START
+        //lines 39200-39240
         public override TextBuilder buildUrbanHelp(TextBuilder builder)
         {
             using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
@@ -2688,6 +3368,8 @@ namespace BetterAI
         //}
         //fuck me, structs can't inherit
         //I can't overrride a struct but at least inside the derived BetterAIHelpText class I can call this for proper japanese list generation
+
+        //lines 43713-43836
         new public struct CommaListVariableGenerator
         {
             public enum ListType

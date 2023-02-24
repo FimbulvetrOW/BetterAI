@@ -254,7 +254,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: Don't hold back too much     START ###
   ##############################################*/
-                    //why is this here?
+                    //if you clear a camp and then don't guard it, that's on you.
                     /*
                     if (shouldLeaveTileForOtherPlayer(pTile))
                     {
@@ -406,6 +406,69 @@ namespace BetterAI
                         //}
                     }
                 }
+
+                if (infos.bonus(eBonus).mbHolyCityAgents)
+                {
+                    iPlayerValue -= adjustForInflation(AI_HOLY_CITY_AGENT_VALUE); //subtract all of it, to add the correct number
+
+                    //slight cheat because the player doesn't know when Pagan Religions get founded, but this should at least
+                    // make Egypt pick another Wonder on Turn 1. Hopefully.
+                    //int iWorldReligionsNoHolyCity = 0;
+                    //int iWorldReligionsWithHolyCity = 0;
+                    //int iPaganReligionsNoHolyCity = 0;
+                    //int iPaganReligionsWithHolyCity = 0;
+                    int iHolyCities = 0;
+                    int iPossibleReligions = 0;
+
+                    HashSet<int> nationSet = new HashSet<int>();
+
+                    for (PlayerType eLoopPlayer = 0; eLoopPlayer < game.getNumPlayers(); ++eLoopPlayer)
+                    {
+                        if (game.player(eLoopPlayer).isAlive() && game.player(eLoopPlayer).hasNation())
+                        {
+                            nationSet.Add((int)(game.player(eLoopPlayer).getNation()));
+                        }
+                    }
+
+                    for (ReligionType eLoopReligion = 0; eLoopReligion < infos.religionsNum(); eLoopReligion++)
+                    {
+                        if (game.hasReligionHolyCity(eLoopReligion))
+                        {
+                            iHolyCities++;
+                            iPossibleReligions++;
+                            //if (infos.religion(eLoopReligion).mePaganNation == NationType.NONE)
+                            //{
+                            //    iWorldReligionsWithHolyCity++;
+                            //}
+                            //else
+                            //{
+                            //    iPaganReligionsWithHolyCity++;
+                            //}
+                        }
+                        else if (!(game.isReligionFounded(eLoopReligion)))
+                        {
+                            if (infos.religion(eLoopReligion).mePaganNation == NationType.NONE)
+                            {
+                                iPossibleReligions++;
+                                //iWorldReligionsNoHolyCity++;
+                            }
+                            else if (nationSet.Contains((int)(infos.religion(eLoopReligion).mePaganNation)))
+                            {
+                                iPossibleReligions++;
+                                //iPaganReligionsNoHolyCity++;
+                            }
+                        }
+
+                    }
+
+                    if ((iPossibleReligions) != 0)
+                    {
+                        //examples with 10 possible religions (6 players): start at negative 50% value, +15% value per holy sity, full value at 10 holy cities
+                        //0 holy cities: value * -0.5  | 2 holy cities: value * -0.2 | 5 holy cities: value * 0.25 | 8 holy cities: value * 0.7
+                        iPlayerValue += (adjustForInflation(AI_HOLY_CITY_AGENT_VALUE) * (3 * iHolyCities - iPossibleReligions)) / (2 * iPossibleReligions);
+                    }
+                }
+
 
                 //if (pOtherPlayer.getTeam() == player.getTeam())
                 //{

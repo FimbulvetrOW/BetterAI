@@ -71,9 +71,9 @@ namespace BetterAI
   ### Don't defend free City Sites       END ###
   ##############################################*/
 
-        /*####### Better Old World AI - Base DLL #######
-          ### Limit Settler Numbers again      START ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again      START ###
+  ##############################################*/
         public override bool isCityMaxReached()
         {
             return ((getNumCities() + countFoundUnitsAndBuilds()) >= getCityMax());

@@ -22,44 +22,71 @@ namespace BetterAI
 {
     public class BetterAIInfos : Infos
     {
+        //line 379
         public BetterAIInfos(ModSettings pModSettings) : base(pModSettings)
         {
         }
 
-/*####### Better Old World AI - Base DLL #######
-  ### Early Unlock                     START ###
-  ##############################################*/
-        protected List<BetterAIInfoImprovement> maBetterAIImprovements;
-        public override InfoImprovement improvement(ImprovementType eIndex) => maBetterAIImprovements.GetOrDefault((int)eIndex);
-        public override ImprovementType improvementsNum() => (ImprovementType)maBetterAIImprovements.Count;
-        public override List<InfoImprovement> improvements() => new List<InfoImprovement>(maBetterAIImprovements);
-        public virtual List<BetterAIInfoImprovement> BetterAIimprovements() => maBetterAIImprovements;
-/*####### Better Old World AI - Base DLL #######
-  ### Early Unlock                       END ###
-  ##############################################*/
+        //line 1072
+        protected override void init(bool resetDefaultXMLCache)
+        {
+            base.init(resetDefaultXMLCache);
+            calculateDerivativeInfo();
+        }
+
+        protected virtual void calculateDerivativeInfo()
+        {
+            for (EffectUnitType eLoopEffectUnit = 0; eLoopEffectUnit < effectUnitsNum(); eLoopEffectUnit++)
+            {
+                if (effectUnit(eLoopEffectUnit).maeUnitTraitZOC.Count > 0)
+                {
+                    for (UnitType eLoopUnit = 0; eLoopUnit < unitsNum(); eLoopUnit++)
+                    {
+
+                        bool bBlocksUnit = false;
+                        foreach (UnitTraitType eLoopUnitTrait in effectUnit(eLoopEffectUnit).maeUnitTraitZOC)
+                        {
+                            if (unit(eLoopUnit).maeUnitTrait.Contains(eLoopUnitTrait))
+                            {
+                                bBlocksUnit = true;
+                                break;
+                            }
+
+                        }
+                        
+                        if (bBlocksUnit)
+                        {
+                            ((BetterAIInfoUnit)unit(eLoopUnit)).maeBlockZOCEffectUnits.Add(eLoopEffectUnit);
+                            ((BetterAIInfoUnit)unit(eLoopUnit)).bHasIngoreZOCBlocker = true;
+                        }
+
+                    }
+                }
+            }
+        }
 
 /*####### Better Old World AI - Base DLL #######
-  ### City Biome                       START ###
+  ### Additional fields for Courtiers  START ###
   ##############################################*/
-        protected List<BetterAIInfoImprovementClass> maBetterAIImprovementClasses;
-        public override InfoImprovementClass improvementClass(ImprovementClassType eIndex) => maBetterAIImprovementClasses.GetOrDefault((int)eIndex);
-        public override ImprovementClassType improvementClassesNum() => (ImprovementClassType)maBetterAIImprovementClasses.Count;
-        public override List<InfoImprovementClass> improvementClasses() => new List<InfoImprovementClass>(maBetterAIImprovementClasses);
-        public virtual List<BetterAIInfoImprovementClass> BetterAIimprovementClasses() => maBetterAIImprovementClasses;
+        //line 229
+        protected List<BetterAIInfoCourtier> maBetterAICourtiers;
 
-        protected List<BetterAIInfoTerrain> maBetterAITerrains;
-        public override InfoTerrain terrain(TerrainType eIndex) => maBetterAITerrains.GetOrDefault((int)eIndex);
-        public override TerrainType terrainsNum() => (TerrainType)maBetterAITerrains.Count;
-        public override List<InfoTerrain> terrains() => new List<InfoTerrain>(maBetterAITerrains);
-        public virtual List<BetterAIInfoTerrain> BetterAIterrains() => maBetterAITerrains;
+        //line 2391
+        public override InfoCourtier courtier(CourtierType eIndex) => maBetterAICourtiers.GetOrDefault((int)eIndex);
+        public override CourtierType courtiersNum() => (CourtierType)maBetterAICourtiers.Count;
+        public override List<InfoCourtier> courtiers() => new List<InfoCourtier>(maBetterAICourtiers);
+        public virtual List<BetterAIInfoCourtier> BetterAIcourtiers() => maBetterAICourtiers;
 /*####### Better Old World AI - Base DLL #######
-  ### City Biome                         END ###
+  ### Additional fields for Courtiers    END ###
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
+        //line 241
         protected List<BetterAIInfoEffectUnit> maBetterAIEffectUnits;
+
+        //line 2341
         public override InfoEffectUnit effectUnit(EffectUnitType eIndex) => maBetterAIEffectUnits.GetOrDefault((int)eIndex);
         public override EffectUnitType effectUnitsNum() => (EffectUnitType)maBetterAIEffectUnits.Count;
         public override List<InfoEffectUnit> effectUnits() => new List<InfoEffectUnit>(maBetterAIEffectUnits);
@@ -69,15 +96,57 @@ namespace BetterAI
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
-  ### Additional fields for Courtiers  START ###
+  ### Early Unlock                     START ###
   ##############################################*/
-        protected List<BetterAIInfoCourtier> maBetterAICourtiers;
-        public override InfoCourtier courtier(CourtierType eIndex) => maBetterAICourtiers.GetOrDefault((int)eIndex);
-        public override CourtierType courtiersNum() => (CourtierType)maBetterAICourtiers.Count;
-        public override List<InfoCourtier> courtiers() => new List<InfoCourtier>(maBetterAICourtiers);
-        public virtual List<BetterAIInfoCourtier> BetterAIcourtiers() => maBetterAICourtiers;
+        //line 262
+        protected List<BetterAIInfoImprovement> maBetterAIImprovements;
+
+        //line 2425
+        public override InfoImprovement improvement(ImprovementType eIndex) => maBetterAIImprovements.GetOrDefault((int)eIndex);
+        public override ImprovementType improvementsNum() => (ImprovementType)maBetterAIImprovements.Count;
+        public override List<InfoImprovement> improvements() => new List<InfoImprovement>(maBetterAIImprovements);
+        public virtual List<BetterAIInfoImprovement> BetterAIimprovements() => maBetterAIImprovements;
+
+        //line 263
+        protected List<BetterAIInfoImprovementClass> maBetterAIImprovementClasses;
+
+        //line 2429
+        public override InfoImprovementClass improvementClass(ImprovementClassType eIndex) => maBetterAIImprovementClasses.GetOrDefault((int)eIndex);
+        public override ImprovementClassType improvementClassesNum() => (ImprovementClassType)maBetterAIImprovementClasses.Count;
+        public override List<InfoImprovementClass> improvementClasses() => new List<InfoImprovementClass>(maBetterAIImprovementClasses);
+        public virtual List<BetterAIInfoImprovementClass> BetterAIimprovementClasses() => maBetterAIImprovementClasses;
 /*####### Better Old World AI - Base DLL #######
-  ### Additional fields for Courtiers    END ###
+  ### Early Unlock                       END ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### City Biome                       START ###
+  ##############################################*/
+        //line 327
+        protected List<BetterAIInfoTerrain> maBetterAITerrains;
+
+        //line 2685
+        public override InfoTerrain terrain(TerrainType eIndex) => maBetterAITerrains.GetOrDefault((int)eIndex);
+        public override TerrainType terrainsNum() => (TerrainType)maBetterAITerrains.Count;
+        public override List<InfoTerrain> terrains() => new List<InfoTerrain>(maBetterAITerrains);
+        public virtual List<BetterAIInfoTerrain> BetterAIterrains() => maBetterAITerrains;
+/*####### Better Old World AI - Base DLL #######
+  ### City Biome                         END ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### Fix ZOC display                  START ###
+  ##############################################*/
+        //line 342
+        protected List<BetterAIInfoUnit> maBetterAIUnits;
+
+        //line 2745
+        public override InfoUnit unit(UnitType eIndex) => maBetterAIUnits.GetOrDefault((int)eIndex);
+        public override UnitType unitsNum() => (UnitType)maBetterAIUnits.Count;
+        public override List<InfoUnit> units() => new List<InfoUnit>(maBetterAIUnits);
+        public virtual List<BetterAIInfoUnit> BetterAIunits() => maBetterAIUnits;
+/*####### Better Old World AI - Base DLL #######
+  ### Fix ZOC display                    END ###
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
@@ -94,6 +163,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### [multiple]                       START ###
   ##############################################*/
+        //line 475
         protected override void BuildListOfInfoFiles()
         {
             base.BuildListOfInfoFiles();
@@ -103,73 +173,90 @@ namespace BetterAI
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/terrain"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/effectUnit"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/courtier"));
+            mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/unit"));
 
             mInfoList.Add(new XmlDataListItem<BetterAIInfoImprovement, ImprovementType>("Infos/improvement", readInfoTypes<BetterAIInfoImprovement, ImprovementType>, ref maBetterAIImprovements));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoImprovementClass, ImprovementClassType>("Infos/improvementClass", readInfoTypes<BetterAIInfoImprovementClass, ImprovementClassType>, ref maBetterAIImprovementClasses));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTerrain, TerrainType>("Infos/terrain", readInfoTypes<BetterAIInfoTerrain, TerrainType>, ref maBetterAITerrains));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoEffectUnit, EffectUnitType>("Infos/effectUnit", readInfoTypes<BetterAIInfoEffectUnit, EffectUnitType>, ref maBetterAIEffectUnits));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoCourtier, CourtierType>("Infos/courtier", readInfoTypes<BetterAIInfoCourtier, CourtierType>, ref maBetterAICourtiers));
+            mInfoList.Add(new XmlDataListItem<BetterAIInfoUnit, UnitType>("Infos/unit", readInfoTypes<BetterAIInfoUnit, UnitType>, ref maBetterAIUnits));
 
             mInfoList.Add(new XmlDataListItem<InfoCityBiome, CityBiomeType>("Infos/cityBiome", readInfoTypes<InfoCityBiome, CityBiomeType>, ref maCityBiomes));
         }
 /*####### Better Old World AI - Base DLL #######
   ### [multiple]                       START ###
   ##############################################*/
+    }
 
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
   ##############################################*/
-        //corresponding classes are in InfoBase.cs
-        public class BetterAIInfoImprovement : InfoImprovement
+    //corresponding classes are in InfoBase.cs
+    //InfoBase.cs, line 2671
+    public class BetterAIInfoImprovement : InfoImprovement
+    {
+        //new stuff here
+        public CityBiomeType meCityBiomePrereq = CityBiomeType.NONE;
+        public TechType meSecondaryUnlockTechPrereq = TechType.NONE;
+        public CultureType meSecondaryUnlockCulturePrereq = CultureType.NONE;
+        public int miSecondaryUnlockPopulationPrereq = 0;
+        public EffectCityType meSecondaryUnlockEffectCityPrereq = EffectCityType.NONE;
+        public virtual bool isAnySecondaryPrereq()
         {
-            //new stuff here
-            public CityBiomeType meCityBiomePrereq = CityBiomeType.NONE;
-            public TechType meSecondaryUnlockTechPrereq = TechType.NONE;
-            public CultureType meSecondaryUnlockCulturePrereq = CultureType.NONE;
-            public int miSecondaryUnlockPopulationPrereq = 0;
-            public EffectCityType meSecondaryUnlockEffectCityPrereq = EffectCityType.NONE;
-            public virtual bool isAnySecondaryPrereq()
-            {
-                return (meSecondaryUnlockTechPrereq != TechType.NONE || 
-                    meSecondaryUnlockCulturePrereq != CultureType.NONE ||
-                    miSecondaryUnlockPopulationPrereq > 0 ||
-                    meSecondaryUnlockEffectCityPrereq != EffectCityType.NONE);
-            }
-
-            public FamilyClassType meTertiaryUnlockFamilyClassPrereq = FamilyClassType.NONE;
-            public bool mbTertiaryUnlockSeatOnly = false;
-            public TechType meTertiaryUnlockTechPrereq = TechType.NONE;
-            public CultureType meTertiaryUnlockCulturePrereq = CultureType.NONE;
-            public EffectCityType meTertiaryUnlockEffectCityPrereq = EffectCityType.NONE;
-            public virtual bool isAnyTertiaryPrereq()
-            {
-                return (meTertiaryUnlockFamilyClassPrereq != FamilyClassType.NONE ||
-                    meTertiaryUnlockTechPrereq != TechType.NONE ||
-                    meTertiaryUnlockCulturePrereq != CultureType.NONE ||
-                    meTertiaryUnlockEffectCityPrereq != EffectCityType.NONE);
-            }
-            public virtual bool isAnythingNew()
-            {
-                return ((meCityBiomePrereq != CityBiomeType.NONE) || isAnySecondaryPrereq() || isAnyTertiaryPrereq());
-            }
-
-
-            public override void ReadData(XmlNode node, Infos infos)
-            {
-                base.ReadData(node, infos);
-
-                infos.readType(node, "CityBiomePrereq", ref meCityBiomePrereq);
-                infos.readType(node, "SecondaryUnlockTechPrereq", ref meSecondaryUnlockTechPrereq);
-                infos.readType(node, "SecondaryUnlockCulturePrereq", ref meSecondaryUnlockCulturePrereq);
-                infos.readInt(node, "iSecondaryUnlockPopulationPrereq", ref miSecondaryUnlockPopulationPrereq);
-                infos.readType(node, "SecondaryUnlockEffectCityPrereq", ref meSecondaryUnlockEffectCityPrereq);
-                infos.readType(node, "TertiaryUnlockFamilyClassPrereq", ref meTertiaryUnlockFamilyClassPrereq);
-                infos.readBool(node, "bTertiaryUnlockSeatOnly", ref mbTertiaryUnlockSeatOnly);
-                infos.readType(node, "TertiaryUnlockTechPrereq", ref meTertiaryUnlockTechPrereq);
-                infos.readType(node, "TertiaryUnlockCulturePrereq", ref meTertiaryUnlockCulturePrereq);
-                infos.readType(node, "TertiaryUnlockEffectCityPrereq", ref meTertiaryUnlockEffectCityPrereq);
-            }
+            return (meSecondaryUnlockTechPrereq != TechType.NONE || 
+                meSecondaryUnlockCulturePrereq != CultureType.NONE ||
+                miSecondaryUnlockPopulationPrereq > 0 ||
+                meSecondaryUnlockEffectCityPrereq != EffectCityType.NONE);
         }
+
+        public FamilyClassType meTertiaryUnlockFamilyClassPrereq = FamilyClassType.NONE;
+        public bool mbTertiaryUnlockSeatOnly = false;
+        public TechType meTertiaryUnlockTechPrereq = TechType.NONE;
+        public CultureType meTertiaryUnlockCulturePrereq = CultureType.NONE;
+        public EffectCityType meTertiaryUnlockEffectCityPrereq = EffectCityType.NONE;
+        public virtual bool isAnyTertiaryPrereq()
+        {
+            return (meTertiaryUnlockFamilyClassPrereq != FamilyClassType.NONE ||
+                meTertiaryUnlockTechPrereq != TechType.NONE ||
+                meTertiaryUnlockCulturePrereq != CultureType.NONE ||
+                meTertiaryUnlockEffectCityPrereq != EffectCityType.NONE);
+        }
+        public virtual bool isAnythingNew()
+        {
+            return ((meCityBiomePrereq != CityBiomeType.NONE) || isAnySecondaryPrereq() || isAnyTertiaryPrereq());
+        }
+
+
+        public override void ReadData(XmlNode node, Infos infos)
+        {
+            base.ReadData(node, infos);
+
+            infos.readType(node, "CityBiomePrereq", ref meCityBiomePrereq);
+            infos.readType(node, "SecondaryUnlockTechPrereq", ref meSecondaryUnlockTechPrereq);
+            infos.readType(node, "SecondaryUnlockCulturePrereq", ref meSecondaryUnlockCulturePrereq);
+            infos.readInt(node, "iSecondaryUnlockPopulationPrereq", ref miSecondaryUnlockPopulationPrereq);
+            infos.readType(node, "SecondaryUnlockEffectCityPrereq", ref meSecondaryUnlockEffectCityPrereq);
+            infos.readType(node, "TertiaryUnlockFamilyClassPrereq", ref meTertiaryUnlockFamilyClassPrereq);
+            infos.readBool(node, "bTertiaryUnlockSeatOnly", ref mbTertiaryUnlockSeatOnly);
+            infos.readType(node, "TertiaryUnlockTechPrereq", ref meTertiaryUnlockTechPrereq);
+            infos.readType(node, "TertiaryUnlockCulturePrereq", ref meTertiaryUnlockCulturePrereq);
+            infos.readType(node, "TertiaryUnlockEffectCityPrereq", ref meTertiaryUnlockEffectCityPrereq);
+        }
+    }
+
+    //InfoBase.cs, line 2910
+    public class BetterAIInfoImprovementClass : InfoImprovementClass
+    {
+        //new stuff here
+        public int miMaxCityCount = 0;
+        public override void ReadData(XmlNode node, Infos infos)
+        {
+            base.ReadData(node, infos);
+            infos.readInt(node, "iMaxCityCount", ref miMaxCityCount);
+
+        }
+    }
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                       END ###
   ##############################################*/
@@ -177,39 +264,28 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
-        public class BetterAIInfoImprovementClass : InfoImprovementClass
+    //InfoBase.cs, line 5372
+    public class BetterAIInfoTerrain : InfoTerrain
+    {
+        public List<int> maiBiomePoints = new List<int>();
+        public override void ReadData(XmlNode node, Infos infos)
         {
-            //new stuff here
-            public int miMaxCityCount = 0;
-            public override void ReadData(XmlNode node, Infos infos)
-            {
-                base.ReadData(node, infos);
-                infos.readInt(node, "iMaxCityCount", ref miMaxCityCount);
-
-            }
+            base.ReadData(node, infos);
+            infos.readIntsByType(node, "aiBiomePoints", ref maiBiomePoints, ((BetterAIInfos)infos).cityBiomesNum());
         }
-
-        public class BetterAIInfoTerrain : InfoTerrain
-        {
-            public List<int> maiBiomePoints = new List<int>();
-            public override void ReadData(XmlNode node, Infos infos)
-            {
-                base.ReadData(node, infos);
-                infos.readIntsByType(node, "aiBiomePoints", ref maiBiomePoints, ((BetterAIInfos)infos).cityBiomesNum());
-            }
-        }
+    }
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                         END ###
   ##############################################*/
 
-
-        public class BetterAIInfoEffectUnit : InfoEffectUnit
-        {
+    //InfoBase.cs, line 1657
+    public class BetterAIInfoEffectUnit : InfoEffectUnit
+    {
 
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-            public bool mbAmphibious = false;
+        public bool mbAmphibious = false;
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
   ##############################################*/
@@ -234,13 +310,13 @@ namespace BetterAI
   ### Tile-based Combat Modifiers        END ###
   ##############################################*/
 
-            public override void ReadData(XmlNode node, Infos infos)
-            {
-                base.ReadData(node, infos);
+        public override void ReadData(XmlNode node, Infos infos)
+        {
+            base.ReadData(node, infos);
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-                infos.readBool(node, "bAmphibious", ref mbAmphibious);
+            infos.readBool(node, "bAmphibious", ref mbAmphibious);
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
   ##############################################*/
@@ -263,53 +339,64 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Tile-based Combat Modifiers        END ###
   ##############################################*/
-            }
-
         }
+
+    }
 
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/
-        public class BetterAIInfoCourtier : InfoCourtier
+    //InfoBase.cs, line 1086
+    public class BetterAIInfoCourtier : InfoCourtier
+    {
+        public List<TraitType> maeAdjectives = new List<TraitType>();
+        public bool mbStateReligion = false; //will automatically get a Religion
+        public bool mbNotRandomCourtier = false; //when true, a Courtier will never randonly get this type
+        public override void ReadData(XmlNode node, Infos infos)
         {
-            public List<TraitType> maeAdjectives = new List<TraitType>();
-            public bool mbStateReligion = false; //will automatically get a Religion
-            public bool mbNotRandomCourtier = false; //when true, a Courtier will never randonly get this type
-            public override void ReadData(XmlNode node, Infos infos)
-            {
-                base.ReadData(node, infos);
-                infos.readTypes(node, "aeAdjectives", ref maeAdjectives);
-                infos.readBool(node, "bStateReligion", ref mbStateReligion);
-                infos.readBool(node, "bNotRandomCourtier", ref mbNotRandomCourtier);
-            }
+            base.ReadData(node, infos);
+            infos.readTypes(node, "aeAdjectives", ref maeAdjectives);
+            infos.readBool(node, "bStateReligion", ref mbStateReligion);
+            infos.readBool(node, "bNotRandomCourtier", ref mbNotRandomCourtier);
         }
+    }
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers    END ###
   ##############################################*/
 
+    public class BetterAIInfoUnit : InfoUnit
+    {
 /*####### Better Old World AI - Base DLL #######
-  ### City Biome                       START ###
+  ### Fix ZOC display                  START ###
   ##############################################*/
-        public class InfoCityBiome : InfoBase
-        {
-            public CityBiomeType meType { get { return (CityBiomeType)miType; } }
-            public TextType mName = TextType.NONE;
-            public override void ReadData(XmlNode node, Infos infos)
-            {
-                infos.readType(node, "Name", ref mName);
-            }
-        }
+        public bool bHasIngoreZOCBlocker = false;
+        public List<EffectUnitType> maeBlockZOCEffectUnits = new List<EffectUnitType>();
 /*####### Better Old World AI - Base DLL #######
-  ### City Biome                         END ###
+  ### Fix ZOC display                    END ###
   ##############################################*/
-
-
     }
 
 
 /*####### Better Old World AI - Base DLL #######
+  ### City Biome                       START ###
+  ##############################################*/
+    public class InfoCityBiome : InfoBase
+    {
+        public CityBiomeType meType { get { return (CityBiomeType)miType; } }
+        public TextType mName = TextType.NONE;
+        public override void ReadData(XmlNode node, Infos infos)
+        {
+            infos.readType(node, "Name", ref mName);
+        }
+    }
+/*####### Better Old World AI - Base DLL #######
+  ### City Biome                         END ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
   ### [multiple]                       START ###
   ##############################################*/
+    //InfoBase.cs, line 6378
     public class BetterAIInfoGlobals : InfoGlobals
     {
         public int BAI_WORKERLIST_EXTRA_SHOWALWAYS = 0; //for Worker Improvement Valid List Mod
@@ -322,7 +409,6 @@ namespace BetterAI
         public int BAI_SHOW_RESOURCE_TILE_TOTAL_COUNT = 0;
         public int BAI_SHOW_RESOURCE_TILE_COUNT = 0;
         public int BAI_SHOW_RESOURCE_TILE_COORDINATES = 0;
-        //public bool BAI_ANY_RESOURCE_TILE_INFO = false;
         public int BAI_SWAP_UNIT_FATIGUE_COST = 0;
         public int BAI_ENLIST_NO_FAMILY = 0;
         //override for more variables
@@ -343,7 +429,6 @@ namespace BetterAI
             BAI_SHOW_RESOURCE_TILE_TOTAL_COUNT = infos.getGlobalInt("BAI_SHOW_RESOURCE_TILE_TOTAL_COUNT");
             BAI_SHOW_RESOURCE_TILE_COUNT = infos.getGlobalInt("BAI_SHOW_RESOURCE_TILE_COUNT");
             BAI_SHOW_RESOURCE_TILE_COORDINATES = infos.getGlobalInt("BAI_SHOW_RESOURCE_TILE_COORDINATES");
-            //BAI_ANY_RESOURCE_TILE_INFO = ((BAI_SHOW_RESOURCE_TILE_TOTAL_COUNT + BAI_SHOW_RESOURCE_TILE_COUNT + BAI_SHOW_RESOURCE_TILE_COORDINATES) > 0);
 
             BAI_SWAP_UNIT_FATIGUE_COST = infos.getGlobalInt("BAI_SWAP_UNIT_FATIGUE_COST");
             BAI_ENLIST_NO_FAMILY = infos.getGlobalInt("BAI_ENLIST_NO_FAMILY");
