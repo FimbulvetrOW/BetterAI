@@ -22,6 +22,8 @@ namespace BetterAI
 {
     public class BetterAICharacter : Character
     {
+
+        //lines 7627-7651
         public override void generateRatingsCourtier(CourtierType eCourtier)
         {
             BetterAIInfoCourtier eInfoCourtier = ((BetterAIInfoCourtier)infos().courtier(eCourtier));

@@ -36,6 +36,9 @@ namespace BetterAI
 
         protected virtual void calculateDerivativeInfo()
         {
+/*####### Better Old World AI - Base DLL #######
+  ### Fix ZOC display                  START ###
+  ##############################################*/
             for (EffectUnitType eLoopEffectUnit = 0; eLoopEffectUnit < effectUnitsNum(); eLoopEffectUnit++)
             {
                 if (effectUnit(eLoopEffectUnit).maeUnitTraitZOC.Count > 0)
@@ -63,6 +66,10 @@ namespace BetterAI
                     }
                 }
             }
+/*####### Better Old World AI - Base DLL #######
+  ### Fix ZOC display                    END ###
+  ##############################################*/
+
         }
 
 /*####### Better Old World AI - Base DLL #######

@@ -88,7 +88,7 @@ namespace BetterAI
         }
 
         //500 lines of copy-paste START
-        //lines 19667-20114
+        //lines 19846-20293
         public override TextBuilder buildImprovementBreakdown(TextBuilder builder, ImprovementType eImprovement, SpecialistType eSpecialist, Tile pTile, ClientManager pManager)
         {
             Game pGame = pManager.GameClient;
@@ -104,7 +104,7 @@ namespace BetterAI
                 int iTotalOutput = pGame.tileYieldOutputModified(eImprovement, eSpecialist, eLoopYield, pTile, true);
                 if (iTotalOutput != 0)
                 {
-                    builder.AddTEXT("TEXT_HELPTEXT_YIELD_PER_YEAR", buildYieldValueIconLinkVariable(eLoopYield, iTotalOutput, true, false, Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+                    builder.AddTEXT("TEXT_HELPTEXT_YIELD_PER_YEAR", buildYieldValueIconLinkVariable(eLoopYield, iTotalOutput, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
 
                     bool bShowModifiers = false;
 
@@ -566,7 +566,7 @@ namespace BetterAI
         //copy-paste END
 
         //1k lines of copy-paste START
-        //lines 20157-21137
+        //lines 20336-21316
         public override TextBuilder buildImprovementHelp(TextBuilder builder, ImprovementType eImprovement, Tile pTile, ClientManager pManager, bool bName = true, bool bCosts = true, bool bDetails = true, bool bEncyclopedia = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.NONE)
         {
             using (new UnityProfileScope("HelpText.buildImprovementHelp"))
@@ -691,7 +691,7 @@ namespace BetterAI
                                     infos().Helpers.yieldOutputImprovement(eImprovement, eLoopYield, ResourceType.NONE, pGame, ref iOutput);
                                     if (iOutput != 0)
                                     {
-                                        builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
+                                        builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                     }
                                 }
                             }
@@ -703,7 +703,7 @@ namespace BetterAI
                                     int iOutput = infos().improvement(eImprovement).maiYieldConsumption[(int)eLoopYield];
                                     if (iOutput != 0)
                                     {
-                                        builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
+                                        builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                     }
                                 }
                             }
@@ -1176,7 +1176,7 @@ namespace BetterAI
                                 int iOutput = infos().improvement(eImprovement).maiAdjacentWonderYieldOutput[(int)eLoopYield];
                                 if (iOutput != 0)
                                 {
-                                    subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
+                                    subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                 }
                             }
                         }
@@ -1188,7 +1188,7 @@ namespace BetterAI
                                 int iOutput = infos().improvement(eImprovement).maiAdjacentResourceYieldOutput[(int)eLoopYield];
                                 if (iOutput != 0)
                                 {
-                                    subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
+                                    subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                 }
                             }
                         }
@@ -1200,7 +1200,7 @@ namespace BetterAI
                                 int iOutput = infos().improvement(eImprovement).maiTradeNetworkYieldOutput[(int)eLoopYield];
                                 if (iOutput != 0)
                                 {
-                                    subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
+                                    subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                 }
                             }
                         }
@@ -1214,7 +1214,7 @@ namespace BetterAI
                                     int iOutput = infos().improvement(eImprovement).maaiAdjacentImprovementClassYield[eLoopImprovementClass, eLoopYield];
                                     if (iOutput != 0)
                                     {
-                                        subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
+                                        subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                     }
                                 }
                             }
@@ -1234,7 +1234,7 @@ namespace BetterAI
                                             infos().Helpers.yieldOutputResource(eImprovementClass, eLoopYield, eLoopResource, ref iValue);
                                             if (iValue != 0)
                                             {
-                                                subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, true, false, Constants.YIELDS_MULTIPLIER));
+                                                subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                             }
                                         }
 /*####### Better Old World AI - Base DLL #######
@@ -1258,7 +1258,7 @@ namespace BetterAI
                                     int iOutput = infos().improvementClass(eImprovementClass).maiAdjacentResourceYieldOutput[(int)eLoopYield];
                                     if (iOutput != 0)
                                     {
-                                        subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
+                                        subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                     }
                                 }
                             }
@@ -1272,7 +1272,7 @@ namespace BetterAI
                                         int iOutput = infos().improvement(eImprovement).maaiTerrainYieldOutput[eLoopTerrain, eLoopYield];
                                         if (iOutput != 0)
                                         {
-                                            subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, true, false, Constants.YIELDS_MULTIPLIER));
+                                            subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                         }
                                     }
                                 }
@@ -1285,7 +1285,7 @@ namespace BetterAI
                                     int iValue = infos().improvement(eImprovement).maaiTerrainYieldModifier[eLoopTerrain, eLoopYield];
                                     if (iValue != 0)
                                     {
-                                        subText.Add(buildColonSpaceOne(buildTerrainLinkVariable(eLoopTerrain), buildYieldValueIconLinkVariable(eLoopYield, iValue, true, true)));
+                                        subText.Add(buildColonSpaceOne(buildTerrainLinkVariable(eLoopTerrain), buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, bPercent: true)));
                                     }
                                 }
                             }
@@ -1297,7 +1297,7 @@ namespace BetterAI
                                     int iValue = infos().improvement(eImprovement).maaiHeightYieldModifier[eLoopHeight, eLoopYield];
                                     if (iValue != 0)
                                     {
-                                        subText.Add(buildColonSpaceOne(buildHeightLinkVariable(eLoopHeight), buildYieldValueIconLinkVariable(eLoopYield, iValue, true, true)));
+                                        subText.Add(buildColonSpaceOne(buildHeightLinkVariable(eLoopHeight), buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, bPercent: true)));
                                     }
                                 }
                             }
@@ -1310,7 +1310,7 @@ namespace BetterAI
                                 int iValue = infos().improvement(eImprovement).maaiAdjacentHeightYieldModifier[eLoopHeight, eLoopYield];
                                 if (iValue != 0)
                                 {
-                                    subText.AddTEXT("TEXT_HELPTEXT_ADJACENT_COLON", buildHeightLinkVariable(eLoopHeight), buildYieldValueIconLinkVariable(eLoopYield, iValue, true, true));
+                                    subText.AddTEXT("TEXT_HELPTEXT_ADJACENT_COLON", buildHeightLinkVariable(eLoopHeight), buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, bPercent: true));
                                 }
                             }
                         }
@@ -1328,7 +1328,7 @@ namespace BetterAI
                             int iValue = infos().improvement(eImprovement).maiYieldFreshWaterModifier[(int)eLoopYield];
                             if (iValue != 0)
                             {
-                                subText.Add(buildColonSpaceOne(buildFreshWaterLinkVariable(), buildYieldValueIconLinkVariable(eLoopYield, iValue, true, true)));
+                                subText.Add(buildColonSpaceOne(buildFreshWaterLinkVariable(), buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, bPercent: true)));
                             }
                         }
 
@@ -1345,7 +1345,7 @@ namespace BetterAI
                             int iValue = infos().improvement(eImprovement).maiYieldRiverModifier[(int)eLoopYield];
                             if (iValue != 0)
                             {
-                                subText.Add(buildColonSpaceOne(buildRiverLinkVariable(), buildYieldValueIconLinkVariable(eLoopYield, iValue, true, true)));
+                                subText.Add(buildColonSpaceOne(buildRiverLinkVariable(), buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, bPercent: true)));
                             }
                         }
 
@@ -1373,7 +1373,7 @@ namespace BetterAI
                                         {
                                             if (bEncyclopedia || (pActivePlayer == null || pActivePlayer.canEverHaveEffectCity(eLoopEffectCity)))
                                             {
-                                                yieldsList.AddItem(buildYieldValueIconLinkVariable(eLoopYield, iValue, true, false, Constants.YIELDS_MULTIPLIER));
+                                                yieldsList.AddItem(buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                             }
                                         }
                                     }
@@ -1424,7 +1424,7 @@ namespace BetterAI
                                                 int iValue = infos().improvementClass(eImprovementClass).maaiTheologyYieldOutput[eLoopTheology, eLoopYield];
                                                 if (iValue != 0)
                                                 {
-                                                    yieldsList.AddItem(buildYieldValueIconLinkVariable(eLoopYield, iValue, true, false, Constants.YIELDS_MULTIPLIER));
+                                                    yieldsList.AddItem(buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                                 }
                                             }
 
@@ -1579,7 +1579,7 @@ namespace BetterAI
 
 
         //1k lines of copy-paste END
-        //lines 21172-21578
+        //lines 21351-21757
         public override void buildImprovementRequiresHelp(List<TextVariable> lRequirements, ImprovementType eImprovement, Game pGame, Player pActivePlayer, Tile pTile, bool bUpgradeImprovement = false)
         {
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
@@ -2156,7 +2156,7 @@ namespace BetterAI
         }
 
         //copy-paste START
-        //lines 21580-21935
+        //lines 21759-22114
         public override TextBuilder buildUnitTypeHelp(TextBuilder builder, UnitType eUnit, City pCity, Player pPlayer, Game pGame, Player pActivePlayer, bool bName = true, bool bCosts = true, bool bStats = true, bool bDetails = true)
         {
             using (new UnityProfileScope("HelpText.buildUnitTypeHelp"))
@@ -2408,7 +2408,7 @@ namespace BetterAI
                                 int iValue = (infos().unit(eUnit).maiYieldConsumption[(int)eLoopYield] * Constants.YIELDS_MULTIPLIER);
                                 if (iValue != 0)
                                 {
-                                    builder.Add(buildYieldValueIconLinkVariable(eLoopYield, -(iValue), true, false, Constants.YIELDS_MULTIPLIER));
+                                    builder.Add(buildYieldValueIconLinkVariable(eLoopYield, -(iValue), bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                 }
                             }
                         }
@@ -2422,7 +2422,7 @@ namespace BetterAI
                                     int iValue = infos().unit(eUnit).maaiImprovementYieldRate[eLoopImprovement, eLoopYield];
                                     if (iValue != 0)
                                     {
-                                        builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, true, false, Constants.YIELDS_MULTIPLIER));
+                                        builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                     }
                                 }
                             }
@@ -2529,7 +2529,7 @@ namespace BetterAI
         //copy-paste END
 
         //copy-paste START
-        //lines 22105-22369
+        //lines 22284-22584
         public override void buildUnitTooltip(Unit pUnit, ClientManager pManager, UIUnitTooltipData outUnitData)
         {
             using (new UnityProfileScope("HelpText.buildUnitTooltip"))
@@ -2795,7 +2795,7 @@ namespace BetterAI
                                 int iValue = pUnit.yieldConsumption(eLoopYield);
                                 if (iValue != 0)
                                 {
-                                    yieldListBuilder.Add(buildUnitConsumesLinkVariable(buildYieldIconTextVariable(eLoopYield, -(iValue), true, false, Constants.YIELDS_MULTIPLIER), pUnit));
+                                    yieldListBuilder.Add(buildUnitConsumesLinkVariable(buildYieldIconTextVariable(eLoopYield, -(iValue), bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER), pUnit));
                                 }
                             }
                         }
@@ -2810,7 +2810,7 @@ namespace BetterAI
         }
         //copy-paste END
 
-        //lines 22864-23513
+        //lines 23043-23692
         public override TextBuilder buildEffectUnitHelp(TextBuilder builder, EffectUnitType eEffectUnit, Game pGame, bool bSkipIcons = false, bool bRightJustify = false)
         {
             builder = base.buildEffectUnitHelp(builder, eEffectUnit, pGame, bSkipIcons, bRightJustify);
@@ -2867,10 +2867,10 @@ namespace BetterAI
         // and I assume a widget also needs UI components
 
         //120 lines copy&paste START
-        //lines 37104-37230
+        //lines 37437-37563
         public override TextBuilder buildResourceHelp(TextBuilder builder, ResourceType eResource, Game pGame, Player pPlayer, Tile pTile, Player pActivePlayer, bool bName = true)
         {
-            using (new UnityProfileScope("HelpText.buildResourceHelp"))
+            //using (new UnityProfileScope("HelpText.buildResourceHelp"))
             {
                 City pCityTerritory = pTile?.cityTerritory();
 
@@ -2904,7 +2904,7 @@ namespace BetterAI
                             int iValue = infos().resource(eResource).maiYieldNoImprovement[(int)eLoopYield];
                             if (iValue > 0)
                             {
-                                commaList.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, true, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                commaList.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER));
                             }
                         }
                     }
@@ -2927,7 +2927,7 @@ namespace BetterAI
                             infos().Helpers.yieldOutputResource(eLoopImprovementClass, eLoopYield, eResource, ref iValue);
                             if (iValue != 0)
                             {
-                                builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, true, false, Constants.YIELDS_MULTIPLIER));
+                                builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER));
                                 bAdded = true;
                             }
                         }
@@ -3307,7 +3307,7 @@ namespace BetterAI
 
 
         //copy-paste START
-        //lines 39200-39240
+        //lines 39549-39589
         public override TextBuilder buildUrbanHelp(TextBuilder builder)
         {
             using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
@@ -3369,7 +3369,7 @@ namespace BetterAI
         //fuck me, structs can't inherit
         //I can't overrride a struct but at least inside the derived BetterAIHelpText class I can call this for proper japanese list generation
 
-        //lines 43713-43836
+        //lines 44213-44336
         new public struct CommaListVariableGenerator
         {
             public enum ListType

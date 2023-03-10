@@ -74,6 +74,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###
   ##############################################*/
+        //lines 16082-16085
         public override bool isCityMaxReached()
         {
             return ((getNumCities() + countFoundUnitsAndBuilds()) >= getCityMax());
@@ -82,6 +83,7 @@ namespace BetterAI
   ### Limit Settler Numbers again        END ###
   ##############################################*/
         //copy-paste START
+        //canBuildUnit: lines 16983-17022
         public virtual bool canContinueBuildUnit(UnitType eUnit)
         {
             if (!canEverBuildUnit(eUnit))
@@ -133,6 +135,7 @@ namespace BetterAI
         }
         //copy-paste END
 
+        //lines 17120-17138
         public override bool isImprovementUnlocked(ImprovementType eImprovement)
         {
 
@@ -192,6 +195,7 @@ namespace BetterAI
   ##############################################*/
         }
 
+        //lines 17139-17203
         public override bool canStartImprovement(ImprovementType eImprovement, Tile pTile, bool bTestTech = true, bool bForceImprovement = false)
         {
             if (base.canStartImprovement(eImprovement, pTile, bTestTech, bForceImprovement))
@@ -246,6 +250,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/
+        //lines 18789-18806
         protected override Character addCourtier(CourtierType eType, GenderType eGender, FamilyType eFamily, Player pFromPlayer = null)
         {
             if (eType == CourtierType.NONE)

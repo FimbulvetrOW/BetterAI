@@ -27,7 +27,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
-        public CityBiomeType getCityBiome()
+        public virtual CityBiomeType getCityBiome()
         {
             BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
 
@@ -37,6 +37,8 @@ namespace BetterAI
             }
             else return CityBiomeType.NONE;
         }
+
+        //lines 3040-3084
         public override void setTerrain(TerrainType eNewValue)
         {
             TerrainType eOldTerrain = getTerrain();
@@ -54,6 +56,7 @@ namespace BetterAI
   ### City Biome                         END ###
   ##############################################*/
 
+        //canHaveImprovement: lines 4783-5076
         public virtual bool canCityTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
@@ -94,6 +97,8 @@ namespace BetterAI
             }
             return true;
         }
+
+        //canHaveImprovement: lines 4783-5076
         public virtual bool canGeneralTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             if (getTerrain() == TerrainType.NONE)
@@ -212,6 +217,7 @@ namespace BetterAI
             return true;
         }
 
+        //lines 4783-5076
         public override bool canHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             //split into 3:

@@ -23,6 +23,7 @@ namespace BetterAI
         {
         }
 
+        //lines 1016-1023
         public override void sendBuildQueue(City pCity, int iOldSlot, int iNewSlot)
         {
 /*####### Better Old World AI - Base DLL #######

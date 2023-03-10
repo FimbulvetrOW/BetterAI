@@ -23,6 +23,7 @@ namespace BetterAI
         {
         }
 
+        //lines 17449-17556
         protected override void updateQueuePanel()
         {
             base.updateQueuePanel();
@@ -56,8 +57,9 @@ namespace BetterAI
             }
         }
 
+        //lines 
         //Intercept and redirect illegal queue moves at doWidgetAction
-        public override void doWidgetAction(WidgetData pWidget)
+        public override bool doWidgetAction(WidgetData pWidget)
         {
             ItemType eType = pWidget.GetWidgetType();
             if (eType == ItemType.BUILD_QUEUE)
@@ -71,6 +73,7 @@ namespace BetterAI
                         if (pWidget.GetDataInt(1) == 1)
                         {
                             //do nothing, this is an illegal move
+                            return false;
                         }
                         else
                         {
@@ -82,16 +85,18 @@ namespace BetterAI
                         mManager.sendBuildQueue(pCity, pWidget.GetDataInt(1), 0);
                     }
                 }
+                return true;
             }
             else
 /*####### Better Old World AI - Base DLL #######
   ### Alternative Hurry                  END ###
   ##############################################*/
             {
-                base.doWidgetAction(pWidget);
+                return base.doWidgetAction(pWidget);
             }
         }
 
+        //lines 16954-17050
         protected override void updateCityListPanel()
         {
             if (currentCityListSort == CityListSortType.CULTURE_LEVEL)
@@ -119,7 +124,7 @@ namespace BetterAI
                                 yieldHeader.SetTEXT("Data", TextManager, HelpText.buildCommaData(TEXTVAR((int)CityListSortType.YIELD), TEXTVAR((int)eLoopYield)));
                                 yieldHeader.SetKey("Icon", Infos.yield(eLoopYield).mzIconName);
 
-                                if (Infos.yield(eLoopYield).meAddToYield != YieldType.NONE)
+                                if (Infos.yield(eLoopYield).meSubtractFromYield != YieldType.NONE)
                                 {
                                     yieldHeader.IsActive = false;
                                 }

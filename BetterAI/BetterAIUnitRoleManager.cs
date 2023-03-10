@@ -36,7 +36,7 @@ namespace BetterAI
                     return false;
                 }
 
-                //lines 414
+                //lines 414-455
                 public override void reset(Player player, Unit.MovePriority eMovePriority, int saveOrders)
                 {
                     base.reset(player, eMovePriority, saveOrders);
@@ -83,15 +83,15 @@ namespace BetterAI
 
                 //line 5036
                 //copy-paste START
-                protected override void getUnitCitySiteGuardValues(PathFinder pPathfinder, Unit pUnit, int iMaxSteps)
+                protected override void getUnitCitySiteGuardValues(PathFinder pPathfinder, Unit pUnit, int iMaxSteps, int iMaxTargets)
                 {
                     //using var profileScope = new UnityProfileScope("UnitRoleManager.getUnitCitySiteGuardValues");
-                    base.getUnitCitySiteGuardValues(pPathfinder, pUnit, iMaxSteps);
+                    base.getUnitCitySiteGuardValues(pPathfinder, pUnit, iMaxSteps, iMaxTargets * 2);
 
 /*####### Better Old World AI - Base DLL #######
   ### Don't defend free City Sites     START ###
   ##############################################*/
-                    //at the start of the game with your only military unit, but allow using Militia for defending free city sites.
+                    //don't defend starting tiles at the start of the game with your only military unit, but allow using Militia for defending free city sites.
                     if (!(AI.isEmergencyUnit(pUnit.getType())) || (Game.getTurn() >= ((Game.isGameOption(Infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? BAI_AI.AI_PLAY_TO_WIN_GRACE_TURNS : BAI_AI.AI_GRACE_TURNS)))
                     {
                         return;
@@ -183,7 +183,7 @@ namespace BetterAI
                                 }
                                 else
                                 {
-                                    iSteps = iMaxSteps + 1;
+                                    continue;
                                 }
                                 TargetUnitValue zValue = new TargetUnitValue(iValue);
                                 zValue.miAttackPriority = (int)iPriority;
