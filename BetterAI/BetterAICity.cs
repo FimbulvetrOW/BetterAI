@@ -80,6 +80,199 @@ namespace BetterAI
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                START ###
+  ##############################################*/
+        public virtual bool isDiscontent()
+        {
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_DISCONTENT_LEVEL_ZERO == 2)
+            {
+                return (getHappinessLevel() < 0);
+            }
+            else
+            {
+                return (getHappinessLevel() <= 0);
+            }
+        }
+
+
+        //lines 4268-4278
+        public override int getYieldTurnsLeft(YieldType eYield)
+        {
+
+            if ((eYield == infos().Globals.HAPPINESS_YIELD) && isDiscontent())
+
+            {
+                return infos().Helpers.turnsLeft(getYieldThresholdWhole(eYield), getYieldProgress(eYield), -(calculateCurrentYield(eYield, true)));
+            }
+            else
+            {
+                return infos().Helpers.turnsLeft(getYieldThresholdWhole(eYield), getYieldProgress(eYield), calculateCurrentYield(eYield, true));
+            }
+        }
+
+        //lines 4287-4395
+        protected override void setYieldProgress(YieldType eIndex, int iNewValue)
+        {
+            if (eIndex == infos().Globals.HAPPINESS_YIELD)
+            {
+
+                if (infos().yield(eIndex).mbFloor)
+                {
+                    iNewValue = Math.Max(0, iNewValue);
+                }
+
+                if (getYieldProgress(eIndex) != iNewValue)
+                {
+                    MohawkAssert.IsFalse(infos().yield(eIndex).mbGlobal);
+                    MohawkAssert.IsTrue(infos().yield(eIndex).meSubtractFromYield == YieldType.NONE);
+
+                    loadYieldProgress(eIndex, iNewValue);
+
+                    int iThreshold = getYieldThreshold(eIndex);
+
+                    if (getYieldProgress(eIndex) >= iThreshold)
+                    {
+
+                        if (!(isDiscontent()))
+                        {
+                            changeHappinessLevel(1);
+
+                            player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_HAPPINESS_CHANGE_LOG_DATA", HelpText.buildSignedTextVariable(1), HelpText.buildCityLinkVariable(this, player())), GameLogType.CITY_EVENT, getTileID());
+                        }
+                        else
+                        {
+                            changeHappinessLevel(-1);
+
+                            player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_HAPPINESS_CHANGE_LOG_DATA", HelpText.buildSignedTextVariable(-1), HelpText.buildCityLinkVariable(this, player())), GameLogType.CITY_WARNING, getTileID());
+                        }
+
+                        setYieldProgress(eIndex, (getYieldProgress(eIndex) - iThreshold));
+                    }
+                    else if (getYieldProgress(eIndex) < 0)
+                    {
+                        bool bFlipped = false;
+
+
+                        if (!(isDiscontent()))
+                        {
+                            changeHappinessLevel(-1);
+
+                            player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_DISCONTENT_CHANGE_LOG_DATA", HelpText.buildSignedTextVariable(1), HelpText.buildCityLinkVariable(this, player())), GameLogType.CITY_WARNING, getTileID());
+
+
+                            if (isDiscontent())
+
+                            {
+                                bFlipped = true;
+                            }
+                        }
+                        else
+                        {
+                            changeHappinessLevel(1);
+
+                            player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_DISCONTENT_CHANGE_LOG_DATA", HelpText.buildSignedTextVariable(-1), HelpText.buildCityLinkVariable(this, player())), GameLogType.CITY_EVENT, getTileID());
+
+
+                            if (!(isDiscontent()))
+
+                            {
+                                bFlipped = true;
+                            }
+                        }
+
+                        if (bFlipped)
+                        {
+                            setYieldProgress(eIndex, -(getYieldProgress(eIndex)));
+                        }
+                        else
+                        {
+                            setYieldProgress(eIndex, (getYieldThreshold(eIndex) + getYieldProgress(eIndex)));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                base.setYieldProgress(eIndex, iNewValue);
+            }
+        }
+
+        //lines 4400-4422
+        public override void changeYieldProgress(YieldType eIndex, int iChange)
+        {
+            if (iChange != 0)
+            {
+                YieldType eYield = eIndex;
+
+                if (infos().yield(eIndex).meSubtractFromYield != YieldType.NONE)
+                {
+                    eYield = infos().yield(eIndex).meSubtractFromYield;
+                    iChange *= -1;
+                }
+
+                if (eYield == infos().Globals.HAPPINESS_YIELD)
+                {
+
+
+                    if (isDiscontent())
+                    {
+                        iChange *= -1;
+                    }
+                }
+
+                setYieldProgress(eYield, getYieldProgress(eYield) + iChange);
+            }
+        }
+
+        //lines 5518-5548
+        public override void changeHappinessLevel(int iChange)
+        {
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_DISCONTENT_LEVEL_ZERO > 0)
+            {
+                if (iChange > 0)
+                {
+                    for (int iI = 0; iI < iChange; iI++)
+                    {
+
+                    //if (getHappinessLevel() == -1)
+                    //{
+                    //    setHappinessLevel(1);
+                    //}
+                    //else
+
+                        {
+                            setHappinessLevel(getHappinessLevel() + 1);
+                        }
+                    }
+                }
+                else if (iChange < 0)
+                {
+                    for (int iI = 0; iI > iChange; iI--)
+                    {
+
+                    //if (getHappinessLevel() == 1)
+                    //{
+                    //    setHappinessLevel(-1);
+                    //}
+                    //else
+
+                        {
+                            setHappinessLevel(getHappinessLevel() - 1);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                base.changeHappinessLevel(iChange);
+            }
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                  END ###
+  ##############################################*/
+
+
+/*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###
   ##############################################*/
         //copy & paste START
@@ -953,5 +1146,8 @@ namespace BetterAI
                 //end base game code
             }
         }
+
+
+
     }
 }

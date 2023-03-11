@@ -418,6 +418,7 @@ namespace BetterAI
         public int BAI_SHOW_RESOURCE_TILE_COORDINATES = 0;
         public int BAI_SWAP_UNIT_FATIGUE_COST = 0;
         public int BAI_ENLIST_NO_FAMILY = 0;
+        public int BAI_DISCONTENT_LEVEL_ZERO = 0;
         //override for more variables
         public override void ReadData(Infos infos)
         {
@@ -439,6 +440,8 @@ namespace BetterAI
 
             BAI_SWAP_UNIT_FATIGUE_COST = infos.getGlobalInt("BAI_SWAP_UNIT_FATIGUE_COST");
             BAI_ENLIST_NO_FAMILY = infos.getGlobalInt("BAI_ENLIST_NO_FAMILY");
+
+            BAI_DISCONTENT_LEVEL_ZERO = infos.getGlobalInt("BAI_DISCONTENT_LEVEL_ZERO");
         }
     }
 /*####### Better Old World AI - Base DLL #######
