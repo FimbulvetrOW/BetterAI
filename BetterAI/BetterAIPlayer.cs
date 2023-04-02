@@ -79,9 +79,50 @@ namespace BetterAI
         {
             return ((getNumCities() + countFoundUnitsAndBuilds()) >= getCityMax());
         }
-/*####### Better Old World AI - Base DLL #######
-  ### Limit Settler Numbers again        END ###
-  ##############################################*/
+        /*####### Better Old World AI - Base DLL #######
+          ### Limit Settler Numbers again        END ###
+          ##############################################*/
+
+        //removed in 1.0.66355
+        protected virtual int countFoundUnitsAndBuilds()
+        {
+            using (new UnityProfileScope("Player.countFoundUnitsAndBuilds"))
+            {
+                int iCount = 0;
+
+                foreach (int iCityID in getCities())
+                {
+                    City pLoopCity = game().city(iCityID);
+
+                    for (int iIndex = 0; iIndex < pLoopCity.getBuildCount(); ++iIndex)
+                    {
+                        CityQueueData pLoopBuild = pLoopCity.getBuildQueueNode(iIndex);
+
+                        if ((pLoopBuild.meBuild == infos().Globals.UNIT_BUILD) && infos().unit((UnitType)(pLoopBuild.miType)).mbFound)
+                        {
+                            iCount++;
+                        }
+                    }
+                }
+
+                foreach (int iUnitID in getUnits())
+                {
+                    Unit pUnit = game().unit(iUnitID);
+
+                    if ((pUnit != null) && pUnit.isAlive())
+                    {
+                        if (pUnit.info().mbFound)
+                        {
+                            iCount++;
+                        }
+                    }
+                }
+
+                return iCount;
+            }
+        }
+
+
         //copy-paste START
         //canBuildUnit: lines 16983-17022
         public virtual bool canContinueBuildUnit(UnitType eUnit)

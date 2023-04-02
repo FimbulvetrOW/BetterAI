@@ -233,17 +233,7 @@ namespace BetterAI
 
                             currentProgress /= yieldThreshold;
 
-                            cityProgressYieldTag.SetTEXT("FillAmounts", TextManager, HelpText.buildCommaData(TEXTVAR(currentProgress, 0, 2, NumberFormatOptions.CULTURE_INVARIANT), TEXTVAR(nextTurnProgress, 0, 2, NumberFormatOptions.CULTURE_INVARIANT)));
-
-                            using (var yieldFillColorsScope = CollectionCache.GetStringBuilderScoped())
-                            {
-                                Color eColor = ColorManager.GetColor(Infos.yield((bDiscontent) ? Infos.Globals.DISCONTENT_YIELD : eLoopYield).meColor);
-                                Color eNextColor = Color.Lerp(eColor, bDiscontent ? Color.white : Color.black, 0.5f);
-                                StringBuilder yieldFillColors = yieldFillColorsScope.Value;
-                                MohawkColorUtility.ToHtmlStringRGBA(yieldFillColors, eColor, true).Append(",");
-                                MohawkColorUtility.ToHtmlStringRGBA(yieldFillColors, eNextColor, true);
-                                cityProgressYieldTag.SetKey("FillColors", yieldFillColors);
-                            }
+                            setProgressBarFillData(cityProgressYieldTag, currentProgress, nextTurnProgress, Infos.yield((bDiscontent) ? Infos.Globals.DISCONTENT_YIELD : eLoopYield).meColor);
 
                             cityProgressYieldTag.SetTEXT("Label", TextManager, rateText);
                             using (var yieldDataScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_CITY_YIELD), pSelectedCity.getID().ToStringCached(), eLoopYield.ToStringCached()))
@@ -338,6 +328,169 @@ namespace BetterAI
         }
         //copy-paste END
 
+        //lines 11591-11624
+        public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, bool bDifferentTile, WorkerActionFilter eFilter = WorkerActionFilter.GENERAL)
+        {
+            bool bRunOriginal = true;
+            if (pUnit != null && pTile != null && eFilter == WorkerActionFilter.GENERAL && ((BetterAIInfoGlobals)mManager.Infos.Globals).BAI_WORKERLIST_EXTRA > 0)
+            {
+                bool bWorker = pUnit.isWorker();
+                Player pActivePlayer = mManager.activePlayer();
+                bool bTeamTest = ((pTile.hasOwner()) ? (pTile.owner().getTeam() == pActivePlayer.getTeam() || pTile.owner().getTeam() == TeamType.NONE) : false);
+                bool bQueue = (pUnit.hasQueueList() || mManager.Interfaces.Input.isShiftDown());
+                bool bControl = mManager.Interfaces.Input.isControlDown();
+                bool bImprovedTile = pTile.hasImprovement() || pTile.hasCity()   //also for city center tile, because you can't build any improvement there anyway.
+                    || ((BetterAIInfoGlobals)mManager.Infos.Globals).BAI_WORKERLIST_EXTRA >= 2; //option to always show extra items (Franz)
+                bool bShowExtraImprovements = !bControl && !bQueue && bTeamTest && bImprovedTile;
+                BetterAICity pCityTerritory = (BetterAICity)pTile.cityTerritory();
+                if (bShowExtraImprovements && (pCityTerritory != null))
+                {
+                    bRunOriginal = false;
+
+                    List<ResourceType> cityResources = new List<ResourceType>(); //only those without improvement
+                    {
+                        //make the resource list
+                        foreach (int iTileID in pCityTerritory.getTerritoryTiles())
+                        {
+                            Tile tile = mManager.GameClient.tile(iTileID);
+                            ResourceType tileResource = tile.getResource();
+                            if (tileResource != ResourceType.NONE)
+                            {
+                                //skip tiles with appropriate improvement
+                                ImprovementType tileImprovement = tile.getImprovement();
+                                if (tileImprovement != ImprovementType.NONE)
+                                {
+                                    if (mManager.Infos.Helpers.isImprovementResourceValid(tileImprovement, tileResource))
+                                    {
+                                        continue;
+                                    }
+                                }
+                                bool bAlreadyInList = false;
+                                //check if it's in the list, if not, add it
+                                int iListIndex = 0;
+                                foreach (ResourceType resource in cityResources)
+                                {
+                                    if (resource < tileResource)
+                                    {
+                                        iListIndex++;
+                                        continue;
+                                    }
+                                    else if (resource == tileResource)
+                                    {
+                                        bAlreadyInList = true;
+                                        break;
+                                    }
+                                    else if (resource > tileResource)
+                                    {
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        //should not happen
+                                        iListIndex++;
+                                    }
+                                }
+                                //add at index, so we get a sorted list
+                                if (!bAlreadyInList)
+                                {
+                                    cityResources.Insert(iListIndex, tileResource);
+                                }
+                            }
+                        }
+                    }
+
+                    for (ImprovementType eLoopImprovement = 0; eLoopImprovement < Infos.improvementsNum(); eLoopImprovement++)
+                    {
+                        bool bShowButton = false;
+                        InfoImprovement improvement = Infos.improvement(eLoopImprovement);
+                        if (improvement == null) continue;
+
+                        if (improvement.mbShowAlways && (improvement.mbUrban == pTile.isUrban()))
+                        {
+                            bShowButton = true;
+                        }
+                        else if (pUnit.canBuildImprovement(pTile, eLoopImprovement, pActivePlayer, isBuyGoods(), bTestEnabled: false, bTestOrders: false, bTestGoods: false))
+                        {
+                            bShowButton = true;
+                        }
+                        else
+                        {
+                            if ((pUnit.canBuildImprovementType(eLoopImprovement) && pActivePlayer.canStartImprovement(eLoopImprovement, null)))
+                            {
+                                bool bPrimaryUnlock = true;
+                                if (!(pCityTerritory.canCityHaveImprovement(eLoopImprovement, ref bPrimaryUnlock)))
+                                {
+                                    continue;
+                                }
+
+                                //check valids, including resources (resources have to be in the list)
+                                {
+
+                                    if (!(improvement.mbFreshWaterValid
+                                        || improvement.mbRiverValid
+                                        || improvement.mbCoastLandValid
+                                        || improvement.mbCoastWaterValid
+                                        || improvement.mbCityValid
+                                        || improvement.mbHolyCityValid))
+                                    {
+                                        bool bAnyValid = false;
+                                        for (TerrainType eLoopTerrain = 0; (eLoopTerrain < mManager.Infos.terrainsNum() && !(bAnyValid)); eLoopTerrain++)
+                                        {
+                                            bAnyValid = bAnyValid || improvement.mabTerrainValid[(int)eLoopTerrain];
+                                        }
+
+                                        //height, heightadjacent, vegetation
+                                        for (HeightType eLoopHeight = 0; (eLoopHeight < mManager.Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
+                                        {
+                                            bAnyValid = bAnyValid || improvement.mabHeightValid[(int)eLoopHeight];
+                                        }
+
+                                        for (HeightType eLoopHeight = 0; (eLoopHeight < mManager.Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
+                                        {
+                                            bAnyValid = bAnyValid || improvement.mabHeightAdjacentValid[(int)eLoopHeight];
+                                        }
+
+                                        for (VegetationType eLoopVegetation = 0; (eLoopVegetation < mManager.Infos.vegetationNum() && !(bAnyValid)); eLoopVegetation++)
+                                        {
+                                            bAnyValid = bAnyValid || improvement.mabVegetationValid[(int)eLoopVegetation];
+                                        }
+
+                                        if (!(bAnyValid))
+                                        {
+                                            foreach (ResourceType cityResource in cityResources)
+                                            {
+                                                if (mManager.Infos.Helpers.isImprovementResourceValid(eLoopImprovement, cityResource))
+                                                {
+                                                    bAnyValid = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!bAnyValid)
+                                            {
+                                                continue;
+                                            }
+                                        }
+
+                                    }
+
+                                }
+
+                                bShowButton = true;
+                            }
+                        }
+
+                        if (bShowButton) aeImprovements.Add(eLoopImprovement);
+                    }
+
+                }
+            }
+
+            if (bRunOriginal)
+            {
+                base.GetValidImprovementsForTile(aeImprovements, pTile, pUnit, bDifferentTile, eFilter);
+            }
+        }
+
 
 
         //lines 17449-17556
@@ -353,7 +506,7 @@ namespace BetterAI
 
             int i = 1;
             UIAttributeTag queueTag = ui.GetUIAttributeTag("QueuePanel-Button", i.ToStringCached());
-            if ((((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED_BY_PRODUCTION == 1) && pSelectedCity.getBuildQueueNode(0) != null && (pSelectedCity.getBuildThreshold(pSelectedCity.getBuildQueueNode(0)) == pSelectedCity.getBuildQueueNode(0).miProgress) && (pSelectedCity.getBuildQueueNode(0).miProgress > 0))
+            if ((((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED > 0) && pSelectedCity.getBuildQueueNode(0) != null && pSelectedCity.getBuildQueueNode(0).mbHurried && (pSelectedCity.getBuildQueueNode(0).miProgress > 0))
             {
                 queueTag.SetBool("Arrow-IsActive", false);
             }
@@ -385,7 +538,7 @@ namespace BetterAI
 
                 if (pCity != null)
                 {
-                    if ((((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED_BY_PRODUCTION == 1) && pCity.getBuildQueueNode(0) != null && (pCity.getBuildThreshold(pCity.getBuildQueueNode(0)) == pCity.getBuildQueueNode(0).miProgress) && (pCity.getBuildQueueNode(0).miProgress > 0))
+                    if ((((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED > 0) && pCity.getBuildQueueNode(0) != null && pCity.getBuildQueueNode(0).mbHurried && (pCity.getBuildQueueNode(0).miProgress > 0))
                     {
                         if (pWidget.GetDataInt(1) == 1)
                         {

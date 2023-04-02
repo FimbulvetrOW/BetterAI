@@ -406,8 +406,8 @@ namespace BetterAI
     //InfoBase.cs, line 6378
     public class BetterAIInfoGlobals : InfoGlobals
     {
-        public int BAI_WORKERLIST_EXTRA_SHOWALWAYS = 0; //for Worker Improvement Valid List Mod
-        public int BAI_HURRY_COST_REDUCED_BY_PRODUCTION = 0; //for activating Alternative Hurry
+        public int BAI_WORKERLIST_EXTRA = 0; //for Worker Improvement Valid List Mod
+        public int BAI_HURRY_COST_REDUCED = 0; //for activating Alternative Hurry
         public int BAI_EMBARKING_COST_EXTRA = 0;
         public int BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT = 0;
         public int BAI_AMPHIBIOUS_RIVER_CROSSING_DISCOUNT = 0;
@@ -423,8 +423,8 @@ namespace BetterAI
         public override void ReadData(Infos infos)
         {
             base.ReadData(infos);
-            BAI_WORKERLIST_EXTRA_SHOWALWAYS = infos.getGlobalInt("BAI_WORKERLIST_EXTRA_SHOWALWAYS"); //for Worker Improvement Valid List Mod
-            BAI_HURRY_COST_REDUCED_BY_PRODUCTION = infos.getGlobalInt("BAI_HURRY_COST_REDUCED_BY_PRODUCTION"); //for activating Alternative Hurry
+            BAI_WORKERLIST_EXTRA = infos.getGlobalInt("BAI_WORKERLIST_EXTRA"); //for Worker Improvement Valid List Mod
+            BAI_HURRY_COST_REDUCED = infos.getGlobalInt("BAI_HURRY_COST_REDUCED"); //for activating Alternative Hurry
 
             //for Land Unit Water Movement
             BAI_EMBARKING_COST_EXTRA = infos.getGlobalInt("BAI_EMBARKING_COST_EXTRA");

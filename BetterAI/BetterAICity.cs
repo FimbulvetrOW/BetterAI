@@ -17,6 +17,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using static TenCrowns.ClientCore.ClientUI;
 using static BetterAI.BetterAIInfos;
+using System.Xml;
 
 namespace BetterAI
 {
@@ -93,6 +94,385 @@ namespace BetterAI
                 return (getHappinessLevel() <= 0);
             }
         }
+/*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                  END ###
+  ##############################################*/
+
+        //lines 1056-1418
+        //copy-paste START
+        public override void writeGameXML(XmlWriter pWriter)
+        {
+            pWriter.WriteStartElement("City");
+            pWriter.WriteAttributeString("ID", getID().ToStringCached());
+            pWriter.WriteAttributeString("TileID", getTileID().ToStringCached());
+            pWriter.WriteAttributeString("Player", getPlayerInt().ToStringCached());
+            pWriter.WriteAttributeString("Family", ((hasFamily()) ? family().mzType : Infos.zTYPE_NONE));
+            pWriter.WriteAttributeString("Founded", getFoundedTurn().ToStringCached());
+
+            if (getNameType() != CityNameType.NONE)
+            {
+                pWriter.WriteElementString("NameType", infos().cityName(getNameType()).mzType);
+            }
+            if (!string.IsNullOrEmpty(getCustomName()))
+            {
+                pWriter.WriteElementString("Name", getCustomName());
+            }
+
+            if (hasGovernor())
+            {
+                pWriter.WriteElementString("GovernorID", getGovernorID().ToStringCached());
+            }
+            if (getGovernorTurn() != -1)
+            {
+                pWriter.WriteElementString("GovernorTurn", getGovernorTurn().ToStringCached());
+            }
+            if (getGiftedTurn() != -1)
+            {
+                pWriter.WriteElementString("GiftedTurn", getGiftedTurn().ToStringCached());
+            }
+            if (getRaidedTurn() != -1)
+            {
+                pWriter.WriteElementString("RaidedTurn", getRaidedTurn().ToStringCached());
+            }
+            if (getCitizens() > 0)
+            {
+                pWriter.WriteElementString("Citizens", getCitizens().ToStringCached());
+            }
+            if (getCitizensQueue() > 0)
+            {
+                pWriter.WriteElementString("CitizensQueue", getCitizensQueue().ToStringCached());
+            }
+            if (getGrowthCount() > 0)
+            {
+                pWriter.WriteElementString("GrowthCount", getGrowthCount().ToStringCached());
+            }
+            if (getDamage() > 0)
+            {
+                pWriter.WriteElementString("Damage", getDamage().ToStringCached());
+            }
+            if (getHurryCivicsCount() > 0)
+            {
+                pWriter.WriteElementString("HurryCivicsCount", getHurryCivicsCount().ToStringCached());
+            }
+            if (getHurryTrainingCount() > 0)
+            {
+                pWriter.WriteElementString("HurryTrainingCount", getHurryTrainingCount().ToStringCached());
+            }
+            if (getHurryMoneyCount() > 0)
+            {
+                pWriter.WriteElementString("HurryMoneyCount", getHurryMoneyCount().ToStringCached());
+            }
+            if (getHurryPopulationCount() > 0)
+            {
+                pWriter.WriteElementString("HurryPopulationCount", getHurryPopulationCount().ToStringCached());
+            }
+            if (getHurryOrdersCount() > 0)
+            {
+                pWriter.WriteElementString("HurryOrdersCount", getHurryOrdersCount().ToStringCached());
+            }
+            if (getBuyTileCount() > 0)
+            {
+                pWriter.WriteElementString("BuyTileCount", getBuyTileCount().ToStringCached());
+            }
+            if (getSpecialistProducedCount() > 0)
+            {
+                pWriter.WriteElementString("SpecialistProducedCount", getSpecialistProducedCount().ToStringCached());
+            }
+            if (getCaptureTurns() > 0)
+            {
+                pWriter.WriteElementString("CaptureTurns", getCaptureTurns().ToStringCached());
+            }
+            if (getAssimilateTurns() > 0)
+            {
+                pWriter.WriteElementString("AssimilateTurns", getAssimilateTurns().ToStringCached());
+            }
+
+            if (isCapturedCapital())
+            {
+                pWriter.WriteElementString("CapturedCapital", "");
+            }
+            if (isCapital())
+            {
+                pWriter.WriteElementString("Capital", "");
+            }
+            if (getSecondaryTileID() != -1)
+            {
+                pWriter.WriteElementString("SecondaryTileID", getSecondaryTileID().ToStringCached());
+            }
+            pWriter.WriteElementString("FirstPlayer", ((int)(getFirstPlayer())).ToStringCached());
+            pWriter.WriteElementString("LastPlayer", ((int)(getLastPlayer())).ToStringCached());
+            if (hasCapturePlayer())
+            {
+                pWriter.WriteElementString("CapturePlayer", ((int)(getCapturePlayer())).ToStringCached());
+            }
+            if (isTribe())
+            {
+                pWriter.WriteElementString("Tribe", infos().tribe(getTribe()).mzType);
+            }
+
+            {
+                pWriter.WriteStartElement("YieldProgress");
+
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                {
+                    int iValue = getYieldProgress(eLoopYield);
+                    if (iValue != 0)
+                    {
+                        pWriter.WriteElementString(infos().yield(eLoopYield).mzType, iValue.ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("YieldOverflow");
+
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                {
+                    int iValue = getYieldOverflow(eLoopYield);
+                    if (iValue != 0)
+                    {
+                        pWriter.WriteElementString(infos().yield(eLoopYield).mzType, iValue.ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("UnitProductionCounts");
+
+                for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); eLoopUnit++)
+                {
+                    int iValue = getUnitProductionCount(eLoopUnit);
+                    if (iValue > 0)
+                    {
+                        pWriter.WriteElementString(infos().unit(eLoopUnit).mzType, iValue.ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("ProjectCount");
+
+                for (ProjectType eLoopProject = 0; eLoopProject < infos().projectsNum(); eLoopProject++)
+                {
+                    int iValue = getProjectCount(eLoopProject);
+                    if (iValue > 0)
+                    {
+                        pWriter.WriteElementString(infos().project(eLoopProject).mzType, iValue.ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("LuxuryTurn");
+
+                for (ResourceType eLoopResource = 0; eLoopResource < infos().resourcesNum(); eLoopResource++)
+                {
+                    if (isLuxury(eLoopResource))
+                    {
+                        pWriter.WriteElementString(infos().resource(eLoopResource).mzType, getLuxuryTurn(eLoopResource).ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("AgentTurn");
+
+                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game().getNumPlayers(); eLoopPlayer++)
+                {
+                    if (isAgentPlayer(eLoopPlayer))
+                    {
+                        pWriter.WriteElementString("P" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopPlayer).ToStringCached(), getAgentTurn(eLoopPlayer).ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("AgentCharacterID");
+
+                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game().getNumPlayers(); eLoopPlayer++)
+                {
+                    if (hasAgentCharacter(eLoopPlayer))
+                    {
+                        pWriter.WriteElementString("P" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopPlayer).ToStringCached(), getAgentCharacterID(eLoopPlayer).ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("AgentTileID");
+
+                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game().getNumPlayers(); eLoopPlayer++)
+                {
+                    if (hasAgentTile(eLoopPlayer))
+                    {
+                        pWriter.WriteElementString("P" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopPlayer).ToStringCached(), getAgentTileID(eLoopPlayer).ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("TeamCultureStep");
+
+                for (TeamType eLoopTeam = 0; eLoopTeam < game().getNumTeams(); eLoopTeam++)
+                {
+                    int iValue = getTeamCultureStep(eLoopTeam);
+                    if (iValue != 0)
+                    {
+                        pWriter.WriteElementString("T" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopTeam).ToStringCached(), iValue.ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("TeamHappinessLevel");
+
+                for (TeamType eLoopTeam = 0; eLoopTeam < game().getNumTeams(); eLoopTeam++)
+                {
+                    int iValue = getTeamHappinessLevel(eLoopTeam);
+/*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                START ###
+  ##############################################*/
+                    //Alex, please fix this in base game
+                    if (iValue != -1)
+/*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                  END ###
+  ##############################################*/
+                    {
+                        pWriter.WriteElementString("T" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopTeam).ToStringCached(), iValue.ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("YieldLevel");
+
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                {
+                    int iValue = getYieldLevel(eLoopYield);
+                    if (iValue > 0)
+                    {
+                        pWriter.WriteElementString(infos().yield(eLoopYield).mzType, iValue.ToStringCached());
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("Religion");
+
+                for (ReligionType eLoopReligion = 0; eLoopReligion < infos().religionsNum(); eLoopReligion++)
+                {
+                    if (isReligion(eLoopReligion))
+                    {
+                        pWriter.WriteElementString(infos().religion(eLoopReligion).mzType, "");
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("PlayerFamily");
+
+                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game().getNumPlayers(); eLoopPlayer++)
+                {
+                    FamilyType ePlayerFamily = getPlayerFamily(eLoopPlayer);
+                    if (ePlayerFamily != FamilyType.NONE)
+                    {
+                        pWriter.WriteElementString("P" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopPlayer).ToStringCached(), infos().family(ePlayerFamily).mzType);
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            {
+                pWriter.WriteStartElement("TeamCulture");
+
+                for (TeamType eLoopTeam = 0; eLoopTeam < game().getNumTeams(); eLoopTeam++)
+                {
+                    CultureType eTeamCulture = getTeamCulture(eLoopTeam);
+                    if (eTeamCulture != CultureType.NONE)
+                    {
+                        pWriter.WriteElementString("T" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopTeam).ToStringCached(), infos().culture(eTeamCulture).mzType);
+                    }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            if (getEventStoryOptions().Count > 0)
+            {
+                pWriter.WriteStartElement("EventStoryOption");
+
+                foreach (EventOptionType eLoopEventStoryOption in getEventStoryOptions())
+                {
+                    pWriter.WriteElementString(infos().eventOption(eLoopEventStoryOption).mzType, "");
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            if (getEventStoryTurns().Count > 0)
+            {
+                pWriter.WriteStartElement("EventStoryTurn");
+
+                foreach (KeyValuePair<EventStoryType, int> p in getEventStoryTurns())
+                {
+                    pWriter.WriteElementString(infos().eventStory(p.Key).mzType, p.Value.ToStringCached());
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            if (hasBuild())
+            {
+                pWriter.WriteStartElement("BuildQueue");
+
+                foreach (CityQueueData pLoopBuild in getBuildQueue())
+                {
+                    pLoopBuild.writeXML(pWriter, infos());
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            if (hasCompletedBuild())
+            {
+                pWriter.WriteStartElement("CompletedBuild");
+
+                CityQueueData pBuild = getCompletedBuild();
+                pBuild.writeXML(pWriter, infos());
+
+                pWriter.WriteEndElement();
+            }
+
+            pWriter.WriteEndElement();
+        }
+        //copy-paste END
+
+
 
 
         //lines 4268-4278
@@ -223,6 +603,38 @@ namespace BetterAI
                 setYieldProgress(eYield, getYieldProgress(eYield) + iChange);
             }
         }
+
+        public override void setHappinessLevel(int iNewValue)
+        {
+            if (!hasPlayer())
+            {
+                return;
+            }
+
+            bool bWasDiscontent = isDiscontent();
+
+            int iOldValue = getTeamHappinessLevel(getTeam());
+            if (iOldValue != iNewValue)
+            {
+                loadTeamHappinessLevel(getTeam(), iNewValue);
+                updateFamilyOpinion();
+
+                //if (Math.Sign(iOldValue) != Math.Sign(iNewValue))
+                if (bWasDiscontent ^ isDiscontent()) //XOR
+                {
+                    //if (getYieldProgress(infos().Globals.HAPPINESS_YIELD) < 0)
+                    //{
+                    //    setYieldProgress(infos().Globals.HAPPINESS_YIELD, -(getYieldProgress(infos().Globals.HAPPINESS_YIELD)));
+                    //}
+                    //else
+                    if (getYieldProgress(infos().Globals.HAPPINESS_YIELD) >= 0) //then it must come from a bonus, so one whole threshold should be added
+                    {
+                        setYieldProgress(infos().Globals.HAPPINESS_YIELD, Math.Max(0, (getYieldThreshold(infos().Globals.HAPPINESS_YIELD) - getYieldProgress(infos().Globals.HAPPINESS_YIELD))));
+                    }
+                }
+            }
+        }
+
 
         //lines 5518-5548
         public override void changeHappinessLevel(int iChange)
@@ -435,14 +847,21 @@ namespace BetterAI
 
                 clearCompletedBuild();
 
-                using (var yieldListScoped = CollectionCache.GetListScoped<int>())
+                using (var yieldMapScoped = CollectionCache.GetDictionaryScoped<YieldType, int>())
                 {
-                    List<int> aiYieldAmounts = yieldListScoped.Value;
+                    Dictionary<YieldType, int> mapYieldAmounts = yieldMapScoped.Value;
 
                     // save current yields since they are affected by what is in the queue and top build may change
                     for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                     {
-                        aiYieldAmounts.Add(calculateCurrentYield(eLoopYield));
+                        if (infos().yield(eLoopYield).meSubtractFromYield == YieldType.NONE)
+                        {
+                            int iYield = calculateCurrentYield(eLoopYield);
+                            if (iYield != 0)
+                            {
+                                mapYieldAmounts.Add(eLoopYield, iYield);
+                            }
+                        }
                     }
 
                     if (hasBuild())
@@ -455,61 +874,56 @@ namespace BetterAI
                         else
                         {
                             YieldType eBuildYield = getBuildYieldType(pCurrentBuild);
+                            if (mapYieldAmounts.TryGetValue(eBuildYield, out int iYieldAmount))
+                            {
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry               START ###
   ##############################################*/
-                            //if (((mbProductionHurried) || (getBuildThreshold(pCurrentBuild) == pCurrentBuild.miProgress)) && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED_BY_PRODUCTION == 1))
-                            if ((getBuildThreshold(pCurrentBuild) == pCurrentBuild.miProgress) && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED_BY_PRODUCTION == 1))
-                            {
-                                setYieldOverflow(eBuildYield, 0);
-                                aiYieldAmounts[(int)eBuildYield] = 0;
-                                finishBuild();
-                                //mbProductionHurried = false;
-                            }
-                            else
-/*####### Better Old World AI - Base DLL #######
-  ### Altnernative Hurry                 END ###
-  ##############################################*/
-                            {
-                                int iOldOverflow = getYieldOverflow(eBuildYield);
-                                changeCurrentBuildProgress(getBuildRate(pCurrentBuild.meBuild, pCurrentBuild.miType));
-                                int iExtraYield = -getBuildDiff(getCurrentBuild());
-                                changeCurrentBuildProgress(iOldOverflow);
-                                if (iExtraYield >= 0)
+                                if (pCurrentBuild.mbHurried && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED >= 3))
                                 {
-                                    int iNewOverflow = iExtraYield;
-                                    if (iOldOverflow > 0 && iNewOverflow > iOldOverflow)
-                                    {
-                                        iNewOverflow = iOldOverflow;
-                                    }
-                                    setYieldOverflow(eBuildYield, iNewOverflow);
-                                    iExtraYield -= iNewOverflow;
-                                    aiYieldAmounts[(int)eBuildYield] = iExtraYield;
-
+                                    setYieldOverflow(eBuildYield, 0);
+                                    mapYieldAmounts.Remove(eBuildYield);
                                     finishBuild();
                                 }
                                 else
+/*####### Better Old World AI - Base DLL #######
+  ### Altnernative Hurry                 END ###
+  ##############################################*/
                                 {
-                                    setYieldOverflow(eBuildYield, 0);
-                                    aiYieldAmounts[(int)eBuildYield] = 0;
+                                    changeCurrentBuildProgress(iYieldAmount + getYieldOverflow(eBuildYield));
+                                    int iExtraYield = -getBuildDiff(pCurrentBuild, bIncludeOverflow: false);
+                                    if (iExtraYield >= 0)
+                                    {
+                                        // build finished, assign overflow, capped at current city production
+                                        // the rest goes to stockpile
+                                        int iOverflow = pCurrentBuild.mbHurried ? 0 : Math.Min(iExtraYield, iYieldAmount);
+                                        mapYieldAmounts[eBuildYield] = iExtraYield - iOverflow;
+                                        setYieldOverflow(eBuildYield, iOverflow);
+                                        finishBuild();
+                                    }
+                                    else
+                                    {
+                                        // all production goes to city build
+                                        mapYieldAmounts.Remove(eBuildYield);
+                                        setYieldOverflow(eBuildYield, 0);
+                                    }
                                 }
                             }
 
                         }
                     }
 
-                    for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                    foreach (KeyValuePair<YieldType, int> p in mapYieldAmounts)
                     {
-                        if (infos().yield(eLoopYield).meSubtractFromYield == YieldType.NONE)
+                        YieldType eLoopYield = p.Key;
+                        int iYieldAmount = p.Value;
+                        if (!infos().yield(eLoopYield).mbGlobal)
                         {
-                            if (!infos().yield(eLoopYield).mbGlobal)
-                            {
-                                changeYieldProgress(eLoopYield, aiYieldAmounts[(int)eLoopYield]);
-                            }
-                            else
-                            {
-                                aiPlayerYieldAmounts[(int)eLoopYield] += aiYieldAmounts[(int)eLoopYield];
-                            }
+                            changeYieldProgress(eLoopYield, iYieldAmount);
+                        }
+                        else
+                        {
+                            aiPlayerYieldAmounts[(int)eLoopYield] += iYieldAmount;
                         }
                     }
                 }
@@ -559,7 +973,7 @@ namespace BetterAI
             {
                 if (iOldIndex == 0)
                 {
-                    if ((getBuildThreshold(pQueueData) == pQueueData.miProgress) && (pQueueData.miProgress > 0) && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED_BY_PRODUCTION == 1))
+                    if (pQueueData.mbHurried && (pQueueData.miProgress > 0) && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED > 0))
                     {
                         return false;
                     }
@@ -579,21 +993,25 @@ namespace BetterAI
         //now the hurry costs
         //this method is only used for hurry cost, so I can just override it, so I don't have to override all the getHurry<yield> methods
         //lines 6143-6146
-        public override int getBuildDiffWholePositive(CityQueueData pQueueInfo)
+        public override int getBuildDiffWholePositive(CityQueueData pQueueInfo, bool bIncludeOverflow = true)
         {
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry               START ###
   ##############################################*/
-            if (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED_BY_PRODUCTION == 1)
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED > 1)
             {
-                return Math.Max(0, (getBuildThreshold(pQueueInfo) - (getBuildProgress(pQueueInfo) + getBuildRate(pQueueInfo.meBuild, pQueueInfo.miType))) / Constants.YIELDS_MULTIPLIER);
+                int iDiff = getBuildThreshold(pQueueInfo) - getBuildProgress(pQueueInfo, bIncludeOverflow: true);
+                if (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED >= 3) iDiff -= getBuildRate(pQueueInfo.meBuild, pQueueInfo.miType);
+
+                return Math.Max(0, iDiff / Constants.YIELDS_MULTIPLIER);
+                //return Math.Max(0, (getBuildThreshold(pQueueInfo) - (getBuildProgress(pQueueInfo) + getBuildRate(pQueueInfo.meBuild, pQueueInfo.miType))) / Constants.YIELDS_MULTIPLIER);
             }
             else
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry                 END ###
   ##############################################*/
             {
-                return base.getBuildDiffWholePositive(pQueueInfo);
+                return base.getBuildDiffWholePositive(pQueueInfo, bIncludeOverflow: bIncludeOverflow);
             }
         }
         //Hurry changes END

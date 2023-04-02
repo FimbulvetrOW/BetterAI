@@ -70,11 +70,16 @@ namespace BetterAI
   ### Alternative Hurry                START ###
   ##############################################*/
                 //hurry cost reduced, but no overflow: needs to be reflected in AI evaluation
-                if (((BetterAIInfoGlobals)infos.Globals).BAI_HURRY_COST_REDUCED_BY_PRODUCTION == 1)
+                YieldType eBuildYield = (pCity.getBuildYieldType(pCity.getCurrentBuild()));
+                int iCityYieldLost = pCity.calculateCurrentYield(eBuildYield);  //whether or not next Turns production reduced the cost of Hurrying, it's not going to City Production next turn
+                int iStockpileYieldGained = iCityYieldLost;                     //but if not it's going to the stockpile instead
+                iCityYieldLost += pCity.getYieldOverflow(eBuildYield);          //whether or not Overflow reduced the cost of Hurrying, it's gone afterwards
+                iValue += (iCityYieldLost * cityYieldValue(eBuildYield, pCity)) / (Constants.YIELDS_MULTIPLIER);
+                if (((BetterAIInfoGlobals)infos.Globals).BAI_HURRY_COST_REDUCED < 3)
                 {
-                    YieldType eBuildYield = (pCity.getBuildYieldType(pCity.getCurrentBuild()));
-                    iValue += (pCity.calculateModifiedYield(eBuildYield) * cityYieldValue(eBuildYield, pCity)) / (Constants.YIELDS_MULTIPLIER);
+                    iValue -= (iStockpileYieldGained * yieldValue(eBuildYield)) / (Constants.YIELDS_MULTIPLIER);
                 }
+
                 return iValue;
             }
 

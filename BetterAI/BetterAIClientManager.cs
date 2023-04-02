@@ -32,11 +32,11 @@ namespace BetterAI
             //can queued items even be dragged to position 0? idk, but better safe than sorry
             //intercepting invalid drag actions here, because I can't mod CityQueueList directly, since that class is in Assembly-CSharp
             if (iOldSlot == iNewSlot) return;
-            if (((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED_BY_PRODUCTION == 1)
+            if (((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED > 0)
             {
                 if (iNewSlot == 0)
                 {
-                    if (pCity != null && (pCity.getBuildThreshold(pCity.getBuildQueueNode(0)) == pCity.getBuildQueueNode(0).miProgress) && (pCity.getBuildQueueNode(0).miProgress > 0))
+                    if (pCity != null && pCity.getBuildQueueNode(0).mbHurried && (pCity.getBuildQueueNode(0).miProgress > 0))
                     {
                         iNewSlot = 1;
                         if (iOldSlot == iNewSlot) return;
@@ -44,7 +44,7 @@ namespace BetterAI
                 }
                 else if (iOldSlot == 0)
                 {
-                    if (pCity != null && (pCity.getBuildThreshold(pCity.getBuildQueueNode(0)) == pCity.getBuildQueueNode(0).miProgress) && (pCity.getBuildQueueNode(0).miProgress > 0))
+                    if (pCity != null && pCity.getBuildQueueNode(0).mbHurried && (pCity.getBuildQueueNode(0).miProgress > 0))
                     {
                         return;
                     }

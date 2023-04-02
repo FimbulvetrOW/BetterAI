@@ -30,15 +30,25 @@ namespace BetterAI
         }
 
         //lines 3147-3153
-        public override TextVariable buildHappinessLevelLinkVariable(City pCity)
+        public override TextVariable buildHappinessLevelLinkVariable(City pCity, bool bShort = false)
         {
             using (new UnityProfileScope("HelpText.buildHappinessLevelLinkVariable"))
             {
 /*####### Better Old World AI - Base DLL #######
   ### Disconent Level 0                START ###
   ##############################################*/
-                //return buildLinkTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_LINK_HAPPINESS", TEXTVAR(Math.Abs(pCity.getHappinessLevel())), TEXTVAR(pCity.getHappinessLevel() >= 0)), ItemType.HELP_LINK, nameof(LinkType.HELP_HAPPINESS_LEVEL), pCity.getID().ToStringCached());
-                return buildLinkTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_LINK_HAPPINESS", TEXTVAR(Math.Abs(pCity.getHappinessLevel())), TEXTVAR(!(((BetterAICity)pCity).isDiscontent()))), ItemType.HELP_LINK, nameof(LinkType.HELP_HAPPINESS_LEVEL), pCity.getID().ToStringCached());
+                if (bShort)
+                {
+                    //return buildLinkTextVariable(concatenateSpace(TEXTVAR_TYPE(infos().yield(pCity.getHappinessLevel() >= 0 ? infos().Globals.HAPPINESS_YIELD : infos().Globals.DISCONTENT_YIELD).meName), 
+                    //    TEXTVAR(Math.Abs(pCity.getHappinessLevel()))), ItemType.HELP_LINK, nameof(LinkType.HELP_HAPPINESS_LEVEL), pCity.getID().ToStringCached());
+                    return buildLinkTextVariable(concatenateSpace(TEXTVAR_TYPE(infos().yield(!(((BetterAICity)pCity).isDiscontent()) ? infos().Globals.HAPPINESS_YIELD : infos().Globals.DISCONTENT_YIELD).meName),
+                        TEXTVAR(Math.Abs(pCity.getHappinessLevel()))), ItemType.HELP_LINK, nameof(LinkType.HELP_HAPPINESS_LEVEL), pCity.getID().ToStringCached());
+                }
+                else
+                {
+                    //return buildLinkTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_LINK_HAPPINESS", TEXTVAR(Math.Abs(pCity.getHappinessLevel())), TEXTVAR(pCity.getHappinessLevel() >= 0)), ItemType.HELP_LINK, nameof(LinkType.HELP_HAPPINESS_LEVEL), pCity.getID().ToStringCached());
+                    return buildLinkTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_LINK_HAPPINESS", TEXTVAR(Math.Abs(pCity.getHappinessLevel())), TEXTVAR(!(((BetterAICity)pCity).isDiscontent()))), ItemType.HELP_LINK, nameof(LinkType.HELP_HAPPINESS_LEVEL), pCity.getID().ToStringCached());
+                }
 /*####### Better Old World AI - Base DLL #######
   ### Disconent Level 0                  END ###
   ##############################################*/
@@ -741,14 +751,12 @@ namespace BetterAI
                             buildEffectCityHelpNoYields(builder, eEffectCity, pGame, pCityTerritory, pPlayer, pActivePlayer);
                         }
 
+                        if (pGame?.isCharacters() ?? true)
                         {
                             int iValue = infos().improvement(eImprovement).miLegitimacy;
                             if (iValue != 0)
                             {
-                                if (pGame?.isCharacters() ?? true)
-                                {
-                                    builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_HELP_LEGITIMACY", buildSignedTextVariable(iValue));
-                                }
+                                builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_HELP_LEGITIMACY", buildSignedTextVariable(iValue));
                             }
                         }
 
@@ -809,7 +817,7 @@ namespace BetterAI
                                         int iValue = infos().improvement(eImprovement).maiUnitTraitXP[(int)eLoopUnitTrait];
                                         if (iValue != 0)
                                         {
-                                            using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_UNIT_TRAIT_XP", buildSignedTextVariable(iValue), buildTurnScaleName(pGame), buildIdleLinkVariable())))
+                                            using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_UNIT_TRAIT_XP", buildSignedTextVariable(iValue), buildTurnScaleName(pGame))))
                                             {
                                                 {
                                                     builder.Add(buildUnitTraitLinkVariable(eLoopUnitTrait));
@@ -3655,7 +3663,7 @@ namespace BetterAI
                         }
                         if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
                         {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_FOREIGN_POPULATION", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildNationLinkVariable(pCity.firstNation().meType));
+                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_FOREIGN_POPULATION", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildNationLinkVariable(pCity.firstNation().meType, pCity.getFirstPlayer()));
                         }
                     }
 
@@ -3668,18 +3676,6 @@ namespace BetterAI
                         if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
                         {
                             builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_DEFENDING", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), TEXTVAR(pCity.hasFamily()));
-                        }
-                    }
-
-                    {
-                        int iValue = pCity.calculateUrbanTileYield(eYield);
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_URBAN_TILE", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildUrbanLinkVariable(), buildCitizenLinkVariable(pCity));
                         }
                     }
 
@@ -3759,6 +3755,17 @@ namespace BetterAI
                             }
                         }
                     }
+                }
+
+                int iBaseYield = pCity.getBaseYieldNet(eYield);
+                int iModifiedYield = pCity.calculateModifiedYieldBase(eYield);
+                if (iBaseYield != iModifiedYield)
+                {
+                    if (bReverseSign)
+                    {
+                        iBaseYield *= -1;
+                    }
+                    builder.AddTEXT("TEXT_HELPTEXT_SUBTOTAL", buildSignedTextVariable(iBaseYield, iMultiplier: Constants.YIELDS_MULTIPLIER));
                 }
 
                 for (int iPass = 0; iPass < 2; iPass++)
@@ -3866,31 +3873,29 @@ namespace BetterAI
                     }
                 }
 
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); ++eLoopYield)
                 {
-                    int iSubTotal = iRate;
-
-                    for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); ++eLoopYield)
+                    if (infos().yield(eLoopYield).meSubtractFromYield == eYield)
                     {
-                        if (infos().yield(eLoopYield).meSubtractFromYield == eYield)
-                        {
-                            iSubTotal += pCity.calculateCurrentYield(eLoopYield);
-                        }
+                        builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eYield), buildSignedTextVariable(iModifiedYield, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                        break;
                     }
+                }
 
+                {
                     for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); ++eLoopYield)
                     {
                         if (infos().yield(eLoopYield).meSubtractFromYield == eYield)
                         {
-                            builder.AddTEXT("TEXT_HELPTEXT_SUBTOTAL", buildSignedTextVariable(iSubTotal, iMultiplier: Constants.YIELDS_MULTIPLIER));
                             buildDividerText(builder);
                             builder.Add(buildYieldIconNameLinkVariable(eLoopYield));
 /*####### Better Old World AI - Base DLL #######
   ### don't reverse sign               START ###
   ##############################################*/
                             //buildCityYieldNetHelp(builder, pCity, eLoopYield, pManager, bNetOnly: true, bReverseSign: true);
-                            //builder.AddTEXT("TEXT_HELPTEXT_SUBTOTAL", buildSignedTextVariable(-(pCity.calculateCurrentYield(eLoopYield)), iMultiplier: Constants.YIELDS_MULTIPLIER));
+                            //builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(-(pCity.calculateModifiedYieldBase(eLoopYield)), iMultiplier: Constants.YIELDS_MULTIPLIER));
                             buildCityYieldNetHelp(builder, pCity, eLoopYield, pManager, bNetOnly: true, bReverseSign: false);
-                            builder.AddTEXT("TEXT_HELPTEXT_SUBTOTAL", buildSignedTextVariable(pCity.calculateCurrentYield(eLoopYield), iMultiplier: Constants.YIELDS_MULTIPLIER));
+                            builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(pCity.calculateModifiedYieldBase(eLoopYield), iMultiplier: Constants.YIELDS_MULTIPLIER));
 /*####### Better Old World AI - Base DLL #######
   ### don't reverse sign                 END ###
   ##############################################*/
