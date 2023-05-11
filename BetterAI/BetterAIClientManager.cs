@@ -18,8 +18,8 @@ namespace BetterAI
 {
     public  class BetterAIClientManager : ClientManager
     {
-        public BetterAIClientManager(ModSettings modSettings, Game gameClient, GameInterfaces gameInterfaces, IClientNetwork clientNetwork)
-            : base(modSettings, gameClient, gameInterfaces, clientNetwork)
+        public BetterAIClientManager(GameInterfaces gameInterfaces)
+            : base(gameInterfaces)
         {
         }
 

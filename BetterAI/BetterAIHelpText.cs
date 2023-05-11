@@ -25,7 +25,7 @@ namespace BetterAI
     public class BetterAIHelpText : HelpText
     {
         //lines 44-48
-        public BetterAIHelpText(Infos pInfos, TextManager textManager) : base(pInfos, textManager)
+        public BetterAIHelpText(ModSettings pModSettings) : base(pModSettings)
         {
         }
 
@@ -104,7 +104,8 @@ namespace BetterAI
                     buildCanActText(builder, 0, pGame, pActivePlayer, pUnit);
                 }
 
-                if (bIncludeEncyclopediaFooter && builder.HasContent && !pManager.Interfaces.UserInterface.IsPopupActive("POPUP_HELP") && hasEncyclopediaEntry(pWidget, pManager.GameClient))
+                if (bIncludeEncyclopediaFooter && builder.HasContent && !pManager.App.UserInterface.IsPopupActive("POPUP_HELP") &&
+                    hasEncyclopediaEntry(pWidget, pManager.GameClient) && hasHotkey(pManager.Interfaces.Hotkeys, infos().Globals.HOTKEY_HELP_SCREEN))
                 {
                     buildDividerText(builder);
                     builder.AddTEXT("TEXT_HELPTEXT_LINK_OPEN_ENCYCLOPEDIA", buildPressHotkeyVariableOrFalse(pManager.Interfaces.Hotkeys, infos().Globals.HOTKEY_HELP_SCREEN));
@@ -3423,6 +3424,17 @@ namespace BetterAI
                     }
                     builder.Add(getCityYieldProgress(pCity, eYield), skipSeparator: true);
 
+                    int iTileBase = pCity.calculateUnmodifiedTileYield(eYield);
+                    int iCityBase = pCity.getBaseYieldNet(eYield);
+                    if (iTileBase != 0 && iTileBase != iCityBase)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_TILE_BASE_YIELD", buildYieldTextVariable(iTileBase, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                    }
+                    if (iCityBase != 0 && iCityBase != iRate)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_CITY_BASE_YIELD", buildYieldTextVariable(iCityBase, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                    }
+
                     buildDividerText(builder);
                 }
 
@@ -3858,18 +3870,18 @@ namespace BetterAI
                             }
                         }
                     }
+                }
 
-                    for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); eLoopUnit++)
+                for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); eLoopUnit++)
+                {
+                    int iValue = pCity.calculateUnitImprovementYield(eYield, eLoopUnit);
+                    if (iValue != 0)
                     {
-                        int iValue = pCity.calculateUnitImprovementYield(eYield, eLoopUnit);
                         if (bReverseSign)
                         {
                             iValue = -(iValue);
                         }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_YIELD_NET_UNIT_IMPROVEMENT_YIELD", buildSignedTextVariable(iValue, false, Constants.YIELDS_MULTIPLIER), buildUnitTypeLinkVariable(eLoopUnit, pGame));
-                        }
+                        builder.AddTEXT("TEXT_HELPTEXT_YIELD_NET_UNIT_IMPROVEMENT_YIELD", buildSignedTextVariable(iValue, false, Constants.YIELDS_MULTIPLIER), buildUnitTypeLinkVariable(eLoopUnit, pGame));
                     }
                 }
 

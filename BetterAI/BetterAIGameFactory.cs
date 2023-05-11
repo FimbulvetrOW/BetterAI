@@ -31,9 +31,9 @@ namespace BetterAI
         {
             return new BetterAIInfoGlobals();
         }
-        public override HelpText CreateHelpText(Infos pInfos, TextManager textManager)
+        public override HelpText CreateHelpText(ModSettings pModSettings)
         {
-            return new BetterAIHelpText(pInfos, textManager);
+            return new BetterAIHelpText(pModSettings);
         }
         public override City CreateCity()
         {
@@ -63,17 +63,17 @@ namespace BetterAI
         {
             return new BetterAICharacter();
         }
-        public override ClientUI CreateClientUI(ClientManager pClientManager)
+        public override ClientUI CreateClientUI(IApplication app)
         {
-            return new BetterAIClientUI(pClientManager);
+            return new BetterAIClientUI(app);
         }
         //public override ClientRenderer CreateClientRenderer(ClientManager pClientManager)
         //{
         //    return new BetterAIClientRenderer(pClientManager);
         //}
-        public override ClientManager CreateClientManager(ModSettings modSettings, Game gameClient, GameInterfaces gameInterfaces, IClientNetwork network)
+        public override ClientManager CreateClientManager(GameInterfaces gameInterfaces)
         {
-            return new BetterAIClientManager(modSettings, gameClient, gameInterfaces, network);
+            return new BetterAIClientManager(gameInterfaces);
         }
     }
 }

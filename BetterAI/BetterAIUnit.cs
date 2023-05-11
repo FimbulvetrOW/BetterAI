@@ -16,6 +16,7 @@ using Mohawk.UIInterfaces;
 using UnityEngine;
 using UnityEngine.UI;
 using static BetterAI.BetterAIInfos;
+using System.Text.RegularExpressions;
 
 namespace BetterAI
 {
@@ -182,6 +183,11 @@ namespace BetterAI
   ##############################################*/
                 }
 
+                if (pToTile.isRiver())
+                {
+                    iCost += game().getRiverCostBonus();
+                }
+
                 if (bFriendly)
                 {
                     if (infos().Globals.RIVER_MOVEMENT_COST != -1)
@@ -192,7 +198,7 @@ namespace BetterAI
                             {
                                 if (pFromTile.isRiverMovement(pToTile, eDirection, this))
                                 {
-                                    iCost = Math.Min(iCost, infos().Globals.RIVER_MOVEMENT_COST);
+                                    iCost = Math.Min(iCost, infos().Globals.RIVER_MOVEMENT_COST + game().getRiverCostBonus());
                                 }
                             }
                         }
@@ -228,11 +234,19 @@ namespace BetterAI
 
         //copy-paste START
         //lines 6627-6655
-        public override bool canSwapUnits(Tile pTile, Player pActingPlayer)
+        public override bool canSwapUnits(Tile pTile, Player pActingPlayer, bool bMarch)
         {
-            if (!canAct(pActingPlayer))
+            if (!canAct(pActingPlayer, (1 + ((isFatigued()) ? infos().Globals.UNIT_FATIGUE_COST : 0))))
             {
                 return false;
+            }
+
+            if (isFatigued() && !isMarch())
+            {
+                if ((bMarch) ? !canMarch(pActingPlayer) : true)
+                {
+                    return false;
+                }
             }
 
             if (!canOccupyTile(pTile, getTeam(), bTestTheirUnits: true, bTestOurUnits: false))
@@ -260,7 +274,7 @@ namespace BetterAI
             }
             else
             {
-                if (pUnit.getStepsToFatigue() < ((BetterAIInfoGlobals)infos().Globals).BAI_SWAP_UNIT_FATIGUE_COST) //getStepsToFatigue() is always at least 0
+                if (pUnit.getStepsToFatigue() < ((BetterAIInfoGlobals)infos().Globals).BAI_SWAP_UNIT_FATIGUE_COST || pUnit.isMarch()) //getStepsToFatigue() is always at least 0
                 {
                     return false;
                 }
@@ -272,9 +286,19 @@ namespace BetterAI
         }
 
         //liens 6656-6669
-        public override void swapUnits(Tile pTile, Player pActingPlayer)
+        public override void swapUnits(Tile pTile, Player pActingPlayer, bool bMarch)
         {
-            MohawkAssert.Assert(canSwapUnits(pTile, pActingPlayer));
+            MohawkAssert.Assert(canSwapUnits(pTile, pActingPlayer, bMarch));
+
+            int iCost = (1 + ((isFatigued()) ? infos().Globals.UNIT_FATIGUE_COST : 0));
+
+            if (bMarch)
+            {
+                if (isFatigued() && !isMarch())
+                {
+                    march(pActingPlayer);
+                }
+            }
 
             BetterAIUnit pUnit = (BetterAIUnit)swapUnit(pTile, pActingPlayer);
 
@@ -294,7 +318,7 @@ namespace BetterAI
 
             setTileID(pTile.getID());
             changeTurnSteps(1);
-            act(pActingPlayer);
+            act(pActingPlayer, iCost);
             wake();
         }
         //copy-paste END

@@ -20,7 +20,7 @@ namespace BetterAI
 {
     public class BetterAIClientUI : ClientUI
     {
-        public BetterAIClientUI(ClientManager manager) : base(manager)
+        public BetterAIClientUI(IApplication app) : base(app)
         {
         }
 
@@ -36,7 +36,7 @@ namespace BetterAI
                 {
 
                     Player pPlayer = pSelectedCity.player();
-                    Player pActivePlayer = mManager.activePlayer();
+                    Player pActivePlayer = ClientMgr.activePlayer();
 
                     FieldInfo FI_YIELD_ARROW = this.GetType().BaseType.GetField("YIELD_ARROW", BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
                     FieldInfo FI_YIELD_NORMAL = this.GetType().BaseType.GetField("YIELD_NORMAL", BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
@@ -67,7 +67,7 @@ namespace BetterAI
                     }
 
 
-                    UIAttributeTag widgetTag = ui.GetUIAttributeTag("SelectedCityWidget");
+                    UIAttributeTag widgetTag = UI.GetUIAttributeTag("SelectedCityWidget");
                     widgetTag.SetInt("MaxHP", pSelectedCity.getHPMax());
                     widgetTag.SetInt("CurrentHP", pSelectedCity.getHP());
 
@@ -119,15 +119,7 @@ namespace BetterAI
 
                             TextVariable rateVar = HelpText.buildYieldTextVariable(iRate, bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER);
 
-                            if (isBuildYield)
-                            {
-                                cityYieldTag.SetTEXT("Rate", TextManager, HelpText.buildEnclosedParenthesis(rateVar,
-                                    HelpText.getQueueIconLinkVariable(pSelectedCity.getCurrentBuild(), pSelectedCity)));
-                            }
-                            else
-                            {
-                                cityYieldTag.SetTEXT("Rate", TextManager, rateVar);
-                            }
+                            cityYieldTag.SetTEXT("Rate", TextManager, HelpText.buildNetCityYieldTextVariable(pSelectedCity, eLoopYield, true));
 
                             if (ColorManager.GetColorHex(yield.meColor) == "#ffffffff" || yield.mbCanBuy)
                             {
@@ -154,7 +146,7 @@ namespace BetterAI
                             }
                             else
                             {
-                                using (var yieldDataScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_CITY_YIELD), pSelectedCity.getID().ToStringCached(), eLoopYield.ToStringCached()))
+                                using (var yieldDataScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_CITY_YIELD_STOCKPILE), pSelectedCity.getID().ToStringCached(), eLoopYield.ToStringCached()))
                                 {
                                     cityYieldTag.SetKey("Data", yieldDataScope.DataList);
                                 }
@@ -288,7 +280,7 @@ namespace BetterAI
                         using (var pacifyDataScope = new WidgetDataScope(nameof(ItemType.START_MISSION), Infos.Globals.PACIFY_CITY_MISSION.ToStringCached(), chancellorID.ToStringCached(), pSelectedCity.getID().ToStringCached(), true.ToStringCached()))
                         {
                             mSelectedPanel.SetBool("City-Pacify-IsInteractable", chancellorID != -1 &&
-                                pActivePlayer.canStartMission(Infos.Globals.PACIFY_CITY_MISSION, Game.character(chancellorID), pSelectedCity.getID().ToStringCached()));
+                                pActivePlayer.canStartMission(Infos.Globals.PACIFY_CITY_MISSION, chancellorID, pSelectedCity.getID().ToStringCached()));
                             mSelectedPanel.SetKey("City-Pacify-Type", pacifyDataScope.Type);
                             mSelectedPanel.SetKey("City-Pacify-Data", pacifyDataScope.DataList);
                         }
@@ -332,15 +324,15 @@ namespace BetterAI
         public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, bool bDifferentTile, WorkerActionFilter eFilter = WorkerActionFilter.GENERAL)
         {
             bool bRunOriginal = true;
-            if (pUnit != null && pTile != null && eFilter == WorkerActionFilter.GENERAL && ((BetterAIInfoGlobals)mManager.Infos.Globals).BAI_WORKERLIST_EXTRA > 0)
+            if (pUnit != null && pTile != null && eFilter == WorkerActionFilter.GENERAL && ((BetterAIInfoGlobals)Infos.Globals).BAI_WORKERLIST_EXTRA > 0)
             {
                 bool bWorker = pUnit.isWorker();
-                Player pActivePlayer = mManager.activePlayer();
+                Player pActivePlayer = ClientMgr.activePlayer();
                 bool bTeamTest = ((pTile.hasOwner()) ? (pTile.owner().getTeam() == pActivePlayer.getTeam() || pTile.owner().getTeam() == TeamType.NONE) : false);
-                bool bQueue = (pUnit.hasQueueList() || mManager.Interfaces.Input.isShiftDown());
-                bool bControl = mManager.Interfaces.Input.isControlDown();
+                bool bQueue = (pUnit.hasQueueList() || Interfaces.Input.isShiftDown());
+                bool bControl = Interfaces.Input.isControlDown();
                 bool bImprovedTile = pTile.hasImprovement() || pTile.hasCity()   //also for city center tile, because you can't build any improvement there anyway.
-                    || ((BetterAIInfoGlobals)mManager.Infos.Globals).BAI_WORKERLIST_EXTRA >= 2; //option to always show extra items (Franz)
+                    || ((BetterAIInfoGlobals)Infos.Globals).BAI_WORKERLIST_EXTRA >= 2; //option to always show extra items (Franz)
                 bool bShowExtraImprovements = !bControl && !bQueue && bTeamTest && bImprovedTile;
                 BetterAICity pCityTerritory = (BetterAICity)pTile.cityTerritory();
                 if (bShowExtraImprovements && (pCityTerritory != null))
@@ -352,7 +344,7 @@ namespace BetterAI
                         //make the resource list
                         foreach (int iTileID in pCityTerritory.getTerritoryTiles())
                         {
-                            Tile tile = mManager.GameClient.tile(iTileID);
+                            Tile tile = ClientMgr.GameClient.tile(iTileID);
                             ResourceType tileResource = tile.getResource();
                             if (tileResource != ResourceType.NONE)
                             {
@@ -360,7 +352,7 @@ namespace BetterAI
                                 ImprovementType tileImprovement = tile.getImprovement();
                                 if (tileImprovement != ImprovementType.NONE)
                                 {
-                                    if (mManager.Infos.Helpers.isImprovementResourceValid(tileImprovement, tileResource))
+                                    if (Infos.Helpers.isImprovementResourceValid(tileImprovement, tileResource))
                                     {
                                         continue;
                                     }
@@ -434,23 +426,23 @@ namespace BetterAI
                                         || improvement.mbHolyCityValid))
                                     {
                                         bool bAnyValid = false;
-                                        for (TerrainType eLoopTerrain = 0; (eLoopTerrain < mManager.Infos.terrainsNum() && !(bAnyValid)); eLoopTerrain++)
+                                        for (TerrainType eLoopTerrain = 0; (eLoopTerrain < Infos.terrainsNum() && !(bAnyValid)); eLoopTerrain++)
                                         {
                                             bAnyValid = bAnyValid || improvement.mabTerrainValid[(int)eLoopTerrain];
                                         }
 
                                         //height, heightadjacent, vegetation
-                                        for (HeightType eLoopHeight = 0; (eLoopHeight < mManager.Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
+                                        for (HeightType eLoopHeight = 0; (eLoopHeight < Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
                                         {
                                             bAnyValid = bAnyValid || improvement.mabHeightValid[(int)eLoopHeight];
                                         }
 
-                                        for (HeightType eLoopHeight = 0; (eLoopHeight < mManager.Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
+                                        for (HeightType eLoopHeight = 0; (eLoopHeight < Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
                                         {
                                             bAnyValid = bAnyValid || improvement.mabHeightAdjacentValid[(int)eLoopHeight];
                                         }
 
-                                        for (VegetationType eLoopVegetation = 0; (eLoopVegetation < mManager.Infos.vegetationNum() && !(bAnyValid)); eLoopVegetation++)
+                                        for (VegetationType eLoopVegetation = 0; (eLoopVegetation < Infos.vegetationNum() && !(bAnyValid)); eLoopVegetation++)
                                         {
                                             bAnyValid = bAnyValid || improvement.mabVegetationValid[(int)eLoopVegetation];
                                         }
@@ -459,7 +451,7 @@ namespace BetterAI
                                         {
                                             foreach (ResourceType cityResource in cityResources)
                                             {
-                                                if (mManager.Infos.Helpers.isImprovementResourceValid(eLoopImprovement, cityResource))
+                                                if (Infos.Helpers.isImprovementResourceValid(eLoopImprovement, cityResource))
                                                 {
                                                     bAnyValid = true;
                                                     break;
@@ -501,11 +493,11 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Alternative Hurry                START ###
   ##############################################*/
-            City pSelectedCity = mManager.Selection.getSelectedCity();
+            City pSelectedCity = ClientMgr.Selection.getSelectedCity();
             if (pSelectedCity == null) return;
 
             int i = 1;
-            UIAttributeTag queueTag = ui.GetUIAttributeTag("QueuePanel-Button", i.ToStringCached());
+            UIAttributeTag queueTag = UI.GetUIAttributeTag("QueuePanel-Button", i.ToStringCached());
             if ((((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED > 0) && pSelectedCity.getBuildQueueNode(0) != null && pSelectedCity.getBuildQueueNode(0).mbHurried && (pSelectedCity.getBuildQueueNode(0).miProgress > 0))
             {
                 queueTag.SetBool("Arrow-IsActive", false);
@@ -518,7 +510,7 @@ namespace BetterAI
             const int numButtons = 5;
             for (i = 2; i < Math.Min(pSelectedCity.getBuildCount(), numButtons); i++)
             {
-                queueTag = ui.GetUIAttributeTag("QueuePanel-Button", i.ToStringCached());
+                queueTag = UI.GetUIAttributeTag("QueuePanel-Button", i.ToStringCached());
                 queueTag.SetBool("Arrow-IsActive", true);
 
                 //updateActiveBuildDisplay(pSelectedCity, queueTag, pSelectedCity.getBuildQueueNode(i), i, true);
@@ -547,12 +539,12 @@ namespace BetterAI
                         }
                         else
                         {
-                            mManager.sendBuildQueue(pCity, pWidget.GetDataInt(1), 1);
+                            ClientMgr.sendBuildQueue(pCity, pWidget.GetDataInt(1), 1);
                         }
                     }
                     else
                     {
-                        mManager.sendBuildQueue(pCity, pWidget.GetDataInt(1), 0);
+                        ClientMgr.sendBuildQueue(pCity, pWidget.GetDataInt(1), 0);
                     }
                 }
                 return true;
@@ -574,7 +566,7 @@ namespace BetterAI
                 //copy-paste start
                 using (new UnityProfileScope("ClientUI.updateCityListPanel"))
                 {
-                    Player pActivePlayer = mManager.activePlayer();
+                    Player pActivePlayer = ClientMgr.activePlayer();
 
                     using (var colorScope = CollectionCache.GetStringBuilderScoped())
                     using (var cityListScoped = CollectionCache.GetListScoped<int>())
@@ -590,7 +582,7 @@ namespace BetterAI
                         {
                             for (YieldType eLoopYield = 0; eLoopYield < Infos.yieldsNum(); eLoopYield++)
                             {
-                                UIAttributeTag yieldHeader = ui.GetUIAttributeTag("CityList-Yield", (int)eLoopYield);
+                                UIAttributeTag yieldHeader = UI.GetUIAttributeTag("CityList-Yield", (int)eLoopYield);
                                 yieldHeader.SetTEXT("Data", TextManager, HelpText.buildCommaData(TEXTVAR((int)CityListSortType.YIELD), TEXTVAR((int)eLoopYield)));
                                 yieldHeader.SetKey("Icon", Infos.yield(eLoopYield).mzIconName);
 
@@ -600,8 +592,8 @@ namespace BetterAI
                                 }
                             }
 
-                            ui.SetUIAttribute("CityList-GovernorActive", (Game.isCharacters()).ToStringCached());
-                            ui.SetUIAttribute("CityList-FamilyActive", (Game.isCharacters()).ToStringCached());
+                            UI.SetUIAttribute("CityList-GovernorActive", (Game.isCharacters()).ToStringCached());
+                            UI.SetUIAttribute("CityList-FamilyActive", (Game.isCharacters()).ToStringCached());
                             isCityListInitialized = true;
                         }
 
@@ -650,7 +642,7 @@ namespace BetterAI
 
                         for (int i = 0; i < cityList.Count; i++)
                         {
-                            UIAttributeTag cityAttribute = ui.GetUIAttributeTag("CityListCity", i.ToStringCached());
+                            UIAttributeTag cityAttribute = UI.GetUIAttributeTag("CityListCity", i.ToStringCached());
                             City city = Game.city(cityList[i]);
 
                             cityAttribute.SetInt("ID", cityList[i]);
@@ -658,8 +650,8 @@ namespace BetterAI
                             cityAttribute.SetInt("SelectionState", city.getID());
                         }
 
-                        ui.SetUIAttribute("CityList-NumCities", cityList.Count.ToStringCached());
-                        ui.SetUIAttribute("CityList-Tab-IsActive", (cityList.Count > 0).ToStringCached());
+                        UI.SetUIAttribute("CityList-NumCities", cityList.Count.ToStringCached());
+                        UI.SetUIAttribute("CityList-Tab-IsActive", (cityList.Count > 0).ToStringCached());
                     }
 
                     if (!isShowOwnCities)
@@ -667,8 +659,8 @@ namespace BetterAI
                         updateAgentCityList();
                     }
 
-                    ui.SetUIAttribute("TabPanel-Cities-IsVisible", (mCurrentTabPanel == TabPanelState.CITIES && isShowOwnCities).ToStringCached());
-                    ui.SetUIAttribute("TabPanel-Agents-IsVisible", (mCurrentTabPanel == TabPanelState.CITIES && !isShowOwnCities).ToStringCached());
+                    UI.SetUIAttribute("TabPanel-Cities-IsVisible", (mCurrentTabPanel == TabPanelState.CITIES && isShowOwnCities).ToStringCached());
+                    UI.SetUIAttribute("TabPanel-Agents-IsVisible", (mCurrentTabPanel == TabPanelState.CITIES && !isShowOwnCities).ToStringCached());
                 }
 
                 //copy-paste end
@@ -680,7 +672,7 @@ namespace BetterAI
         }
 
 
-        private int CompareCultureLevels(int cityID, int otherCityID)
+        protected override int CompareCultureLevels(int cityID, int otherCityID)
         {
             //copy-paste start
             City city = Game.city(cityID);

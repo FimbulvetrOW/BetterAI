@@ -482,11 +482,11 @@ namespace BetterAI
             if ((eYield == infos().Globals.HAPPINESS_YIELD) && isDiscontent())
 
             {
-                return infos().Helpers.turnsLeft(getYieldThresholdWhole(eYield), getYieldProgress(eYield), -(calculateCurrentYield(eYield, true)));
+                return infos().Helpers.turnsLeft(getYieldThresholdWhole(eYield), getYieldProgress(eYield), -(calculateCurrentYield(eYield, bTestBuild: true, bAccountForCurrentBuild: true)));
             }
             else
             {
-                return infos().Helpers.turnsLeft(getYieldThresholdWhole(eYield), getYieldProgress(eYield), calculateCurrentYield(eYield, true));
+                return infos().Helpers.turnsLeft(getYieldThresholdWhole(eYield), getYieldProgress(eYield), calculateCurrentYield(eYield, bTestBuild: true, bAccountForCurrentBuild: true));
             }
         }
 
@@ -523,7 +523,7 @@ namespace BetterAI
                         {
                             changeHappinessLevel(-1);
 
-                            player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_HAPPINESS_CHANGE_LOG_DATA", HelpText.buildSignedTextVariable(-1), HelpText.buildCityLinkVariable(this, player())), GameLogType.CITY_WARNING, getTileID());
+                            player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_DISCONTENT_CHANGE_LOG_DATA", HelpText.buildSignedTextVariable(1), HelpText.buildCityLinkVariable(this, player())), GameLogType.CITY_WARNING, getTileID());
                         }
 
                         setYieldProgress(eIndex, (getYieldProgress(eIndex) - iThreshold));
@@ -537,7 +537,7 @@ namespace BetterAI
                         {
                             changeHappinessLevel(-1);
 
-                            player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_DISCONTENT_CHANGE_LOG_DATA", HelpText.buildSignedTextVariable(1), HelpText.buildCityLinkVariable(this, player())), GameLogType.CITY_WARNING, getTileID());
+                            player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_HAPPINESS_CHANGE_LOG_DATA", HelpText.buildSignedTextVariable(-1), HelpText.buildCityLinkVariable(this, player())), GameLogType.CITY_WARNING, getTileID());
 
 
                             if (isDiscontent())
@@ -802,6 +802,112 @@ namespace BetterAI
 
         //Hurry changes START
 
+        //lines 6196-6274
+        //method rewritten
+        protected virtual void getNetCityProductionYieldHelper(YieldType eYield, out int iProgress, out int iLocalOverflow, out int iToStockpile, out int iExcessOverflow, out bool bComplete, bool bReturnLocalOverflowForBuildYieldOnly = false)
+        {
+            using (new UnityProfileScope("City.getNetCityProductionYield"))
+            {
+                bool isBuildYield = isYieldBuildCurrent(eYield);
+                int iRate = calculateCurrentYield(eYield, true, false); // total rate, build or not
+
+                int iTotalRate = iRate + getYieldOverflow(eYield);
+                int iMissingYieldCost = 0;
+                int iOverflow = 0;
+                iExcessOverflow = 0;
+                iLocalOverflow = 0;
+                if (!bReturnLocalOverflowForBuildYieldOnly && !isBuildYield) //just in case we want to see overflow remaining from previous turns for all yields
+                {
+                    iLocalOverflow = getYieldOverflow(eYield);
+                }
+                bComplete = false;
+                if (isBuildYield)
+                {
+                    int iTotalProductionCost = getBuildThreshold(getCurrentBuild());
+                    int iFinalProgress = getCurrentBuild().miProgress + iTotalRate;
+                    iMissingYieldCost = iTotalProductionCost - getCurrentBuild().miProgress;
+
+/*####### Better Old World AI - Base DLL #######
+  ### Altnernative Hurry               START ###
+  ##############################################*/
+                    if (getCurrentBuild().mbHurried && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED >= 3))
+                    {
+                        iProgress = iMissingYieldCost; //should be 0
+                        iLocalOverflow = 0;
+                        iToStockpile = 0;
+                        iExcessOverflow = 0;
+                        return;
+                    }
+/*####### Better Old World AI - Base DLL #######
+  ### Altnernative Hurry                 END ###
+  ##############################################*/
+
+
+                    if (iFinalProgress - iTotalProductionCost >= 0) // completes this turn
+                    {
+                        iOverflow = iFinalProgress - iTotalProductionCost;
+                        bComplete = true;
+                    }
+                    iExcessOverflow = Math.Max(iOverflow - iRate, 0);
+                    iLocalOverflow = iOverflow - iExcessOverflow;
+                }
+
+                if (!isBuildYield)
+                {
+                    iProgress = 0;
+                    iToStockpile = iRate;
+                }
+                else if (getCurrentBuild().mbHurried)
+                {
+                    if (bComplete)
+                    {
+                        iProgress = iMissingYieldCost;
+                        iToStockpile = iTotalRate - iMissingYieldCost;
+                        iLocalOverflow = 0; //no overflow after hurrying, everything just goes to stockpile
+                        iExcessOverflow = iToStockpile;
+                    }
+                    else
+                    {
+                        iProgress = iTotalRate;
+                        iToStockpile = 0;
+                    }
+                }
+                else
+                {
+                    // whether the build finishes this turn or not, production stays local apart from Excess overflow (OF is capped at current production rate)
+                    iProgress = iTotalRate - iOverflow; //this value doesn't include iLocalOverflow
+                    iToStockpile = iExcessOverflow;
+                }
+            }
+        }
+        //overriding to make use of rewritten getNetCityProductionYieldHelper method
+        public override int getNetCityProductionYield(YieldType eYield, bool bToStockpile)
+        {
+            //return getNetCityProductionYieldHelper(eYield, bToStockpile, false, out int iOverflow);
+            getNetCityProductionYieldHelper(eYield, out int iProgress, out int iLocalOverflow, out int iToStockpile, out int iExcessOverflow, out bool bComplete, bReturnLocalOverflowForBuildYieldOnly: true);
+            if (bToStockpile)
+            {
+                return iToStockpile;
+            }
+            else
+            {
+                return iProgress + iLocalOverflow;
+            }
+        }
+        public override int getExcessOverflow(YieldType eYield)
+        {
+            //getNetCityProductionYieldHelper(eYield, false, bNextTurnOverflow: false, out int iExcessOverflow);
+            getNetCityProductionYieldHelper(eYield, out int iProgress, out int iLocalOverflow, out int iToStockpile, out int iExcessOverflow, out bool bComplete, bReturnLocalOverflowForBuildYieldOnly: true);
+            return iExcessOverflow;
+        }
+        public override int getNextTurnOverflow(YieldType eYield)
+        {
+            //getNetCityProductionYieldHelper(eYield, false, bNextTurnOverflow: true, out int iNextTurnOverflow);
+            getNetCityProductionYieldHelper(eYield, out int iProgress, out int iLocalOverflow, out int iToStockpile, out int iExcessOverflow, out bool bComplete, bReturnLocalOverflowForBuildYieldOnly: true);
+            return iLocalOverflow;
+        }
+
+
         //base game code paste START
         //lines 7013-7123
         public override void doPlayerTurn(List<int> aiPlayerYieldAmounts)
@@ -1014,12 +1120,33 @@ namespace BetterAI
                 return base.getBuildDiffWholePositive(pQueueInfo, bIncludeOverflow: bIncludeOverflow);
             }
         }
+
+        public override void moveBuildQueue(int iNewIndex, int iOldIndex)
+        {
+/*####### Better Old World AI - Base DLL #######
+  ### Altnernative Hurry               START ###
+  ##############################################*/
+            CityQueueData pBuildNodeOld = getBuildQueueNode(iOldIndex);
+            if (iNewIndex == -1 && pBuildNodeOld.mbHurried && (pBuildNodeOld.miProgress > 0) && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED > 0))
+            {
+                //can't cancel
+                return;
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### Altnernative Hurry                 END ###
+  ##############################################*/
+            else
+            {
+                base.moveBuildQueue(iNewIndex, iOldIndex);
+            }
+        }
+
         //Hurry changes END
 
 
-/*####### Better Old World AI - Base DLL #######
-  ### City Biome                       START ###
-  ##############################################*/
+        /*####### Better Old World AI - Base DLL #######
+          ### City Biome                       START ###
+          ##############################################*/
         //Sorry, I have no clue how the "Dirty" type stuff works
         //lines 5963-5978
         public override void addTerritoryTile(int iTileID)
