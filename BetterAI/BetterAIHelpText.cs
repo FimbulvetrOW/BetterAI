@@ -2510,16 +2510,51 @@ namespace BetterAI
                         if (production != null)
                         {
                             TextVariable output = production;
-                            if (infos().unit(eUnit).miProductionCity != 0)
+
+/*####### Better Old World AI - Base DLL #######
+  ### Training Time increase Modifier  START ###
+  ##############################################*/
+                            int iModifier = 0;
+                            if (pPlayer != null && pCity != null)
                             {
-                                TextVariable perCity = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_CITY", TEXTVAR(infos().unit(eUnit).miProductionCity, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                                //from Player.getUnitBuildCost
+                                iModifier += pCity.getUnitTrainModifier(eUnit);
+
+                                foreach (UnitTraitType eLoopUnitTrait in infos().unit(eUnit).maeUnitTrait)
+                                {
+                                    iModifier += pCity.getUnitTraitTrainModifier(eLoopUnitTrait);
+                                }
+                            }
+
+                            int iValue = infos().unit(eUnit).miProductionCity;
+                            if (iModifier != 0) //from Player.getUnitBuildCost
+                            {
+                                iValue = infos().utils().modify(iValue, iModifier);
+                            }
+                            //if (infos().unit(eUnit).miProductionCity != 0)
+                            if (iValue != 0)
+                            {
+                                //TextVariable perCity = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_CITY", TEXTVAR(infos().unit(eUnit).miProductionCity, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                                TextVariable perCity = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_CITY", TEXTVAR(iValue, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
                                 output = buildCommaSpaceSeparator(output, perCity);
                             }
-                            if (infos().unit(eUnit).miProductionPer != 0)
+
+                            iValue = infos().unit(eUnit).miProductionPer;
+                            if (iModifier != 0) //from Player.getUnitBuildCost
                             {
-                                TextVariable perGlobal = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_GLOBAL", TEXTVAR(infos().unit(eUnit).miProductionPer, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                                iValue = infos().utils().modify(iValue, iModifier);
+                            }                            
+                            //if (infos().unit(eUnit).miProductionPer != 0)
+                            if (iValue != 0)
+                            {
+                                //TextVariable perGlobal = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_GLOBAL", TEXTVAR(infos().unit(eUnit).miProductionPer, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                                TextVariable perGlobal = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_GLOBAL", TEXTVAR(iValue, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
                                 output = buildCommaSpaceSeparator(output, perGlobal);
                             }
+/*####### Better Old World AI - Base DLL #######
+  ### Training Time increase Modifier    END ###
+  ##############################################*/
+
                             builder.Add(output);
                         }
                     }
