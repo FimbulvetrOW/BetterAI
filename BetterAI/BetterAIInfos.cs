@@ -22,12 +22,12 @@ namespace BetterAI
 {
     public class BetterAIInfos : Infos
     {
-        //line 379
+        //line 382
         public BetterAIInfos(ModSettings pModSettings) : base(pModSettings)
         {
         }
 
-        //line 1072
+        //line 1249-1274
         protected override void init(bool resetDefaultXMLCache)
         {
             base.init(resetDefaultXMLCache);
@@ -75,10 +75,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/
-        //line 229
+        //line 231
         protected List<BetterAIInfoCourtier> maBetterAICourtiers;
 
-        //line 2391
+        //line 2464
         public override InfoCourtier courtier(CourtierType eIndex) => maBetterAICourtiers.GetOrDefault((int)eIndex);
         public override CourtierType courtiersNum() => (CourtierType)maBetterAICourtiers.Count;
         public override List<InfoCourtier> courtiers() => new List<InfoCourtier>(maBetterAICourtiers);
@@ -90,10 +90,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-        //line 241
+        //line 243
         protected List<BetterAIInfoEffectUnit> maBetterAIEffectUnits;
 
-        //line 2341
+        //line 2512
         public override InfoEffectUnit effectUnit(EffectUnitType eIndex) => maBetterAIEffectUnits.GetOrDefault((int)eIndex);
         public override EffectUnitType effectUnitsNum() => (EffectUnitType)maBetterAIEffectUnits.Count;
         public override List<InfoEffectUnit> effectUnits() => new List<InfoEffectUnit>(maBetterAIEffectUnits);
@@ -105,19 +105,19 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
   ##############################################*/
-        //line 262
+        //line 264
         protected List<BetterAIInfoImprovement> maBetterAIImprovements;
 
-        //line 2425
+        //line 2596
         public override InfoImprovement improvement(ImprovementType eIndex) => maBetterAIImprovements.GetOrDefault((int)eIndex);
         public override ImprovementType improvementsNum() => (ImprovementType)maBetterAIImprovements.Count;
         public override List<InfoImprovement> improvements() => new List<InfoImprovement>(maBetterAIImprovements);
         public virtual List<BetterAIInfoImprovement> BetterAIimprovements() => maBetterAIImprovements;
 
-        //line 263
+        //line 265
         protected List<BetterAIInfoImprovementClass> maBetterAIImprovementClasses;
 
-        //line 2429
+        //line 2600
         public override InfoImprovementClass improvementClass(ImprovementClassType eIndex) => maBetterAIImprovementClasses.GetOrDefault((int)eIndex);
         public override ImprovementClassType improvementClassesNum() => (ImprovementClassType)maBetterAIImprovementClasses.Count;
         public override List<InfoImprovementClass> improvementClasses() => new List<InfoImprovementClass>(maBetterAIImprovementClasses);
@@ -129,10 +129,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
-        //line 327
+        //line 329
         protected List<BetterAIInfoTerrain> maBetterAITerrains;
 
-        //line 2685
+        //line 2856
         public override InfoTerrain terrain(TerrainType eIndex) => maBetterAITerrains.GetOrDefault((int)eIndex);
         public override TerrainType terrainsNum() => (TerrainType)maBetterAITerrains.Count;
         public override List<InfoTerrain> terrains() => new List<InfoTerrain>(maBetterAITerrains);
@@ -144,10 +144,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Fix ZOC display                  START ###
   ##############################################*/
-        //line 342
+        //line 345
         protected List<BetterAIInfoUnit> maBetterAIUnits;
 
-        //line 2745
+        //line 2920
         public override InfoUnit unit(UnitType eIndex) => maBetterAIUnits.GetOrDefault((int)eIndex);
         public override UnitType unitsNum() => (UnitType)maBetterAIUnits.Count;
         public override List<InfoUnit> units() => new List<InfoUnit>(maBetterAIUnits);
@@ -170,7 +170,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### [multiple]                       START ###
   ##############################################*/
-        //line 475
+        //line 491-646
         protected override void BuildListOfInfoFiles()
         {
             base.BuildListOfInfoFiles();
@@ -200,7 +200,7 @@ namespace BetterAI
   ### Early Unlock                     START ###
   ##############################################*/
     //corresponding classes are in InfoBase.cs
-    //InfoBase.cs, line 2671
+    //InfoBase.cs, line 2724
     public class BetterAIInfoImprovement : InfoImprovement
     {
         //new stuff here
@@ -252,7 +252,7 @@ namespace BetterAI
         }
     }
 
-    //InfoBase.cs, line 2910
+    //InfoBase.cs, line 2963
     public class BetterAIInfoImprovementClass : InfoImprovementClass
     {
         //new stuff here
@@ -271,7 +271,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
-    //InfoBase.cs, line 5372
+    //InfoBase.cs, line 5518
     public class BetterAIInfoTerrain : InfoTerrain
     {
         public List<int> maiBiomePoints = new List<int>();
@@ -285,7 +285,7 @@ namespace BetterAI
   ### City Biome                         END ###
   ##############################################*/
 
-    //InfoBase.cs, line 1657
+    //InfoBase.cs, line 1701
     public class BetterAIInfoEffectUnit : InfoEffectUnit
     {
 
@@ -353,7 +353,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/
-    //InfoBase.cs, line 1086
+    //InfoBase.cs, line 1122
     public class BetterAIInfoCourtier : InfoCourtier
     {
         public List<TraitType> maeAdjectives = new List<TraitType>();
@@ -371,6 +371,7 @@ namespace BetterAI
   ### Additional fields for Courtiers    END ###
   ##############################################*/
 
+    //InfoBase.cs, line 6106
     public class BetterAIInfoUnit : InfoUnit
     {
 /*####### Better Old World AI - Base DLL #######
@@ -403,7 +404,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### [multiple]                       START ###
   ##############################################*/
-    //InfoBase.cs, line 6378
+    //InfoBase.cs, line 6556
     public class BetterAIInfoGlobals : InfoGlobals
     {
         public int BAI_WORKERLIST_EXTRA = 0; //for Worker Improvement Valid List Mod
@@ -419,6 +420,8 @@ namespace BetterAI
         public int BAI_SWAP_UNIT_FATIGUE_COST = 0;
         public int BAI_ENLIST_NO_FAMILY = 0;
         public int BAI_DISCONTENT_LEVEL_ZERO = 0;
+        public int BAI_MINOR_CITY_IGNORE_IMPASSABLE = 0;
+        public int BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS = 0;
         //override for more variables
         public override void ReadData(Infos infos)
         {
@@ -440,8 +443,9 @@ namespace BetterAI
 
             BAI_SWAP_UNIT_FATIGUE_COST = infos.getGlobalInt("BAI_SWAP_UNIT_FATIGUE_COST");
             BAI_ENLIST_NO_FAMILY = infos.getGlobalInt("BAI_ENLIST_NO_FAMILY");
-
             BAI_DISCONTENT_LEVEL_ZERO = infos.getGlobalInt("BAI_DISCONTENT_LEVEL_ZERO");
+            BAI_MINOR_CITY_IGNORE_IMPASSABLE = infos.getGlobalInt("BAI_MINOR_CITY_IGNORE_IMPASSABLE");
+            BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS = infos.getGlobalInt("BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS");
         }
     }
 /*####### Better Old World AI - Base DLL #######

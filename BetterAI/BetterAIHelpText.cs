@@ -29,7 +29,7 @@ namespace BetterAI
         {
         }
 
-        //lines 3147-3153
+        //lines 2998-3012
         public override TextVariable buildHappinessLevelLinkVariable(City pCity, bool bShort = false)
         {
             using (new UnityProfileScope("HelpText.buildHappinessLevelLinkVariable"))
@@ -58,7 +58,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### ZOC ignore exceptions            START ###
   ##############################################*/
-        //lines 3173-3176
+        //lines 3044-3047
         //public virtual TextVariable buildIgnoreZOCLinkVariable()
         //{
         //    return buildConceptLinkVariable("CONCEPT_IGNORES_ZOC");
@@ -77,7 +77,7 @@ namespace BetterAI
   ### ZOC ignore exceptions              END ###
   ##############################################*/
 
-        //lines 8702-13468
+        //lines 8684-13513
         public override TextBuilder buildWidgetHelp(TextBuilder builder, WidgetData pWidget, ClientManager pManager, bool bIncludeEncyclopediaFooter = true)
         {
             if (pWidget.GetWidgetType() == ItemType.CREATE_AGENT_NETWORK)
@@ -88,7 +88,7 @@ namespace BetterAI
                 Unit pUnit = pGame.unit(pWidget.GetDataInt(0));
                 if (pUnit != null)
                 {
-                    Player pPlayer = pUnit.player();
+                    //Player pPlayer = pUnit.player();
                     City pCity = pGame.city(pWidget.GetDataInt(1));
 /*####### Better Old World AI - Base DLL #######
   ### Agent Network Cost Scaling       START ###
@@ -121,7 +121,7 @@ namespace BetterAI
         }
 
         //500 lines of copy-paste START
-        //lines 19846-20293
+        //lines 19806-20253
         public override TextBuilder buildImprovementBreakdown(TextBuilder builder, ImprovementType eImprovement, SpecialistType eSpecialist, Tile pTile, ClientManager pManager)
         {
             Game pGame = pManager.GameClient;
@@ -599,7 +599,7 @@ namespace BetterAI
         //copy-paste END
 
         //1k lines of copy-paste START
-        //lines 20336-21316
+        //lines 20296-21274
         public override TextBuilder buildImprovementHelp(TextBuilder builder, ImprovementType eImprovement, Tile pTile, ClientManager pManager, bool bName = true, bool bCosts = true, bool bDetails = true, bool bEncyclopedia = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.NONE)
         {
             using (new UnityProfileScope("HelpText.buildImprovementHelp"))
@@ -1610,7 +1610,7 @@ namespace BetterAI
 
 
         //1k lines of copy-paste END
-        //lines 21351-21757
+        //lines 21309-21715
         public override void buildImprovementRequiresHelp(List<TextVariable> lRequirements, ImprovementType eImprovement, Game pGame, Player pActivePlayer, Tile pTile, bool bUpgradeImprovement = false)
         {
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
@@ -2187,7 +2187,7 @@ namespace BetterAI
         }
 
         //copy-paste START
-        //lines 21759-22114
+        //lines 21717-22072
         public override TextBuilder buildUnitTypeHelp(TextBuilder builder, UnitType eUnit, City pCity, Player pPlayer, Game pGame, Player pActivePlayer, bool bName = true, bool bCosts = true, bool bStats = true, bool bDetails = true)
         {
             using (new UnityProfileScope("HelpText.buildUnitTypeHelp"))
@@ -2595,7 +2595,7 @@ namespace BetterAI
         //copy-paste END
 
         //copy-paste START
-        //lines 22284-22584
+        //lines 22242-22506
         public override void buildUnitTooltip(Unit pUnit, ClientManager pManager, UIUnitTooltipData outUnitData)
         {
             using (new UnityProfileScope("HelpText.buildUnitTooltip"))
@@ -2876,7 +2876,7 @@ namespace BetterAI
         }
         //copy-paste END
 
-        //lines 23043-23692
+        //lines 23001-23650
         public override TextBuilder buildEffectUnitHelp(TextBuilder builder, EffectUnitType eEffectUnit, Game pGame, bool bSkipIcons = false, bool bRightJustify = false)
         {
             builder = base.buildEffectUnitHelp(builder, eEffectUnit, pGame, bSkipIcons, bRightJustify);
@@ -2933,7 +2933,7 @@ namespace BetterAI
         // and I assume a widget also needs UI components
 
         //120 lines copy&paste START
-        //lines 37437-37563
+        //lines 37481-37607
         public override TextBuilder buildResourceHelp(TextBuilder builder, ResourceType eResource, Game pGame, Player pPlayer, Tile pTile, Player pActivePlayer, bool bName = true)
         {
             //using (new UnityProfileScope("HelpText.buildResourceHelp"))
@@ -3373,7 +3373,7 @@ namespace BetterAI
 
 
         //copy-paste START
-        //lines 39549-39589
+        //lines 39607-39647
         public override TextBuilder buildUrbanHelp(TextBuilder builder)
         {
             using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
@@ -3426,7 +3426,7 @@ namespace BetterAI
         //copy-paste END
 
         //copy-paste START
-        //lines 39604-40118
+        //lines 39783-40305
         public override TextBuilder buildCityYieldNetHelp(TextBuilder builder, City pCity, YieldType eYield, ClientManager pManager, bool bNetOnly = false, bool bReverseSign = false)
         {
             Game pGame = pManager.GameClient;

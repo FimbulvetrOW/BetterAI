@@ -30,7 +30,7 @@ namespace BetterAI
         public bool mbAmphibious = false;
         public int miAmphibiousCount = 0;
 
-        //lines 3956-3972
+        //lines 3989-4005
         protected override void changeEffectUnitDictionary(EffectUnitType eKey, int iChange)
         {
             base.changeEffectUnitDictionary(eKey, iChange);
@@ -59,7 +59,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### No Family for Enlisted Units     START ###
   ##############################################*/
-        //lines 4396-4431
+        //lines 4438-4473
         public override Unit convert(PlayerType ePlayer, TribeType eTribe, bool bEnlisted = false)
         {
             Unit pUnit = base.convert(ePlayer, eTribe, bEnlisted);
@@ -82,7 +82,7 @@ namespace BetterAI
 
         //copy-pasted from Unit.cs START
 
-        //lines 6114-6199
+        //lines 6143-6233
         // used by pathfinder
         public override int getMovementCost(Tile pFromTile, Tile pToTile, int iCostSoFar)
         {
@@ -233,7 +233,7 @@ namespace BetterAI
         //copy-pasted from Unit.cs END
 
         //copy-paste START
-        //lines 6627-6655
+        //lines 6661-6697
         public override bool canSwapUnits(Tile pTile, Player pActingPlayer, bool bMarch)
         {
             if (!canAct(pActingPlayer, (1 + ((isFatigued()) ? infos().Globals.UNIT_FATIGUE_COST : 0))))
@@ -263,10 +263,10 @@ namespace BetterAI
             {
                 return false;
             }
+
 /*####### Better Old World AI - Base DLL #######
   ### Fix Swap Unit Exploit            START ###
   ##############################################*/
-
             BetterAIUnit pUnit = (BetterAIUnit)swapUnit(pTile, pActingPlayer);
             if (pUnit == null)
             {
@@ -282,10 +282,11 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Fix Swap Unit Exploit              END ###
   ##############################################*/
+
             return true;
         }
 
-        //liens 6656-6669
+        //lines 6698-6721
         public override void swapUnits(Tile pTile, Player pActingPlayer, bool bMarch)
         {
             MohawkAssert.Assert(canSwapUnits(pTile, pActingPlayer, bMarch));
@@ -323,10 +324,31 @@ namespace BetterAI
         }
         //copy-paste END
 
+        //lines 9063-9089
+        public override bool canPillage(Tile pTile, Player pActingPlayer, bool bTestEnabled = true)
+        {
+            if (base.canPillage(pTile, pActingPlayer, bTestEnabled))
+            {
+                TribeType eTribe = getTribe();
+                if (eTribe != TribeType.NONE && pTile.isWater() && !(info().mbWater) && infos().tribe(eTribe).mbWaterMove
+                    && ((BetterAIInfoGlobals)infos().Globals).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS > 0)
+                {
+                    //stolen from City.doDistantRaidTurn
+                    if (game().getTurn() < (game().tribeLevel().miRaidStartTurn + ((BetterAIInfoGlobals)infos().Globals).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            else return false;
+        }
+
 /*####### Better Old World AI - Base DLL #######
   ### Agent Network Cost Scaling       START ###
   ##############################################*/
-        //lines 10486-10496
+        //lines 10543-10553
         public virtual int getAgentNetworkCost(City pCity)
         {
             int iCost = base.getAgentNetworkCost();
@@ -336,7 +358,7 @@ namespace BetterAI
             return iCost;
         }
 
-        //lines 10497-10556
+        //lines 10554-10613
         public override bool canCreateAgentNetwork(Tile pTile, City pCity, Player pActingPlayer, bool bTestEnabled = true)
         {
             bool bNoTest = base.canCreateAgentNetwork(pTile, pCity, pActingPlayer, false);
@@ -373,7 +395,7 @@ namespace BetterAI
             }
         }
 
-        //lines 10561-10571
+        //lines 10618-10628
         public override void createAgentNetwork(City pCity, Player pActingPlayer)
         {
             MohawkAssert.Assert(canCreateAgentNetwork(tile(), pCity, pActingPlayer));

@@ -38,7 +38,7 @@ namespace BetterAI
             else return CityBiomeType.NONE;
         }
 
-        //lines 3040-3084
+        //lines 3077-3121
         public override void setTerrain(TerrainType eNewValue)
         {
             TerrainType eOldTerrain = getTerrain();
@@ -46,17 +46,76 @@ namespace BetterAI
             if (eOldTerrain != eNewValue)
             {
                 BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
-                if (pCityTerritory != null)
-                {
-                    pCityTerritory.setTerrainChanged();
-                }
+                pCityTerritory?.setTerrainChanged();
             }
         }
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                         END ###
   ##############################################*/
 
-        //canHaveImprovement: lines 4783-5076
+        //lines 4142-4191
+        // returns false if site is not surrounded
+        // otherwise returns true and populates the city site urban tiles plus all the surrounding tiles
+        protected override bool getCitySiteAndSurroundingTiles(HashSet<int> siTiles, Dictionary<int, int> dTerritoryTiles)
+        {
+            bool hasTileCityTerritory()
+            {
+                if (hasCityTerritory())
+                {
+                    return true;
+                }
+                if (dTerritoryTiles != null && dTerritoryTiles.ContainsKey(getID()))
+                {
+                    return true;
+                }
+                return false;
+            }
+
+            using var profileScoped = new UnityProfileScope("Tile.getCitySiteSurroundedTiles");
+
+            if (siTiles.Contains(getID()))
+            {
+                // already checked
+                return true;
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Minor Cities next to Mountain    START ###
+  ##############################################*/
+            //if (!isUrban() && isLand() && !hasTileCityTerritory())
+            if (!isUrban() && isLand() && (!impassable() || (((BetterAIInfoGlobals)(infos().Globals)).BAI_MINOR_CITY_IGNORE_IMPASSABLE != 1)) && !hasTileCityTerritory())
+/*####### Better Old World AI - Base DLL #######
+  ### Minor Cities next to Mountain      END ###
+  ##############################################*/
+            {
+                // not surrounded
+                return false;
+            }
+
+            siTiles.Add(getID());
+
+            if (isUrban() && !hasTileCityTerritory())
+            {
+                // unclaimed urban tile is part of city site - check its surrounding tiles too
+                for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+                {
+                    BetterAITile pAdjacentTile = (BetterAITile)tileAdjacent(eLoopDirection);
+
+                    if (pAdjacentTile != null)
+                    {
+                        if (!pAdjacentTile.getCitySiteAndSurroundingTiles(siTiles, dTerritoryTiles))
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+
+        //canHaveImprovement: lines 4805-5098
         public virtual bool canCityTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
@@ -98,7 +157,7 @@ namespace BetterAI
             return true;
         }
 
-        //canHaveImprovement: lines 4783-5076
+        //canHaveImprovement: lines 4805-5098
         public virtual bool canGeneralTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             if (getTerrain() == TerrainType.NONE)
@@ -217,7 +276,7 @@ namespace BetterAI
             return true;
         }
 
-        //lines 4783-5076
+        //lines 4805-5098
         public override bool canHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             //split into 3:

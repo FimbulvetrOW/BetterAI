@@ -475,7 +475,7 @@ namespace BetterAI
 
 
 
-        //lines 4268-4278
+        //lines 4272-4282
         public override int getYieldTurnsLeft(YieldType eYield)
         {
 
@@ -490,7 +490,7 @@ namespace BetterAI
             }
         }
 
-        //lines 4287-4395
+        //lines 4291-4395
         protected override void setYieldProgress(YieldType eIndex, int iNewValue)
         {
             if (eIndex == infos().Globals.HAPPINESS_YIELD)
@@ -604,6 +604,7 @@ namespace BetterAI
             }
         }
 
+        //lines 5505-5530
         public override void setHappinessLevel(int iNewValue)
         {
             if (!hasPlayer())
@@ -636,7 +637,7 @@ namespace BetterAI
         }
 
 
-        //lines 5518-5548
+        //lines 5531-5561
         public override void changeHappinessLevel(int iChange)
         {
             if (((BetterAIInfoGlobals)infos().Globals).BAI_DISCONTENT_LEVEL_ZERO > 0)
@@ -688,7 +689,7 @@ namespace BetterAI
   ### Limit Settler Numbers again      START ###
   ##############################################*/
         //copy & paste START
-        //lines 6462-6495
+        //lines 6613-6628
         protected override bool verifyBuildUnit(CityQueueData pBuild)
         {
             UnitType eUnit = (UnitType)(pBuild.miType);
@@ -712,7 +713,7 @@ namespace BetterAI
             return true;
         }
 
-        //canBuildUnitCurrent: lines 9028-9105
+        //canBuildUnitCurrent: lines 9929-9306
         public virtual bool canContinueBuildUnitCurrent(UnitType eUnit, bool bTestEnabled = true)
         {
             Player pPlayer = ((hasPlayer()) ? player() : lastPlayer());
@@ -909,7 +910,7 @@ namespace BetterAI
 
 
         //base game code paste START
-        //lines 7013-7123
+        //lines 7180-7295
         public override void doPlayerTurn(List<int> aiPlayerYieldAmounts)
         {
             MohawkAssert.Assert(hasPlayer());
@@ -1069,7 +1070,7 @@ namespace BetterAI
   ### Altnernative Hurry                 END ###
   ##############################################*/
 
-        //lines 6211-6241
+        //lines 6356-6365
         public override bool canCancelBuildQueue(CityQueueData pQueueData, int iOldIndex)
         {
             if (base.canCancelBuildQueue(pQueueData, iOldIndex))
@@ -1098,7 +1099,7 @@ namespace BetterAI
 
         //now the hurry costs
         //this method is only used for hurry cost, so I can just override it, so I don't have to override all the getHurry<yield> methods
-        //lines 6143-6146
+        //lines 6164-6166
         public override int getBuildDiffWholePositive(CityQueueData pQueueInfo, bool bIncludeOverflow = true)
         {
 /*####### Better Old World AI - Base DLL #######
@@ -1121,6 +1122,7 @@ namespace BetterAI
             }
         }
 
+        //lines 6375-6539
         public override void moveBuildQueue(int iNewIndex, int iOldIndex)
         {
 /*####### Better Old World AI - Base DLL #######
@@ -1144,11 +1146,11 @@ namespace BetterAI
         //Hurry changes END
 
 
-        /*####### Better Old World AI - Base DLL #######
-          ### City Biome                       START ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### City Biome                       START ###
+  ##############################################*/
         //Sorry, I have no clue how the "Dirty" type stuff works
-        //lines 5963-5978
+        //lines 5981-5996 (add & remove)
         public override void addTerritoryTile(int iTileID)
         {
             int iCount = getTerritoryTiles().Count;
@@ -1173,7 +1175,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### self-aaiEffectCityYieldRate      START ###
   ##############################################*/
-        //lines 10066-10204
+        //lines 10267-10405
         public override int getEffectCityYieldRate(EffectCityType eEffectCity, YieldType eYield, bool bComplete = false)
         {
             int iRate = base.getEffectCityYieldRate(eEffectCity, eYield, bComplete);
@@ -1204,7 +1206,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
   ##############################################*/
-        //Player.isImprovementUnlocked: lines 17120-17138
+        //Player.isImprovementUnlocked: lines 17320-17338
         public virtual bool ImprovementUnlocked(ImprovementType eImprovement, ref bool bPrimaryUnlock, bool bTestEnabled = true, bool bTestTech = true)
         {
             BetterAIPlayer pOwner = (BetterAIPlayer)player();
@@ -1364,7 +1366,7 @@ namespace BetterAI
             return false;
         }
 
-        //Tile.canHaveImprovement: lines 4783-5076
+        //Tile.canHaveImprovement: lines 4805-5098
         public virtual bool canCityHaveImprovement(ImprovementType eImprovement, ref bool bPrimaryUnlock, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             if (!bForceImprovement && !ImprovementUnlocked(eImprovement, ref bPrimaryUnlock, bTestEnabled, false)) //testing without tech

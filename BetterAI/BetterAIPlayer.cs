@@ -74,14 +74,14 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###
   ##############################################*/
-        //lines 16082-16085
+        //lines 16282-16285
         public override bool isCityMaxReached()
         {
             return ((getNumCities() + countFoundUnitsAndBuilds()) >= getCityMax());
         }
-        /*####### Better Old World AI - Base DLL #######
-          ### Limit Settler Numbers again        END ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### Limit Settler Numbers again        END ###
+  ##############################################*/
 
         //removed in 1.0.66355
         protected virtual int countFoundUnitsAndBuilds()
@@ -124,7 +124,7 @@ namespace BetterAI
 
 
         //copy-paste START
-        //canBuildUnit: lines 16983-17022
+        //canBuildUnit: lines 17183-17222
         public virtual bool canContinueBuildUnit(UnitType eUnit)
         {
             if (!canEverBuildUnit(eUnit))
@@ -176,7 +176,7 @@ namespace BetterAI
         }
         //copy-paste END
 
-        //lines 17120-17138
+        //lines 17320-17338
         public override bool isImprovementUnlocked(ImprovementType eImprovement)
         {
 
@@ -236,7 +236,7 @@ namespace BetterAI
   ##############################################*/
         }
 
-        //lines 17139-17203
+        //lines 17339-17393
         public override bool canStartImprovement(ImprovementType eImprovement, Tile pTile, bool bTestTech = true, bool bForceImprovement = false)
         {
             if (base.canStartImprovement(eImprovement, pTile, bTestTech, bForceImprovement))
@@ -291,7 +291,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/
-        //lines 18789-18806
+        //lines 18983-19002
         protected override Character addCourtier(CourtierType eType, GenderType eGender, FamilyType eFamily, Player pFromPlayer = null)
         {
             if (eType == CourtierType.NONE)

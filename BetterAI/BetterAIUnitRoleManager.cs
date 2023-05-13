@@ -46,7 +46,7 @@ namespace BetterAI
   ### Don't defend free City Sites       END ###
   ##############################################*/
 
-                //lines 885
+                //lines 886-902
                 protected override void calculateBlockableCitySiteValues()
                 {
                     //using var profileScope = new UnityProfileScope("UnitRoleManager.calculateBlockableCitySiteValues");
@@ -81,7 +81,7 @@ namespace BetterAI
                     }
                 }
 
-                //line 5036
+                //line 5081-5189
                 //copy-paste START
                 protected override void getUnitCitySiteGuardValues(PathFinder pPathfinder, Unit pUnit, int iMaxSteps, int iMaxTargets)
                 {

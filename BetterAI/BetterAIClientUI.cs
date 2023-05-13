@@ -27,7 +27,7 @@ namespace BetterAI
         private const string YIELD_ARROW = "Sprites/GuitarPickUp";
         private const string YIELD_NORMAL = "Sprites/GuitarPick";
         //copy-paste START
-        //lines 8957-9219
+        //lines 9192-9436
         protected override void updateCitySelection(City pSelectedCity)
         {
             using (new UnityProfileScope("ClientUI.updateCitySelection"))
@@ -320,7 +320,7 @@ namespace BetterAI
         }
         //copy-paste END
 
-        //lines 11591-11624
+        //lines 11725-11756
         public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, bool bDifferentTile, WorkerActionFilter eFilter = WorkerActionFilter.GENERAL)
         {
             bool bRunOriginal = true;
@@ -333,7 +333,7 @@ namespace BetterAI
                 bool bControl = Interfaces.Input.isControlDown();
                 bool bImprovedTile = pTile.hasImprovement() || pTile.hasCity()   //also for city center tile, because you can't build any improvement there anyway.
                     || ((BetterAIInfoGlobals)Infos.Globals).BAI_WORKERLIST_EXTRA >= 2; //option to always show extra items (Franz)
-                bool bShowExtraImprovements = !bControl && !bQueue && bTeamTest && bImprovedTile;
+                bool bShowExtraImprovements = bWorker && !bControl && !bQueue && bTeamTest && bImprovedTile;
                 BetterAICity pCityTerritory = (BetterAICity)pTile.cityTerritory();
                 if (bShowExtraImprovements && (pCityTerritory != null))
                 {
@@ -485,7 +485,7 @@ namespace BetterAI
 
 
 
-        //lines 17449-17556
+        //lines 17830-17937
         protected override void updateQueuePanel()
         {
             base.updateQueuePanel();
@@ -519,7 +519,7 @@ namespace BetterAI
             }
         }
 
-        //lines 
+        //lines 18846-21341
         //Intercept and redirect illegal queue moves at doWidgetAction
         public override bool doWidgetAction(WidgetData pWidget)
         {
@@ -558,7 +558,7 @@ namespace BetterAI
             }
         }
 
-        //lines 16954-17050
+        //lines 17336-17432
         protected override void updateCityListPanel()
         {
             if (currentCityListSort == CityListSortType.CULTURE_LEVEL)
@@ -671,7 +671,7 @@ namespace BetterAI
             }
         }
 
-
+        //lines 17022-17035
         protected override int CompareCultureLevels(int cityID, int otherCityID)
         {
             //copy-paste start
