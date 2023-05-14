@@ -689,8 +689,17 @@ namespace BetterAI
                 }
                 else
                 {
-                    //reversed, less turns left = more culture
-                    return otherCity.getYieldTurnsLeft(Infos.Globals.CULTURE_YIELD) - city.getYieldTurnsLeft(Infos.Globals.CULTURE_YIELD) ;
+                    //check if either city has a yield rate of 0
+                    if (city.calculateCurrentYield(Infos.Globals.CULTURE_YIELD, true) * otherCity.calculateCurrentYield(Infos.Globals.CULTURE_YIELD, true) != 0)
+                    {
+                        //reversed, less turns left = more culture
+                        return otherCity.getYieldTurnsLeft(Infos.Globals.CULTURE_YIELD) - city.getYieldTurnsLeft(Infos.Globals.CULTURE_YIELD);
+                    }
+                    else
+                    {
+                        //reverse the reversal if either yield rate is 0
+                        return city.getYieldTurnsLeft(Infos.Globals.CULTURE_YIELD) - otherCity.getYieldTurnsLeft(Infos.Globals.CULTURE_YIELD);
+                    }
                 }
 /*####### Better Old World AI - Base DLL #######
   ### Culture Level Sort                 END ###
