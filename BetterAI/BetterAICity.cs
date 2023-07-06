@@ -422,18 +422,6 @@ namespace BetterAI
                 pWriter.WriteEndElement();
             }
 
-            if (getEventStoryOptions().Count > 0)
-            {
-                pWriter.WriteStartElement("EventStoryOption");
-
-                foreach (EventOptionType eLoopEventStoryOption in getEventStoryOptions())
-                {
-                    pWriter.WriteElementString(infos().eventOption(eLoopEventStoryOption).mzType, "");
-                }
-
-                pWriter.WriteEndElement();
-            }
-
             if (getEventStoryTurns().Count > 0)
             {
                 pWriter.WriteStartElement("EventStoryTurn");
@@ -840,7 +828,7 @@ namespace BetterAI
                     }
                     else
                     {
-                        //int iOverflow = Math.Max(0, iExtraYield);
+                        //int iOverflow = Math.Max(0, iExtraYield); //iExtraYield >= 0
                         zYield.iProductionOverflow = Math.Min(iExtraYield, zYield.iRate);
                         zYield.iStockpileOverflow = iExtraYield - zYield.iProductionOverflow;
                         zYield.iStockpile = zYield.iStockpileOverflow;
@@ -855,147 +843,14 @@ namespace BetterAI
             else
             {
                 zYield.iStockpile = zYield.iRate;
+                zYield.iProductionOverflow = getYieldOverflow(eYield);
             }
 
             return zYield;
         }
 
-         //base game code paste START
-        //lines 7180-7295
-        public override void doPlayerTurn(List<int> aiPlayerYieldAmounts)
-        {
-            MohawkAssert.Assert(hasPlayer());
+        //overriding doPlayerTurn is no longer needed
 
-            if (isDamaged())
-            {
-                changeDamage(-((infos().Globals.CITY_HEAL_PERCENT_PER_TURN * getHPMax()) / 100));
-            }
-
-            if (getAssimilateTurns() > 0)
-            {
-                changeAssimilateTurns(culture().miAssimilationRate);
-            }
-
-            doDistantRaidTurn();
-
-            if (!isEnablesGovernor() && hasGovernor())
-            {
-                clearGovernor();
-            }
-
-            if (hasPlayer() && !player().isFirstTurnProcessing())
-            {
-                if (!hasBuild())
-                {
-                    if (isAutoBuild())
-                    {
-                        player().AI.chooseBuild(this, BuildType.NONE, false);
-                    }
-                }
-
-                if (!hasBuild())
-                {
-                    ProjectType eDefaultProject = culture().meDefaultProject;
-
-                    if (eDefaultProject != ProjectType.NONE)
-                    {
-                        pushBuildProjectFirst(eDefaultProject);
-                    }
-                }
-
-                clearCompletedBuild();
-
-                //to be changed to use new getNetCityProductionYieldHelper once it's fixed in base game.
-                //until then it stays, since it's working fine.
-                using (var yieldMapScoped = CollectionCache.GetDictionaryScoped<YieldType, int>())
-                {
-                    Dictionary<YieldType, int> mapYieldAmounts = yieldMapScoped.Value;
-
-                    // save current yields since they are affected by what is in the queue and top build may change
-                    for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
-                    {
-                        if (infos().yield(eLoopYield).meSubtractFromYield == YieldType.NONE)
-                        {
-                            int iYield = calculateCurrentYield(eLoopYield);
-                            if (iYield != 0)
-                            {
-                                mapYieldAmounts.Add(eLoopYield, iYield);
-                            }
-                        }
-                    }
-
-                    if (hasBuild())
-                    {
-                        CityQueueData pCurrentBuild = getCurrentBuild();
-                        if (getBuildThreshold(pCurrentBuild) == 0)
-                        {
-                            finishBuild();
-                        }
-                        else
-                        {
-                            YieldType eBuildYield = getBuildYieldType(pCurrentBuild);
-                            if (mapYieldAmounts.TryGetValue(eBuildYield, out int iYieldAmount))
-                            {
-/*####### Better Old World AI - Base DLL #######
-  ### Altnernative Hurry               START ###
-  ##############################################*/
-                                if (pCurrentBuild.mbHurried && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED >= 3))
-                                {
-                                    setYieldOverflow(eBuildYield, 0);
-                                    mapYieldAmounts.Remove(eBuildYield);
-                                    finishBuild();
-                                }
-                                else
-/*####### Better Old World AI - Base DLL #######
-  ### Altnernative Hurry                 END ###
-  ##############################################*/
-                                {
-                                    changeCurrentBuildProgress(iYieldAmount + getYieldOverflow(eBuildYield));
-                                    int iExtraYield = -getBuildDiff(pCurrentBuild, bIncludeOverflow: false);
-                                    if (iExtraYield >= 0)
-                                    {
-                                        // build finished, assign overflow, capped at current city production
-                                        // the rest goes to stockpile
-                                        int iOverflow = pCurrentBuild.mbHurried ? 0 : Math.Min(iExtraYield, iYieldAmount);
-                                        mapYieldAmounts[eBuildYield] = iExtraYield - iOverflow;
-                                        setYieldOverflow(eBuildYield, iOverflow);
-                                        finishBuild();
-                                    }
-                                    else
-                                    {
-                                        // all production goes to city build
-                                        mapYieldAmounts.Remove(eBuildYield);
-                                        setYieldOverflow(eBuildYield, 0);
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-
-                    foreach (KeyValuePair<YieldType, int> p in mapYieldAmounts)
-                    {
-                        YieldType eLoopYield = p.Key;
-                        int iYieldAmount = p.Value;
-                        if (!infos().yield(eLoopYield).mbGlobal)
-                        {
-                            changeYieldProgress(eLoopYield, iYieldAmount);
-                        }
-                        else
-                        {
-                            aiPlayerYieldAmounts[(int)eLoopYield] += iYieldAmount;
-                        }
-                    }
-                }
-
-                decayBuildQueue();
-            }
-
-            verifyBuildProjects();
-            verifyBuildSpecialists();
-            verifyBuildUnits();
-        }
-        //base game code paste END
 
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry               START ###
@@ -1126,35 +981,38 @@ namespace BetterAI
   ##############################################*/
 
 
-        protected override bool canRaidFrom(Tile pFromTile)
+        public override bool canRaidFrom(Tile pFromTile, bool bDistantRaid)
         {
-            if (!(pFromTile.adjacentToBoundary()))
+            if (bDistantRaid)
             {
-                return false;
-            }
-
-            if (pFromTile.impassable())
-            {
-                return false;
-            }
-
-            if (pFromTile.hasCityTerritory())
-            {
-                return false;
-            }
-
-            if (pFromTile.isWater())
-            {
-                if (pFromTile.getAreaTileCount() < 2 * infos().Globals.FRESH_WATER_THRESHOLD)
+                if (!(pFromTile.adjacentToBoundary()))
                 {
                     return false;
                 }
-            }
-            else
-            {
-                if (pFromTile.getLandSection() != tile().getLandSection())
+
+                if (pFromTile.impassable())
                 {
                     return false;
+                }
+
+                if (pFromTile.hasCityTerritory())
+                {
+                    return false;
+                }
+
+                if (pFromTile.isWater())
+                {
+                    if (pFromTile.getAreaTileCount() < 2 * infos().Globals.FRESH_WATER_THRESHOLD)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (pFromTile.getLandSection() != tile().getLandSection())
+                    {
+                        return false;
+                    }
                 }
             }
 
@@ -1167,6 +1025,11 @@ namespace BetterAI
         public override bool doDistantRaid(bool bTest = false)
         {
             using var profileScope = new UnityProfileScope("City.doDistantRaid");
+
+            if (!canGetRaided())
+            {
+                return false;
+            }
 
             Tile pCityTile = tile();
 
@@ -1182,7 +1045,7 @@ namespace BetterAI
                 {
                     Tile pLoopTile = game().tile(iLoopTile);
 
-                    if (canRaidFrom(pLoopTile))
+                    if (canRaidFrom(pLoopTile, true))
                     {
                         if (bTest)
                         {

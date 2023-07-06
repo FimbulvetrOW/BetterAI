@@ -150,7 +150,7 @@ namespace BetterAI
                 }
 
                 iCost += game().getTerrainCostBonus(pToTile.getTerrain());
-
+                iCost += pToTile.getMovementCostExtra();
 
                 bool bRiverCrossing = (bRiver && !pFromTile.isBridge(pToTile, getPlayer()));
                 if (bRiverCrossing)

@@ -22,6 +22,17 @@ namespace BetterAI
 {
     public class BetterAICharacter : Character
     {
+        //lines 4670-4673
+/*####### Better Old World AI - Base DLL #######
+  ### Leader yield preview fix         START ###
+  ##############################################*/
+        public override int getRatingYieldRateLeader(RatingType eRating, YieldType eYield)
+        {
+            return infos().Helpers.getRatingYieldRateCourt(eRating, eYield, getRating(eRating), OpinionCharacterType.NONE, game());
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Leader yield preview fix           END ###
+  ##############################################*/
 
         //lines 7677-7701
         public override void generateRatingsCourtier(CourtierType eCourtier)

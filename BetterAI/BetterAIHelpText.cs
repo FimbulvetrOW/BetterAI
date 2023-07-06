@@ -202,6 +202,29 @@ namespace BetterAI
                                     builder.AddTEXT("TEXT_HELPTEXT_YIELD_FROM", buildSignedTextVariable(iValue, true, bColor: true), buildOccurrenceLinkVariable(pLoopData.meType, pLoopData));
                                 }
                             }
+                            iValue = occurrence.miTileBaseYieldModifier;
+                            if (iValue != 0 && pLoopData.getAffectedTiles().Contains(pTile.getID()))
+                            {
+                                using (buildSecondaryTextScope(builder))
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_YIELD_FROM", buildSignedTextVariable(iValue, true, bColor: true), buildOccurrenceLinkVariable(pLoopData.meType, pLoopData));
+                                }
+                            }
+                            iValue = occurrence.miTileBaseYieldModifierAdjacent;
+                            if (iValue != 0)
+                            {
+                                for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+                                {
+                                    Tile pAdjacentTile = pTile.tileAdjacent(eLoopDirection);
+                                    if (pAdjacentTile != null && pLoopData.getAffectedTiles().Contains(pAdjacentTile.getID()))
+                                    {
+                                        using (buildSecondaryTextScope(builder))
+                                        {
+                                            builder.AddTEXT("TEXT_HELPTEXT_YIELD_FROM", buildSignedTextVariable(iValue, true, bColor: true), buildOccurrenceLinkVariable(pLoopData.meType, pLoopData));
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -354,7 +377,7 @@ namespace BetterAI
                                     {
                                         builder.AddTEXT("TEXT_HELPTEXT_YIELD_FROM_X",
                                             buildSignedTextVariable((iCount * iValue), false, Constants.YIELDS_MULTIPLIER),
-                                            buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pGame, pActivePlayer),
+                                            buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pCityTerritory.governor(), pGame, pActivePlayer),
                                             (iCount > 1 ? TEXTVAR(iCount) : TEXTVAR(false)));
                                     }
 
@@ -379,7 +402,7 @@ namespace BetterAI
                                     {
                                         builder.AddTEXT("TEXT_HELPTEXT_YIELD_FROM_X",
                                             buildSignedTextVariable((iCount * iValue), true),
-                                            buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pGame, pActivePlayer),
+                                            buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pCityTerritory.governor(), pGame, pActivePlayer),
                                             (iCount > 1 ? TEXTVAR(iCount) : TEXTVAR(false)));
                                     }
                                 }
@@ -748,7 +771,7 @@ namespace BetterAI
 
                         foreach (EffectCityType eEffectCity in effectListScoped.Value)
                         {
-                            buildEffectCityHelpNoYields(builder, eEffectCity, pGame, pCityTerritory, pActivePlayer);
+                            buildEffectCityHelpNoYields(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), pActivePlayer);
                         }
 
                         if (pGame?.isCharacters() ?? true)
@@ -886,7 +909,7 @@ namespace BetterAI
                                                 {
                                                     using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                                                     {
-                                                        buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, true, pActivePlayer, bSkipImpossible: !bEncyclopedia);
+                                                        buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), true, pActivePlayer, bSkipImpossible: !bEncyclopedia);
                                                     }
 
                                                     if (subText.HasContent)
@@ -996,7 +1019,7 @@ namespace BetterAI
 
                                                 if (eEffectCity != EffectCityType.NONE)
                                                 {
-                                                    buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, true, pActivePlayer, bSkipImpossible: !bEncyclopedia);
+                                                    buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), true, pActivePlayer, bSkipImpossible: !bEncyclopedia);
                                                 }
                                             }
                                         }
@@ -1410,7 +1433,7 @@ namespace BetterAI
 
                                     if (yieldsList.Count > 0)
                                     {
-                                        subText.AddTEXT("TEXT_HELPTEXT_EFFECT_CITY_HELP_YIELDS_EFFECT_CITY_YIELD_RATE", buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pGame, pActivePlayer), yieldsList.Finalize(), TEXTVAR(false), TEXTVAR(!(infos().effectCity(eLoopEffectCity).mbSingle)));
+                                        subText.AddTEXT("TEXT_HELPTEXT_EFFECT_CITY_HELP_YIELDS_EFFECT_CITY_YIELD_RATE", buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer), yieldsList.Finalize(), TEXTVAR(false), TEXTVAR(!(infos().effectCity(eLoopEffectCity).mbSingle)));
                                     }
                                 }
                             }
@@ -1432,7 +1455,7 @@ namespace BetterAI
                                         {
                                             if (bEncyclopedia || (pActivePlayer == null || pActivePlayer.canEverHaveEffectCity(eLoopEffectCity)))
                                             {
-                                                subText.AddTEXT("TEXT_HELPTEXT_EFFECT_CITY_HELP_YIELDS_EFFECT_CITY_YIELD_MODIFIER", buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pGame, pActivePlayer), buildSignedTextVariable(iValue, true), TEXTVAR(!(infos().effectCity(eLoopEffectCity).mbSingle)));
+                                                subText.AddTEXT("TEXT_HELPTEXT_EFFECT_CITY_HELP_YIELDS_EFFECT_CITY_YIELD_MODIFIER", buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer), buildSignedTextVariable(iValue, true), TEXTVAR(!(infos().effectCity(eLoopEffectCity).mbSingle)));
                                             }
                                         }
                                     }
@@ -1709,7 +1732,7 @@ namespace BetterAI
                                     if (eInfoImprovement.meSecondaryUnlockEffectCityPrereq != EffectCityType.NONE)
                                     {
                                         //andList2.AddItem(buildWarningTextVariable(buildEffectCitySourceLinkVariable(eInfoImprovement.meSecondaryUnlockEffectCityPrereq, pCityTerritory, pGame, pActivePlayer), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(eInfoImprovement.meSecondaryUnlockEffectCityPrereq) == 0) : false)));
-                                        andList2.AddItem(buildEffectCitySourceLinkVariable(eInfoImprovement.meSecondaryUnlockEffectCityPrereq, pCityTerritory, pGame, pActivePlayer));
+                                        andList2.AddItem(buildEffectCitySourceLinkVariable(eInfoImprovement.meSecondaryUnlockEffectCityPrereq, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer));
                                     }
                                     orLineBreakList.AddItem(andList2.Finalize());
                                 }
@@ -1745,7 +1768,7 @@ namespace BetterAI
                                     if (eInfoImprovement.meTertiaryUnlockEffectCityPrereq != EffectCityType.NONE)
                                     {
                                         //andList3.AddItem(buildWarningTextVariable(buildEffectCitySourceLinkVariable(eInfoImprovement.meTertiaryUnlockEffectCityPrereq, pCityTerritory, pGame, pActivePlayer), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(eInfoImprovement.meTertiaryUnlockEffectCityPrereq) == 0) : false)));
-                                        andList3.AddItem(buildEffectCitySourceLinkVariable(eInfoImprovement.meTertiaryUnlockEffectCityPrereq, pCityTerritory, pGame, pActivePlayer));
+                                        andList3.AddItem(buildEffectCitySourceLinkVariable(eInfoImprovement.meTertiaryUnlockEffectCityPrereq, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer));
                                     }
 
                                     orLineBreakList.AddItem(andList3.Finalize());
@@ -1907,7 +1930,7 @@ namespace BetterAI
                     {
                         if (infos().improvement(eImprovement).mbHolyCity)
                         {
-                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_HOLY_CITY", buildReligionLinkVariable(eReligionPrereq, pGame, pActivePlayer)), ((pCityTerritory != null) && !(pCityTerritory.isReligionHolyCityAny()))));
+                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_HOLY_CITY", buildReligionLinkVariable(eReligionPrereq, pGame, pActivePlayer)), ((pCityTerritory != null) && !(pCityTerritory.isReligionHolyCity(eReligionPrereq)))));
                         }
                         else
                         {
@@ -1951,6 +1974,7 @@ namespace BetterAI
 
                         if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
                         {
+                            //this is already fixed by giving classes an actual name instead of sometimes using the lvl1 improvement name for the entire improvement class
                             lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_ADJACENT_IMPROVEMENT", buildImprovementClassLinkVariable(eAdjacentImprovementClassPrereq)), ((pTile != null) ? !pTile.adjacentToCityImprovementClassFinished(eAdjacentImprovementClassPrereq) : false)));
                         }
                     }
@@ -1960,7 +1984,7 @@ namespace BetterAI
 
                         if (eEffectCityPrereq != EffectCityType.NONE)
                         {
-                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", buildEffectCitySourceLinkVariable(eEffectCityPrereq, pCityTerritory, pGame, pActivePlayer)), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(eEffectCityPrereq) == 0) : false)));
+                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", buildEffectCitySourceLinkVariable(eEffectCityPrereq, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer)), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(eEffectCityPrereq) == 0) : false)));
                         }
                     }
 /*####### Better Old World AI - Base DLL #######
@@ -2168,7 +2192,7 @@ namespace BetterAI
                                     {
                                         if (pCityTerritory.getEffectCityCount(eLoopEffectCity) > 0)
                                         {
-                                            subText.Add(buildEffectCityLinkVariable(eLoopEffectCity, pCityTerritory));
+                                            subText.Add(buildEffectCityLinkVariable(eLoopEffectCity, pCityTerritory, pCityTerritory.governor()));
                                         }
                                     }
                                 }
@@ -3030,7 +3054,7 @@ namespace BetterAI
                             EffectCityType eEffectCity = infos().improvementClass(eLoopImprovementClass).maeResourceCityEffect[(int)eResource];
                             if (eEffectCity != EffectCityType.NONE)
                             {
-                                buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, false, pActivePlayer);
+                                buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), false, pActivePlayer);
                                 bAdded = true;
                             }
                         }
@@ -3057,7 +3081,7 @@ namespace BetterAI
                         EffectCityType eEffectCity = infos().specialistClass(eLoopSpecialistClass).maeResourceCityEffect[(int)eResource];
                         if (eEffectCity != EffectCityType.NONE)
                         {
-                            buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, false, pActivePlayer);
+                            buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), false, pActivePlayer);
                         }
                     }
                 }
@@ -3077,7 +3101,7 @@ namespace BetterAI
                     {
                         if (infos().effectCity(eLoopEffectCity).meLuxuryResource == eResource)
                         {
-                            subText.Add(buildEffectCitySourceLinkVariable(eLoopEffectCity, null, pGame, pActivePlayer));
+                            subText.Add(buildEffectCitySourceLinkVariable(eLoopEffectCity, null, null, pGame, pActivePlayer));
                         }
                     }
 
@@ -3434,364 +3458,82 @@ namespace BetterAI
 
         //copy-paste START
         //lines 39783-40305
-        public override TextBuilder buildCityYieldNetHelp(TextBuilder builder, City pCity, YieldType eYield, ClientManager pManager, bool bNetOnly = false, bool bReverseSign = false)
+        public override TextBuilder buildCityYieldNetHelp(TextBuilder builder, City pCity, Character pGovernor, YieldType eYield, ClientManager pManager, bool bNetOnly = false, bool bReverseSign = false)
         {
             Game pGame = pManager.GameClient;
             Player pActivePlayer = pManager.activePlayer();
 
             if (pCity != null)
             {
-                Player pPlayer = pCity.player();
-                Character pGovernor = pCity.governor();
-
-                int iRate = pCity.calculateCurrentYield(eYield);
-
-                if (!bNetOnly)
+                using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
                 {
-                    builder.AddTEXT("TEXT_HELPTEXT_CONCAT_SPACE_TWO", buildYieldLinkVariable(eYield), buildIconTextVariable(infos().yield(eYield).meType));
+                    Dictionary<EffectCityType, int> dEffectCityCounts = effectCityCountsScoped.Value;
 
-                    if (pCity.isYieldBuildCurrent(eYield) && pCity.getCurrentBuild().mdYieldCosts.TryGetValue(eYield, out int value) && value > 0)
+                    pCity.getEffectCityCountsForGovernor(pGovernor, dEffectCityCounts);
+
+                    Player pPlayer = pCity.player();
+
+                    int iRate = pCity.calculateCurrentYield(eYield);
+                    int iBaseYield = pCity.getBaseYieldNetForGovernor(eYield, pGovernor);
+                    int iModifiedYield = pCity.calculateModifiedYieldGovernor(eYield, pGovernor);
+
+                    if (!bNetOnly)
                     {
-                        builder.AddTEXT("TEXT_HELPTEXT_USED_FOR",
-                            buildColonSpaceOne(TEXTVAR(pCity.getName()), buildYieldValueIconLinkVariable(eYield, iRate, iMultiplier: Constants.YIELDS_MULTIPLIER)),
-                            getQueueLinkVariable(pCity.getCurrentBuild(), pCity, pGame, true, false));
-                    }
-                    else
-                    {
-                        YieldType eDisplayYield = eYield;
-                        int iDisplayRate = iRate;
-                        getDisplayYield(ref eDisplayYield, ref iDisplayRate);
+                        builder.AddTEXT("TEXT_HELPTEXT_CONCAT_SPACE_TWO", buildYieldLinkVariable(eYield), buildIconTextVariable(infos().yield(eYield).meType));
 
-                        builder.Add(buildColonSpaceOne(TEXTVAR(pCity.getName()), buildYieldValueIconLinkVariable(eDisplayYield, iDisplayRate, iMultiplier: Constants.YIELDS_MULTIPLIER)));
-                    }
-                    builder.Add(getCityYieldProgress(pCity, eYield), skipSeparator: true);
-
-                    int iTileBase = pCity.calculateUnmodifiedTileYield(eYield, pCity.governor());
-                    int iCityBase = pCity.getBaseYieldNet(eYield);
-                    if (iTileBase != 0 && iTileBase != iCityBase)
-                    {
-                        builder.AddTEXT("TEXT_HELPTEXT_TILE_BASE_YIELD", buildYieldTextVariable(iTileBase, iMultiplier: Constants.YIELDS_MULTIPLIER));
-                    }
-                    if (iCityBase != 0 && iCityBase != iRate)
-                    {
-                        builder.AddTEXT("TEXT_HELPTEXT_CITY_BASE_YIELD", buildYieldTextVariable(iCityBase, iMultiplier: Constants.YIELDS_MULTIPLIER));
-                    }
-
-                    buildDividerText(builder);
-                }
-
-                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); ++eLoopYield)
-                {
-                    if (infos().yield(eLoopYield).meSubtractFromYield == eYield)
-                    {
-                        builder.Add(buildYieldIconNameLinkVariable(eYield));
-                        break;
-                    }
-                }
-
-                for (int iPass = 0; iPass < 2; iPass++)
-                {
-                    SetList<EffectCityType> seGovernorCityEffects = new SetList<EffectCityType>();
-
-                    if (pGovernor != null)
-                    {
-                        foreach (TraitType eLoopTrait in pGovernor.getTraits())
+                        if (pCity.isYieldBuildCurrent(eYield) && pCity.getCurrentBuild().mdYieldCosts.TryGetValue(eYield, out int value) && value > 0)
                         {
-                            EffectCityType eEffectCity = infos().trait(eLoopTrait).meGovernorEffectCity;
-                            EffectCityType eEffectCityState = infos().trait(eLoopTrait).meStateReligionEffectCity;
+                            builder.AddTEXT("TEXT_HELPTEXT_USED_FOR",
+                                buildColonSpaceOne(TEXTVAR(pCity.getName()), buildYieldValueIconLinkVariable(eYield, iRate, iMultiplier: Constants.YIELDS_MULTIPLIER)),
+                                getQueueLinkVariable(pCity.getCurrentBuild(), pCity, pGame, true, false));
+                        }
+                        else
+                        {
+                            YieldType eDisplayYield = eYield;
+                            int iDisplayRate = iRate;
+                            getDisplayYield(ref eDisplayYield, ref iDisplayRate);
 
-                            if (eEffectCity != EffectCityType.NONE)
+                            builder.Add(buildColonSpaceOne(TEXTVAR(pCity.getName()), buildYieldValueIconLinkVariable(eDisplayYield, iDisplayRate, iMultiplier: Constants.YIELDS_MULTIPLIER)));
+                        }
+                        builder.Add(getCityYieldProgress(pCity, eYield), skipSeparator: true);
+
+                        int iTileBase = pCity.calculateUnmodifiedTileYield(eYield, pGovernor);
+                        if (iTileBase != 0 && iTileBase != iBaseYield)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TILE_BASE_YIELD", buildYieldTextVariable(iTileBase, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                        }
+                        // base yield included in subtotal, below
+                        //if (iBaseYield != 0 && iBaseYield != iRate)
+                        //{
+                        //    builder.AddTEXT("TEXT_HELPTEXT_CITY_BASE_YIELD", buildYieldTextVariable(iBaseYield, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                        //}
+
+                        buildDividerText(builder);
+                    }
+
+                    for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); ++eLoopYield)
+                    {
+                        if (infos().yield(eLoopYield).meSubtractFromYield == eYield)
+                        {
+                            builder.Add(buildYieldIconNameLinkVariable(eYield));
+                            break;
+                        }
+                    }
+
+                    for (int iPass = 0; iPass < 2; iPass++)
+                    {
+                        SetList<EffectCityType> seGovernorCityEffects = new SetList<EffectCityType>();
+
+                        if (pGovernor != null)
+                        {
+                            foreach (TraitType eLoopTrait in pGovernor.getTraits())
                             {
-                                int iValue = pCity.getEffectCityYieldRate(eEffectCity, eYield, pCity.governor());
-                                if (bReverseSign)
+                                EffectCityType eEffectCity = infos().trait(eLoopTrait).meGovernorEffectCity;
+                                EffectCityType eEffectCityState = infos().trait(eLoopTrait).meStateReligionEffectCity;
+
+                                if (eEffectCity != EffectCityType.NONE)
                                 {
-                                    iValue = -(iValue);
-                                }
-                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                                {
-                                    builder.AddTEXT("TEXT_HELPTEXT_CONCAT_COLON_ENCLOSED_PARENTHESIS",
-                                        buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER),
-                                        buildCharacterLinkVariable(pGovernor, pActivePlayer),
-                                        buildTraitLinkVariable(eLoopTrait, pGovernor));
-                                }
-
-                                seGovernorCityEffects.Add(eEffectCity);
-                            }
-                            
-                            if (eEffectCityState != EffectCityType.NONE && pCity.hasStateReligion())
-                            {
-                                int iValue = pCity.getEffectCityYieldRate(eEffectCityState, eYield, pCity.governor());
-                                if (bReverseSign)
-                                {
-                                    iValue = -(iValue);
-                                }
-                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                                {
-                                    builder.AddTEXT("TEXT_HELPTEXT_CONCAT_COLON_ENCLOSED_PARENTHESIS",
-                                        buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER),
-                                        buildCharacterLinkVariable(pGovernor, pActivePlayer),
-                                        buildTraitLinkVariable(eLoopTrait, pGovernor));
-                                }
-
-                                seGovernorCityEffects.Add(eEffectCityState);
-                            }
-                        }
-                    }
-
-                    foreach (EffectCityType eLoopEffectCity in pCity.getActiveEffectCity())
-                    {
-                        int iCount = pCity.getEffectCityCount(eLoopEffectCity);
-
-                        if (seGovernorCityEffects.Contains(eLoopEffectCity))
-                        {
-                            iCount--;
-                        }
-
-                        if (iCount > 0)
-                        {
-                            int iValue = pCity.getEffectCityYieldRate(eLoopEffectCity, eYield, pCity.governor());
-                            if (bReverseSign)
-                            {
-                                iValue = -(iValue);
-                            }
-                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                            {
-                                TextVariable yieldEffectText = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_COLON_X_COUNT",
-                                    buildYieldTextVariable((iCount * iValue), true, false, Constants.YIELDS_MULTIPLIER),
-                                    buildEffectCitySourceLinkVariable(eLoopEffectCity, pCity, pGame, pActivePlayer),
-                                    (iCount > 1 ? TEXTVAR(iCount) : TEXTVAR(false)));
-
-                                if (infos().effectCity(eLoopEffectCity).maaiEffectCityYieldRate.Count > 0)
-                                {
-                                    using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
-                                    {
-                                        using (subText.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: buildEnclosedParenthesisIf(yieldEffectText, null), emptyScopeText: TEXTVAR(false)))
-                                        {
-                                            foreach (EffectCityType eOtherEffectCity in pCity.getActiveEffectCity())
-                                            {
-                                                int iOtherCount = pCity.getEffectCityCount(eLoopEffectCity);
-                                                int iSubValue = infos().effectCity(eLoopEffectCity).maaiEffectCityYieldRate[eOtherEffectCity, eYield];
-                                                if (iSubValue != 0)
-                                                {
-                                                    subText.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_YIELD_FROM_X",
-                                                        buildSignedTextVariable((iCount * iSubValue), false, Constants.YIELDS_MULTIPLIER),
-                                                        buildEffectCitySourceLinkVariable(eOtherEffectCity, pCity, pGame, pActivePlayer),
-                                                        ((iOtherCount > 1) ? TEXTVAR(iOtherCount) : TEXTVAR(false))
-                                                        );
-                                                }
-                                            }
-                                        }
-
-                                        builder.Add(subText.ToTextVariable());
-                                    }
-                                }
-                                else
-                                {
-                                    builder.Add(yieldEffectText);
-                                }
-                            }
-                        }
-                    }
-
-                    using (var resourceMapScoped = CollectionCache.GetDictionaryScoped<ResourceType, int>())
-                    using (var improvementMapScoped = CollectionCache.GetDictionaryScoped<ImprovementType, int>())
-                    using (var specialistMapScoped = CollectionCache.GetDictionaryScoped<SpecialistType, int>())
-                    {
-                        Dictionary<ResourceType, int> dResourceYields = resourceMapScoped.Value;
-                        Dictionary<ImprovementType, int> dImprovementYields = improvementMapScoped.Value;
-                        Dictionary<SpecialistType, int> dSpecialistYields = specialistMapScoped.Value;
-                        foreach (int iTileID in pCity.getTerritoryTiles())
-                        {
-                            Tile pTile = pGame.tile(iTileID);
-                            if (pTile.hasImprovementFinished())
-                            {
-                                ImprovementType eImprovement = pTile.getImprovement();
-                                SpecialistType eSpecialist = pTile.getSpecialist();
-
-                                int iBase = pTile.yieldOutputModified(pTile.getImprovement(), SpecialistType.NONE, eYield);
-                                if (iBase != 0)
-                                {
-                                    if (!dImprovementYields.ContainsKey(eImprovement))
-                                    {
-                                        dImprovementYields.Add(eImprovement, iBase);
-                                    }
-                                    else
-                                    {
-                                        dImprovementYields[eImprovement] += iBase;
-                                    }
-                                }
-
-                                if (eSpecialist != SpecialistType.NONE)
-                                {
-                                    int iSpecialist = (pTile.yieldOutputModified(pTile.getImprovement(), eSpecialist, eYield) - iBase);
-                                    if (iSpecialist != 0)
-                                    {
-                                        if (!dSpecialistYields.ContainsKey(eSpecialist))
-                                        {
-                                            dSpecialistYields.Add(eSpecialist, iSpecialist);
-                                        }
-                                        else
-                                        {
-                                            dSpecialistYields[eSpecialist] += iSpecialist;
-                                        }
-                                    }
-                                }
-                            }
-                            else if (pTile.hasResource())
-                            {
-                                ResourceType eResource = pTile.getResource();
-
-                                int iValue = pTile.yieldOutputModified(ImprovementType.NONE, SpecialistType.NONE, eYield);
-                                if (iValue != 0)
-                                {
-                                    if (!dResourceYields.ContainsKey(eResource))
-                                    {
-                                        dResourceYields.Add(eResource, iValue);
-                                    }
-                                    else
-                                    {
-                                        dResourceYields[eResource] += iValue;
-                                    }
-                                }
-                            }
-                        }
-                        foreach (KeyValuePair<ResourceType, int> pPair in dResourceYields)
-                        {
-                            int iValue = pPair.Value;
-                            if (bReverseSign)
-                            {
-                                iValue = -(iValue);
-                            }
-                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                            {
-                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_YIELD_FROM_RESOURCE", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildResourceLinkVariable(pPair.Key));
-                            }
-                        }
-                        foreach (KeyValuePair<SpecialistType, int> pPair in dSpecialistYields)
-                        {
-                            int iValue = pPair.Value;
-                            if (bReverseSign)
-                            {
-                                iValue = -(iValue);
-                            }
-                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                            {
-                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_YIELD_FROM_IMPROVEMENT", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildSpecialistLinkVariable(pPair.Key, pGame));
-                            }
-                        }
-                        foreach (KeyValuePair<ImprovementType, int> pPair in dImprovementYields)
-                        {
-                            int iValue = pPair.Value;
-                            if (bReverseSign)
-                            {
-                                iValue = -(iValue);
-                            }
-                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                            {
-                                builder.Add(buildColonSpaceOne(buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildImprovementLinkVariable(pPair.Key, pGame)));
-                            }
-                        }
-                    }
-
-                    if (pCity.isGovernorLeader())
-                    {
-                        int iValue = infos().yield(eYield).miLeaderGovernor;
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_GOVERNOR_IS_LEADER", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER));
-                        }
-                    }
-
-                    if (pCity.getTeam() != pCity.getFirstTeam())
-                    {
-                        int iValue = infos().yield(eYield).miForeignPopulation;
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_FOREIGN_POPULATION", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildNationLinkVariable(pCity.firstNation().meType, pCity.getFirstPlayer()));
-                        }
-                    }
-
-                    {
-                        int iValue = pCity.calculateYieldRateDefending(eYield);
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_DEFENDING", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), TEXTVAR(pCity.hasFamily()));
-                        }
-                    }
-
-                    {
-                        int iValue = pCity.calculateImprovementYield(eYield);
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            int iCount = pCity.getFinishedImprovementCountAll();
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_IMPROVEMENT", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), ((iCount > 1) ? TEXTVAR(iCount) : TEXTVAR(false)), buildUrbanLinkVariable());
-                        }
-                    }
-
-                    {
-                        int iValue = pCity.calculateCapitalDistanceYield(eYield);
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_CAPITAL_DISTANCE", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildCapitalLinkVariable(pPlayer.capitalCity()));
-                        }
-                    }
-
-                    if (pGovernor != null)
-                    {
-                        int iValue = pCity.calculateGovernorOpinionYield(eYield, pCity.governor());
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_GOVERNOR_OPINION", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildOpinionCharacterLinkVariable(pPlayer.getCharacterOpinion(pGovernor), pGovernor, pPlayer.getPlayer()), buildCharacterLinkVariable(pGovernor, pActivePlayer));
-                        }
-                    }
-
-                    if (pPlayer != null)
-                    {
-                        {
-                            int iValue = pPlayer.calculateMissingFamilyYield(eYield);
-                            if (bReverseSign)
-                            {
-                                iValue = -(iValue);
-                            }
-                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                            {
-                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_MISSING_FAMILY", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER));
-                            }
-                        }
-
-                        for (CouncilType eLoopCouncil = 0; eLoopCouncil < infos().councilsNum(); eLoopCouncil++)
-                        {
-                            Character pCouncilCharacter = pPlayer.councilCharacter(eLoopCouncil);
-
-                            if (pCouncilCharacter != null)
-                            {
-                                for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
-                                {
-                                    int iValue = pCouncilCharacter.getRatingYieldRateCouncilCity(eLoopRating, eYield, eLoopCouncil);
+                                    int iValue = pCity.getEffectCityYieldRate(eEffectCity, eYield, pGovernor);
                                     if (bReverseSign)
                                     {
                                         iValue = -(iValue);
@@ -3799,164 +3541,455 @@ namespace BetterAI
                                     if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
                                     {
                                         builder.AddTEXT("TEXT_HELPTEXT_CONCAT_COLON_ENCLOSED_PARENTHESIS",
-                                            buildSignedTextVariable(iValue, false, Constants.YIELDS_MULTIPLIER),
-                                            buildCharacterLinkVariable(pCouncilCharacter, pActivePlayer, bCognomen: false, bSkipNation: true),
-                                            buildCharacterRatingLinkVariable(pCouncilCharacter, eLoopRating, true));
+                                            buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER),
+                                            buildCharacterLinkVariable(pGovernor, pActivePlayer),
+                                            buildTraitLinkVariable(eLoopTrait, pGovernor));
+                                    }
+
+                                    seGovernorCityEffects.Add(eEffectCity);
+                                }
+
+                                if (eEffectCityState != EffectCityType.NONE && pCity.hasStateReligion())
+                                {
+                                    int iValue = pCity.getEffectCityYieldRate(eEffectCityState, eYield, pGovernor);
+                                    if (bReverseSign)
+                                    {
+                                        iValue = -(iValue);
+                                    }
+                                    if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                    {
+                                        builder.AddTEXT("TEXT_HELPTEXT_CONCAT_COLON_ENCLOSED_PARENTHESIS",
+                                            buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER),
+                                            buildCharacterLinkVariable(pGovernor, pActivePlayer),
+                                            buildTraitLinkVariable(eLoopTrait, pGovernor));
+                                    }
+
+                                    seGovernorCityEffects.Add(eEffectCityState);
+                                }
+                            }
+                        }
+
+                        foreach (var p in dEffectCityCounts)
+                        {
+                            EffectCityType eLoopEffectCity = p.Key;
+                            int iCount = p.Value;
+
+                            if (seGovernorCityEffects.Contains(eLoopEffectCity))
+                            {
+                                iCount--;
+                            }
+
+                            if (iCount > 0)
+                            {
+                                int iValue = pCity.getEffectCityYieldRate(eLoopEffectCity, eYield, pGovernor);
+                                if (bReverseSign)
+                                {
+                                    iValue = -(iValue);
+                                }
+                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                {
+                                    TextVariable yieldEffectText = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_COLON_X_COUNT",
+                                        buildYieldTextVariable((iCount * iValue), true, false, Constants.YIELDS_MULTIPLIER),
+                                        buildEffectCitySourceLinkVariable(eLoopEffectCity, pCity, pGovernor, pGame, pActivePlayer),
+                                        (iCount > 1 ? TEXTVAR(iCount) : TEXTVAR(false)));
+
+                                    if (infos().effectCity(eLoopEffectCity).maaiEffectCityYieldRate.Count > 0)
+                                    {
+                                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                                        {
+                                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: buildEnclosedParenthesisIf(yieldEffectText, null), emptyScopeText: TEXTVAR(false)))
+                                            {
+                                                foreach (var q in dEffectCityCounts)
+                                                {
+                                                    EffectCityType eOtherEffectCity = q.Key;
+                                                    int iOtherCount = q.Value;
+                                                    int iSubValue = infos().effectCity(eLoopEffectCity).maaiEffectCityYieldRate[eOtherEffectCity, eYield];
+                                                    if (iSubValue != 0)
+                                                    {
+                                                        subText.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_YIELD_FROM_X",
+                                                            buildSignedTextVariable((iCount * iSubValue), false, Constants.YIELDS_MULTIPLIER),
+                                                            buildEffectCitySourceLinkVariable(eOtherEffectCity, pCity, pGovernor, pGame, pActivePlayer),
+                                                            ((iOtherCount > 1) ? TEXTVAR(iOtherCount) : TEXTVAR(false))
+                                                            );
+                                                    }
+                                                }
+                                            }
+
+                                            builder.Add(subText.ToTextVariable());
+                                        }
+                                    }
+                                    else
+                                    {
+                                        builder.Add(yieldEffectText);
+                                    }
+                                }
+                            }
+                        }
+
+                        using (var resourceMapScoped = CollectionCache.GetDictionaryScoped<ResourceType, int>())
+                        using (var improvementMapScoped = CollectionCache.GetDictionaryScoped<ImprovementType, int>())
+                        using (var specialistMapScoped = CollectionCache.GetDictionaryScoped<SpecialistType, int>())
+                        {
+                            Dictionary<ResourceType, int> dResourceYields = resourceMapScoped.Value;
+                            Dictionary<ImprovementType, int> dImprovementYields = improvementMapScoped.Value;
+                            Dictionary<SpecialistType, int> dSpecialistYields = specialistMapScoped.Value;
+                            foreach (int iTileID in pCity.getTerritoryTiles())
+                            {
+                                Tile pTile = pGame.tile(iTileID);
+                                if (pTile.hasImprovementFinished())
+                                {
+                                    ImprovementType eImprovement = pTile.getImprovement();
+                                    SpecialistType eSpecialist = pTile.getSpecialist();
+
+                                    int iBase = pTile.yieldOutputModified(pTile.getImprovement(), SpecialistType.NONE, eYield);
+                                    if (iBase != 0)
+                                    {
+                                        if (!dImprovementYields.ContainsKey(eImprovement))
+                                        {
+                                            dImprovementYields.Add(eImprovement, iBase);
+                                        }
+                                        else
+                                        {
+                                            dImprovementYields[eImprovement] += iBase;
+                                        }
+                                    }
+
+                                    if (eSpecialist != SpecialistType.NONE)
+                                    {
+                                        int iSpecialist = (pTile.yieldOutputModified(pTile.getImprovement(), eSpecialist, eYield) - iBase);
+                                        if (iSpecialist != 0)
+                                        {
+                                            if (!dSpecialistYields.ContainsKey(eSpecialist))
+                                            {
+                                                dSpecialistYields.Add(eSpecialist, iSpecialist);
+                                            }
+                                            else
+                                            {
+                                                dSpecialistYields[eSpecialist] += iSpecialist;
+                                            }
+                                        }
+                                    }
+                                }
+                                else if (pTile.hasResource())
+                                {
+                                    ResourceType eResource = pTile.getResource();
+
+                                    int iValue = pTile.yieldOutputModified(ImprovementType.NONE, SpecialistType.NONE, eYield);
+                                    if (iValue != 0)
+                                    {
+                                        if (!dResourceYields.ContainsKey(eResource))
+                                        {
+                                            dResourceYields.Add(eResource, iValue);
+                                        }
+                                        else
+                                        {
+                                            dResourceYields[eResource] += iValue;
+                                        }
+                                    }
+                                }
+                            }
+                            foreach (KeyValuePair<ResourceType, int> pPair in dResourceYields)
+                            {
+                                int iValue = pPair.Value;
+                                if (bReverseSign)
+                                {
+                                    iValue = -(iValue);
+                                }
+                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_YIELD_FROM_RESOURCE", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildResourceLinkVariable(pPair.Key));
+                                }
+                            }
+                            foreach (KeyValuePair<SpecialistType, int> pPair in dSpecialistYields)
+                            {
+                                int iValue = pPair.Value;
+                                if (bReverseSign)
+                                {
+                                    iValue = -(iValue);
+                                }
+                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_YIELD_FROM_IMPROVEMENT", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildSpecialistLinkVariable(pPair.Key, pGame));
+                                }
+                            }
+                            foreach (KeyValuePair<ImprovementType, int> pPair in dImprovementYields)
+                            {
+                                int iValue = pPair.Value;
+                                if (bReverseSign)
+                                {
+                                    iValue = -(iValue);
+                                }
+                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                {
+                                    builder.Add(buildColonSpaceOne(buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildImprovementLinkVariable(pPair.Key, pGame)));
+                                }
+                            }
+                        }
+
+                        if (pGovernor != null && pGovernor.isLeader())
+                        {
+                            int iValue = infos().yield(eYield).miLeaderGovernor;
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_GOVERNOR_IS_LEADER", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER));
+                            }
+                        }
+
+                        if (pCity.getTeam() != pCity.getFirstTeam())
+                        {
+                            int iValue = infos().yield(eYield).miForeignPopulation;
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_FOREIGN_POPULATION", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildNationLinkVariable(pCity.firstNation().meType, pCity.getFirstPlayer()));
+                            }
+                        }
+
+                        {
+                            int iValue = pCity.calculateYieldRateDefending(eYield);
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_DEFENDING", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), TEXTVAR(pCity.hasFamily()));
+                            }
+                        }
+
+                        {
+                            int iValue = pCity.calculateImprovementYield(eYield);
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                            {
+                                int iCount = pCity.getFinishedImprovementCountAll();
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_IMPROVEMENT", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), ((iCount > 1) ? TEXTVAR(iCount) : TEXTVAR(false)), buildUrbanLinkVariable());
+                            }
+                        }
+
+                        {
+                            int iValue = pCity.calculateCapitalDistanceYield(eYield);
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_CAPITAL_DISTANCE", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildCapitalLinkVariable(pPlayer.capitalCity()));
+                            }
+                        }
+
+                        if (pGovernor != null)
+                        {
+                            int iValue = pCity.calculateGovernorOpinionYield(eYield, pGovernor);
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_GOVERNOR_OPINION", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildOpinionCharacterLinkVariable(pPlayer.getCharacterOpinion(pGovernor), pGovernor, pPlayer.getPlayer()), buildCharacterLinkVariable(pGovernor, pActivePlayer));
+                            }
+                        }
+
+                        if (pPlayer != null)
+                        {
+                            {
+                                int iValue = pPlayer.calculateMissingFamilyYield(eYield);
+                                if (bReverseSign)
+                                {
+                                    iValue = -(iValue);
+                                }
+                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_MISSING_FAMILY", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER));
+                                }
+                            }
+
+                            for (CouncilType eLoopCouncil = 0; eLoopCouncil < infos().councilsNum(); eLoopCouncil++)
+                            {
+                                Character pCouncilCharacter = pPlayer.councilCharacter(eLoopCouncil);
+
+                                if (pCouncilCharacter != null)
+                                {
+                                    for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
+                                    {
+                                        int iValue = pCouncilCharacter.getRatingYieldRateCouncilCity(eLoopRating, eYield, eLoopCouncil);
+                                        if (bReverseSign)
+                                        {
+                                            iValue = -(iValue);
+                                        }
+                                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                        {
+                                            builder.AddTEXT("TEXT_HELPTEXT_CONCAT_COLON_ENCLOSED_PARENTHESIS",
+                                                buildSignedTextVariable(iValue, false, Constants.YIELDS_MULTIPLIER),
+                                                buildCharacterLinkVariable(pCouncilCharacter, pActivePlayer, bCognomen: false, bSkipNation: true),
+                                                buildCharacterRatingLinkVariable(pCouncilCharacter, eLoopRating, true));
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                int iBaseYield = pCity.getBaseYieldNet(eYield);
-                int iModifiedYield = pCity.calculateModifiedYield(eYield);
-                if (iBaseYield != iModifiedYield)
-                {
-                    if (bReverseSign)
+                    if (iBaseYield != iModifiedYield)
                     {
-                        iBaseYield *= -1;
-                    }
-                    builder.AddTEXT("TEXT_HELPTEXT_SUBTOTAL", buildSignedTextVariable(iBaseYield, iMultiplier: Constants.YIELDS_MULTIPLIER));
-                }
-
-                for (int iPass = 0; iPass < 2; iPass++)
-                {
-                    {
-                        int iValue = pCity.getHappinessLevelYieldModifier(eYield);
                         if (bReverseSign)
                         {
-                            iValue = -(iValue);
+                            iBaseYield *= -1;
                         }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.Add(buildColonSpaceOne(buildSignedTextVariable(iValue, true), buildHappinessLevelLinkVariable(pCity)));
-                        }
+                        builder.AddTEXT("TEXT_HELPTEXT_SUBTOTAL", buildSignedTextVariable(iBaseYield, iMultiplier: Constants.YIELDS_MULTIPLIER));
                     }
 
+                    for (int iPass = 0; iPass < 2; iPass++)
                     {
-                        int iValue = pCity.getDamageYieldModifier(eYield);
-                        if (bReverseSign)
                         {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_DAMAGE_YIELD_MODIFIER", buildSignedTextVariable(iValue, true), TEXTVAR(pCity.getHP()), TEXTVAR(pCity.getHPMax()));
-                        }
-                    }
-
-                    {
-                        int iValue = pCity.getAssimilateYieldModifier(eYield);
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_ASSIMILATE_YIELD_MODIFIER", buildSignedTextVariable(iValue, true));
-                        }
-                    }
-
-                    foreach (EffectCityType eLoopEffectCity in pCity.getActiveEffectCity())
-                    {
-                        int iCount = pCity.getEffectCityCount(eLoopEffectCity);
-                        int iValue = (infos().effectCity(eLoopEffectCity).maiYieldModifier[(int)eYield] * iCount);
-                        if (bReverseSign)
-                        {
-                            iValue = -(iValue);
-                        }
-                        if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
-                        {
-                            builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_YIELD_FROM_X",
-                                buildSignedTextVariable(iValue, true),
-                                buildEffectCitySourceLinkVariable(eLoopEffectCity, pCity, pGame, pActivePlayer),
-                                (iCount > 1 ? TEXTVAR(iCount) : TEXTVAR(false)));
-                        }
-                    }
-
-                    if (pGovernor != null)
-                    {
-                        for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
-                        {
-                            int iValue = pGovernor.getRatingYieldModifierGovernor(eLoopRating, eYield);
+                            int iValue = pCity.getHappinessLevelYieldModifier(eYield);
                             if (bReverseSign)
                             {
                                 iValue = -(iValue);
                             }
                             if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
                             {
-                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_GOVERNOR_YIELD_MODIFIER", buildSignedTextVariable(iValue, true), buildCharacterLinkVariable(pGovernor, pActivePlayer), buildCharacterRatingLinkVariable(pGovernor, eLoopRating));
+                                builder.Add(buildColonSpaceOne(buildSignedTextVariable(iValue, true), buildHappinessLevelLinkVariable(pCity)));
                             }
                         }
-                    }
 
-                    if (pCity.hasBuild())
-                    {
-                        CityQueueData pCurrentBuild = pCity.getCurrentBuild();
-
-                        if (pCurrentBuild.meBuild == infos().Globals.PROJECT_BUILD)
                         {
-                            ProjectType eProject = (ProjectType)(pCurrentBuild.miType);
-                            int iValue = infos().project(eProject).maiYieldModifier[(int)eYield];
+                            int iValue = pCity.getDamageYieldModifier(eYield);
                             if (bReverseSign)
                             {
                                 iValue = -(iValue);
                             }
                             if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
                             {
-                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_PROJECT_YIELD_MODIFIER", buildSignedTextVariable(infos().utils().modify(pCity.getBaseYieldNet(eYield), iValue - 100), false, Constants.YIELDS_MULTIPLIER), buildProjectLinkVariable(eProject, pCity));
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_DAMAGE_YIELD_MODIFIER", buildSignedTextVariable(iValue, true), TEXTVAR(pCity.getHP()), TEXTVAR(pCity.getHPMax()));
+                            }
+                        }
+
+                        {
+                            int iValue = pCity.getAssimilateYieldModifier(eYield);
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_ASSIMILATE_YIELD_MODIFIER", buildSignedTextVariable(iValue, true));
+                            }
+                        }
+
+                        foreach (var p in dEffectCityCounts)
+                        {
+                            EffectCityType eLoopEffectCity = p.Key;
+                            int iCount = p.Value;
+                            int iValue = (infos().effectCity(eLoopEffectCity).maiYieldModifier[(int)eYield] * iCount);
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_YIELD_FROM_X",
+                                    buildSignedTextVariable(iValue, true),
+                                    buildEffectCitySourceLinkVariable(eLoopEffectCity, pCity, pGovernor, pGame, pActivePlayer),
+                                    (iCount > 1 ? TEXTVAR(iCount) : TEXTVAR(false)));
+                            }
+                        }
+
+                        if (pGovernor != null)
+                        {
+                            for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
+                            {
+                                int iValue = pGovernor.getRatingYieldModifierGovernor(eLoopRating, eYield);
+                                if (bReverseSign)
+                                {
+                                    iValue = -(iValue);
+                                }
+                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_GOVERNOR_YIELD_MODIFIER", buildSignedTextVariable(iValue, true), buildCharacterLinkVariable(pGovernor, pActivePlayer), buildCharacterRatingLinkVariable(pGovernor, eLoopRating));
+                                }
+                            }
+                        }
+
+                        if (pCity.hasBuild())
+                        {
+                            CityQueueData pCurrentBuild = pCity.getCurrentBuild();
+
+                            if (pCurrentBuild.meBuild == infos().Globals.PROJECT_BUILD)
+                            {
+                                ProjectType eProject = (ProjectType)(pCurrentBuild.miType);
+                                int iValue = infos().project(eProject).maiYieldModifier[(int)eYield];
+                                if (bReverseSign)
+                                {
+                                    iValue = -(iValue);
+                                }
+                                if ((iPass == 0) ? (iValue > 0) : (iValue < 0))
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_CITY_PROJECT_YIELD_MODIFIER", buildSignedTextVariable(infos().utils().modify(pCity.getBaseYieldNet(eYield), iValue - 100), false, Constants.YIELDS_MULTIPLIER), buildProjectLinkVariable(eProject, pCity));
+                                }
                             }
                         }
                     }
-                }
 
-                for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); eLoopUnit++)
-                {
-                    int iValue = pCity.calculateUnitImprovementYield(eYield, eLoopUnit);
-                    if (iValue != 0)
+                    for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); eLoopUnit++)
                     {
-                        if (bReverseSign)
+                        int iValue = pCity.calculateUnitImprovementYield(eYield, eLoopUnit);
+                        if (iValue != 0)
                         {
-                            iValue = -(iValue);
+                            if (bReverseSign)
+                            {
+                                iValue = -(iValue);
+                            }
+                            builder.AddTEXT("TEXT_HELPTEXT_YIELD_NET_UNIT_IMPROVEMENT_YIELD", buildSignedTextVariable(iValue, false, Constants.YIELDS_MULTIPLIER), buildUnitTypeLinkVariable(eLoopUnit, pGame));
                         }
-                        builder.AddTEXT("TEXT_HELPTEXT_YIELD_NET_UNIT_IMPROVEMENT_YIELD", buildSignedTextVariable(iValue, false, Constants.YIELDS_MULTIPLIER), buildUnitTypeLinkVariable(eLoopUnit, pGame));
                     }
-                }
 
-                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); ++eLoopYield)
-                {
-                    if (infos().yield(eLoopYield).meSubtractFromYield == eYield)
-                    {
-                        builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eYield), buildSignedTextVariable(iModifiedYield, iMultiplier: Constants.YIELDS_MULTIPLIER));
-                        break;
-                    }
-                }
-
-                {
                     for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); ++eLoopYield)
                     {
                         if (infos().yield(eLoopYield).meSubtractFromYield == eYield)
                         {
-                            buildDividerText(builder);
-                            builder.Add(buildYieldIconNameLinkVariable(eLoopYield));
-/*####### Better Old World AI - Base DLL #######
-  ### don't reverse sign               START ###
-  ##############################################*/
-                            //buildCityYieldNetHelp(builder, pCity, eLoopYield, pManager, bNetOnly: true, bReverseSign: true);
-                            //builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(-(pCity.calculateModifiedYieldBase(eLoopYield)), iMultiplier: Constants.YIELDS_MULTIPLIER));
-                            buildCityYieldNetHelp(builder, pCity, eLoopYield, pManager, bNetOnly: true, bReverseSign: false);
-                            builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(pCity.calculateModifiedYield(eLoopYield), iMultiplier: Constants.YIELDS_MULTIPLIER));
-/*####### Better Old World AI - Base DLL #######
-  ### don't reverse sign                 END ###
-  ##############################################*/
+                            builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eYield), buildSignedTextVariable(iModifiedYield, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                            break;
                         }
                     }
-                }
 
-                if (!bNetOnly && pActivePlayer != null && pActivePlayer.isPlayerOption(infos().Globals.DEBUG_HELP))
-                {
-                    buildYieldDebugText(builder, eYield, pManager);
+                    {
+                        for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); ++eLoopYield)
+                        {
+                            if (infos().yield(eLoopYield).meSubtractFromYield == eYield)
+                            {
+                                buildDividerText(builder);
+                                builder.Add(buildYieldIconNameLinkVariable(eLoopYield));
+                                /*####### Better Old World AI - Base DLL #######
+                                  ### don't reverse sign               START ###
+                                  ##############################################*/
+                                //buildCityYieldNetHelp(builder, pCity, eLoopYield, pManager, bNetOnly: true, bReverseSign: true);
+                                //builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(-(pCity.calculateModifiedYieldBase(eLoopYield)), iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                buildCityYieldNetHelp(builder, pCity, pGovernor, eLoopYield, pManager, bNetOnly: true, bReverseSign: false);
+                                builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(pCity.calculateModifiedYield(eLoopYield), iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                /*####### Better Old World AI - Base DLL #######
+                                  ### don't reverse sign                 END ###
+                                  ##############################################*/
+                            }
+                        }
+                    }
+
+                    if (!bNetOnly && pActivePlayer != null && pActivePlayer.isPlayerOption(infos().Globals.DEBUG_HELP))
+                    {
+                        buildYieldDebugText(builder, eYield, pManager);
+                    }
                 }
             }
 

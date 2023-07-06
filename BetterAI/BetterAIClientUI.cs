@@ -321,7 +321,7 @@ namespace BetterAI
         //copy-paste END
 
         //lines 11725-11756
-        public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, bool bDifferentTile, WorkerActionFilter eFilter = WorkerActionFilter.GENERAL)
+        public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, WorkerActionFilter eFilter = WorkerActionFilter.GENERAL)
         {
             bool bRunOriginal = true;
             if (pUnit != null && pTile != null && eFilter == WorkerActionFilter.GENERAL && ((BetterAIInfoGlobals)Infos.Globals).BAI_WORKERLIST_EXTRA > 0)
@@ -480,7 +480,7 @@ namespace BetterAI
 
             if (bRunOriginal)
             {
-                base.GetValidImprovementsForTile(aeImprovements, pTile, pUnit, bDifferentTile, eFilter);
+                base.GetValidImprovementsForTile(aeImprovements, pTile, pUnit, eFilter);
             }
         }
 
@@ -671,6 +671,37 @@ namespace BetterAI
                 base.updateCityListPanel();
             }
         }
+
+        //lines 17072-17085
+        protected override int CompareHappinessLevels(int cityID, int otherCityID)
+        {
+            BetterAICity city = (BetterAICity)Game.city(cityID);
+            BetterAICity otherCity = (BetterAICity)Game.city(otherCityID);
+
+            if (city.getHappinessLevel() == otherCity.getHappinessLevel())
+            {
+/*####### Better Old World AI - Base DLL #######
+  ### Happiness Level Sort             START ###
+  ##############################################*/
+                if (city.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD) == otherCity.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD))
+                {
+                    return (otherCity.getYieldProgress(Infos.Globals.HAPPINESS_YIELD) - city.getYieldProgress(Infos.Globals.HAPPINESS_YIELD)) * (city.isDiscontent() ? -1 : 1);
+                }
+                else
+                {
+                    return (city.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD) - otherCity.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD)) * (city.isDiscontent() ? -1 : 1);
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Happiness Level Sort               END ###
+  ##############################################*/
+            }
+            else
+            {
+                return otherCity.getHappinessLevel() - city.getHappinessLevel();
+            }
+        }
+
+
 
         //lines 17022-17035
         protected override int CompareCultureLevels(int cityID, int otherCityID)
