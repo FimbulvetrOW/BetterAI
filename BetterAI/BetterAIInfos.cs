@@ -70,6 +70,18 @@ namespace BetterAI
   ### Fix ZOC display                    END ###
   ##############################################*/
 
+            for (ImprovementClassType eLoopImprovementClass = 0; eLoopImprovementClass < improvementClassesNum(); eLoopImprovementClass++)
+            {
+                BetterAIInfoImprovementClass pLoopImprovementClass = ((BetterAIInfoImprovementClass)improvementClass(eLoopImprovementClass));
+                for (ImprovementType eLoopImprovement = 0; eLoopImprovement < improvementsNum(); eLoopImprovement++)
+                {
+                    if (eLoopImprovementClass == improvement(eLoopImprovement).meClass)
+                    {
+                        pLoopImprovementClass.maeImprovementTypes.Add(eLoopImprovement);
+                    }
+                }
+            }
+
         }
 
 /*####### Better Old World AI - Base DLL #######
@@ -257,6 +269,7 @@ namespace BetterAI
     {
         //new stuff here
         public int miMaxCityCount = 0;
+        public List<ImprovementType> maeImprovementTypes = new List<ImprovementType>();
         public override void ReadData(XmlNode node, Infos infos)
         {
             base.ReadData(node, infos);
@@ -420,7 +433,6 @@ namespace BetterAI
         public int BAI_SWAP_UNIT_FATIGUE_COST = 0;
         public int BAI_ENLIST_NO_FAMILY = 0;
         public int BAI_DISCONTENT_LEVEL_ZERO = 0;
-        public int BAI_MINOR_CITY_IGNORE_IMPASSABLE = 0;
         public int BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS = 0;
         //override for more variables
         public override void ReadData(Infos infos)
@@ -444,7 +456,6 @@ namespace BetterAI
             BAI_SWAP_UNIT_FATIGUE_COST = infos.getGlobalInt("BAI_SWAP_UNIT_FATIGUE_COST");
             BAI_ENLIST_NO_FAMILY = infos.getGlobalInt("BAI_ENLIST_NO_FAMILY");
             BAI_DISCONTENT_LEVEL_ZERO = infos.getGlobalInt("BAI_DISCONTENT_LEVEL_ZERO");
-            BAI_MINOR_CITY_IGNORE_IMPASSABLE = infos.getGlobalInt("BAI_MINOR_CITY_IGNORE_IMPASSABLE");
             BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS = infos.getGlobalInt("BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS");
         }
     }

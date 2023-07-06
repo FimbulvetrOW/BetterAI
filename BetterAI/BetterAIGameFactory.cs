@@ -55,6 +55,10 @@ namespace BetterAI
         {
             return new BetterAIUnit();
         }
+        public override Unit.UnitAI CreateUnitAI()
+        {
+            return new BetterAIUnit.BetterAIUnitAI();
+        }
         public override Tile CreateTile()
         {
             return new BetterAITile();

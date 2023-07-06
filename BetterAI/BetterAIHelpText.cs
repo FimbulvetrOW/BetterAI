@@ -134,7 +134,7 @@ namespace BetterAI
 
             for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
             {
-                int iTotalOutput = pGame.tileYieldOutputModified(eImprovement, eSpecialist, eLoopYield, pTile, true);
+                int iTotalOutput = pTile.yieldOutputModified(eImprovement, eSpecialist, eLoopYield, true);
                 if (iTotalOutput != 0)
                 {
                     builder.AddTEXT("TEXT_HELPTEXT_YIELD_PER_YEAR", buildYieldValueIconLinkVariable(eLoopYield, iTotalOutput, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
@@ -344,10 +344,9 @@ namespace BetterAI
 
                         if (pCityTerritory != null)
                         {
-                            foreach (var p in pCityTerritory.getEffectCityCounts())
+                            foreach (EffectCityType eLoopEffectCity in pCityTerritory.getActiveEffectCity())
                             {
-                                EffectCityType eLoopEffectCity = p.Key;
-                                int iCount = p.Value;
+                                int iCount = pCityTerritory.getEffectCityCount(eLoopEffectCity);
                                 int iValue = infos().effectCity(eLoopEffectCity).maaiImprovementYield[eImprovement, eLoopYield] + infos().effectCity(eLoopEffectCity).maaiImprovementClassYield[eImprovementClass, eLoopYield];
                                 if (iValue != 0)
                                 {
@@ -369,11 +368,11 @@ namespace BetterAI
                     {
                         if (pCityTerritory != null)
                         {
-                            foreach (var p in pCityTerritory.getEffectCityCounts())
+                            foreach (EffectCityType eLoopEffectCity in pCityTerritory.getActiveEffectCity())
                             {
-                                EffectCityType eLoopEffectCity = p.Key;
-                                int iCount = p.Value;
-                                int iValue = pGame.getTileEffectCityModifier(eLoopEffectCity, pTile, eImprovement);
+                                int iCount = pCityTerritory.getEffectCityCount(eLoopEffectCity);
+                                int iValue = pTile.getTileEffectCityModifier(eLoopEffectCity, eImprovement);
+
                                 if (iValue != 0)
                                 {
                                     using (buildSecondaryTextScope(builder))
@@ -749,7 +748,7 @@ namespace BetterAI
 
                         foreach (EffectCityType eEffectCity in effectListScoped.Value)
                         {
-                            buildEffectCityHelpNoYields(builder, eEffectCity, pGame, pCityTerritory, pPlayer, pActivePlayer);
+                            buildEffectCityHelpNoYields(builder, eEffectCity, pGame, pCityTerritory, pActivePlayer);
                         }
 
                         if (pGame?.isCharacters() ?? true)
@@ -887,7 +886,7 @@ namespace BetterAI
                                                 {
                                                     using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                                                     {
-                                                        buildEffectCityHelp(subText, eEffectCity, pGame, null, pCityTerritory, pActivePlayer, bSkipImpossible: !bEncyclopedia);
+                                                        buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, true, pActivePlayer, bSkipImpossible: !bEncyclopedia);
                                                     }
 
                                                     if (subText.HasContent)
@@ -997,7 +996,7 @@ namespace BetterAI
 
                                                 if (eEffectCity != EffectCityType.NONE)
                                                 {
-                                                    buildEffectCityHelp(builder, eEffectCity, pGame, null, pCityTerritory, pActivePlayer, bSkipImpossible: !bEncyclopedia);
+                                                    buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, true, pActivePlayer, bSkipImpossible: !bEncyclopedia);
                                                 }
                                             }
                                         }
@@ -2188,7 +2187,7 @@ namespace BetterAI
 
         //copy-paste START
         //lines 21717-22072
-        public override TextBuilder buildUnitTypeHelp(TextBuilder builder, UnitType eUnit, City pCity, Player pPlayer, Game pGame, Player pActivePlayer, bool bName = true, bool bCosts = true, bool bStats = true, bool bDetails = true)
+        public override TextBuilder buildUnitTypeHelp(TextBuilder builder, UnitType eUnit, City pCity, Player pPlayer, TribeType eTribe, Game pGame, Player pActivePlayer, bool bName = true, bool bCosts = true, bool bStats = true, bool bDetails = true)
         {
             using (new UnityProfileScope("HelpText.buildUnitTypeHelp"))
             {
@@ -2509,52 +2508,19 @@ namespace BetterAI
                         }
                         if (production != null)
                         {
+                            //fixed in base game :)
+                            int iModifier = pPlayer?.getUnitBuildCostModifier(eUnit, pCity) ?? 0;
                             TextVariable output = production;
-
-/*####### Better Old World AI - Base DLL #######
-  ### Training Time increase Modifier  START ###
-  ##############################################*/
-                            int iModifier = 0;
-                            if (pPlayer != null && pCity != null)
+                            if (infos().unit(eUnit).miProductionCity != 0)
                             {
-                                //from Player.getUnitBuildCost
-                                iModifier += pCity.getUnitTrainModifier(eUnit);
-
-                                foreach (UnitTraitType eLoopUnitTrait in infos().unit(eUnit).maeUnitTrait)
-                                {
-                                    iModifier += pCity.getUnitTraitTrainModifier(eLoopUnitTrait);
-                                }
-                            }
-
-                            int iValue = infos().unit(eUnit).miProductionCity;
-                            if (iModifier != 0) //from Player.getUnitBuildCost
-                            {
-                                iValue = infos().utils().modify(iValue, iModifier);
-                            }
-                            //if (infos().unit(eUnit).miProductionCity != 0)
-                            if (iValue != 0)
-                            {
-                                //TextVariable perCity = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_CITY", TEXTVAR(infos().unit(eUnit).miProductionCity, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
-                                TextVariable perCity = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_CITY", TEXTVAR(iValue, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                                TextVariable perCity = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_CITY", TEXTVAR(infos().utils().modify(infos().unit(eUnit).miProductionCity, iModifier), NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
                                 output = buildCommaSpaceSeparator(output, perCity);
                             }
-
-                            iValue = infos().unit(eUnit).miProductionPer;
-                            if (iModifier != 0) //from Player.getUnitBuildCost
+                            if (infos().unit(eUnit).miProductionPer != 0)
                             {
-                                iValue = infos().utils().modify(iValue, iModifier);
-                            }                            
-                            //if (infos().unit(eUnit).miProductionPer != 0)
-                            if (iValue != 0)
-                            {
-                                //TextVariable perGlobal = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_GLOBAL", TEXTVAR(infos().unit(eUnit).miProductionPer, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
-                                TextVariable perGlobal = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_GLOBAL", TEXTVAR(iValue, NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
+                                TextVariable perGlobal = TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_PRODUCTION_PER_GLOBAL", TEXTVAR(infos().utils().modify(infos().unit(eUnit).miProductionPer, iModifier), NumberFormatOptions.SHOW_SIGN), buildYieldIconLinkVariable(infos().unit(eUnit).meProductionType));
                                 output = buildCommaSpaceSeparator(output, perGlobal);
                             }
-/*####### Better Old World AI - Base DLL #######
-  ### Training Time increase Modifier    END ###
-  ##############################################*/
-
                             builder.Add(output);
                         }
                     }
@@ -2569,7 +2535,21 @@ namespace BetterAI
                             {
                                 if (infos().unit(eLoopUnit).maeUpgradeUnit.Contains(eUnit))
                                 {
-                                    builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, pCity: pCity));
+                                    builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
+                                }
+                            }
+                            if (eTribe != TribeType.NONE)
+                            {
+                                if (infos().unit(eLoopUnit).maeTribeUpgradeUnit[(int)eTribe] == eUnit)
+                                {
+                                    builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
+                                }
+                            }
+                            else
+                            {
+                                if (infos().unit(eLoopUnit).maeTribeUpgradeUnit.Contains(eUnit))
+                                {
+                                    builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
                                 }
                             }
                         }
@@ -2578,13 +2558,38 @@ namespace BetterAI
 
                 {
                     using (builder.BeginScope(TextBuilder.ScopeType.COMMA_OR, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_UPGRADES_TO")))
+                    using (var unitTypesScoped = CollectionCache.GetHashSetScoped<UnitType>())
                     {
+                        HashSet<UnitType> seUpgrades = unitTypesScoped.Value;
+
                         foreach (UnitType eLoopUnit in infos().unit(eUnit).maeUpgradeUnit)
                         {
                             if (pPlayer == null || pPlayer.canEverBuildUnit(eLoopUnit))
                             {
-                                builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, pCity: pCity));
+                                seUpgrades.Add(eLoopUnit);
                             }
+                        }
+                        if (eTribe != TribeType.NONE)
+                        {
+                            UnitType eUpgrade = infos().unit(eUnit).maeTribeUpgradeUnit[(int)eTribe];
+                            if (eUpgrade != UnitType.NONE)
+                            {
+                                seUpgrades.Add(eUpgrade);
+                            }
+                        }
+                        else
+                        {
+                            foreach (UnitType eLoopUnit in infos().unit(eUnit).maeTribeUpgradeUnit)
+                            {
+                                if (eLoopUnit != UnitType.NONE)
+                                {
+                                    seUpgrades.Add(eLoopUnit);
+                                }
+                            }
+                        }
+                        foreach (UnitType eLoopUnit in seUpgrades)
+                        {
+                            builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
                         }
                     }
                 }
@@ -2879,6 +2884,8 @@ namespace BetterAI
         //lines 23001-23650
         public override TextBuilder buildEffectUnitHelp(TextBuilder builder, EffectUnitType eEffectUnit, Game pGame, bool bSkipIcons = false, bool bRightJustify = false)
         {
+            //ToDo: group maiImprovementToModifier effects by improvementClasses, like specialist improvement prereqs
+
             builder = base.buildEffectUnitHelp(builder, eEffectUnit, pGame, bSkipIcons, bRightJustify);
 
 /*####### Better Old World AI - Base DLL #######
@@ -3023,7 +3030,7 @@ namespace BetterAI
                             EffectCityType eEffectCity = infos().improvementClass(eLoopImprovementClass).maeResourceCityEffect[(int)eResource];
                             if (eEffectCity != EffectCityType.NONE)
                             {
-                                buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory, pActivePlayer);
+                                buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, false, pActivePlayer);
                                 bAdded = true;
                             }
                         }
@@ -3050,7 +3057,7 @@ namespace BetterAI
                         EffectCityType eEffectCity = infos().specialistClass(eLoopSpecialistClass).maeResourceCityEffect[(int)eResource];
                         if (eEffectCity != EffectCityType.NONE)
                         {
-                            buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory, pActivePlayer);
+                            buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, false, pActivePlayer);
                         }
                     }
                 }
@@ -3459,7 +3466,7 @@ namespace BetterAI
                     }
                     builder.Add(getCityYieldProgress(pCity, eYield), skipSeparator: true);
 
-                    int iTileBase = pCity.calculateUnmodifiedTileYield(eYield);
+                    int iTileBase = pCity.calculateUnmodifiedTileYield(eYield, pCity.governor());
                     int iCityBase = pCity.getBaseYieldNet(eYield);
                     if (iTileBase != 0 && iTileBase != iCityBase)
                     {
@@ -3495,7 +3502,7 @@ namespace BetterAI
 
                             if (eEffectCity != EffectCityType.NONE)
                             {
-                                int iValue = pCity.getEffectCityYieldRate(eEffectCity, eYield);
+                                int iValue = pCity.getEffectCityYieldRate(eEffectCity, eYield, pCity.governor());
                                 if (bReverseSign)
                                 {
                                     iValue = -(iValue);
@@ -3513,7 +3520,7 @@ namespace BetterAI
                             
                             if (eEffectCityState != EffectCityType.NONE && pCity.hasStateReligion())
                             {
-                                int iValue = pCity.getEffectCityYieldRate(eEffectCityState, eYield);
+                                int iValue = pCity.getEffectCityYieldRate(eEffectCityState, eYield, pCity.governor());
                                 if (bReverseSign)
                                 {
                                     iValue = -(iValue);
@@ -3531,10 +3538,9 @@ namespace BetterAI
                         }
                     }
 
-                    foreach (var p in pCity.getEffectCityCounts())
+                    foreach (EffectCityType eLoopEffectCity in pCity.getActiveEffectCity())
                     {
-                        EffectCityType eLoopEffectCity = p.Key;
-                        int iCount = p.Value;
+                        int iCount = pCity.getEffectCityCount(eLoopEffectCity);
 
                         if (seGovernorCityEffects.Contains(eLoopEffectCity))
                         {
@@ -3543,7 +3549,7 @@ namespace BetterAI
 
                         if (iCount > 0)
                         {
-                            int iValue = pCity.getEffectCityYieldRate(eLoopEffectCity, eYield);
+                            int iValue = pCity.getEffectCityYieldRate(eLoopEffectCity, eYield, pCity.governor());
                             if (bReverseSign)
                             {
                                 iValue = -(iValue);
@@ -3561,10 +3567,9 @@ namespace BetterAI
                                     {
                                         using (subText.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: buildEnclosedParenthesisIf(yieldEffectText, null), emptyScopeText: TEXTVAR(false)))
                                         {
-                                            foreach (var pp in pCity.getEffectCityCounts())
+                                            foreach (EffectCityType eOtherEffectCity in pCity.getActiveEffectCity())
                                             {
-                                                EffectCityType eOtherEffectCity = pp.Key;
-                                                int iOtherCount = pp.Value;
+                                                int iOtherCount = pCity.getEffectCityCount(eLoopEffectCity);
                                                 int iSubValue = infos().effectCity(eLoopEffectCity).maaiEffectCityYieldRate[eOtherEffectCity, eYield];
                                                 if (iSubValue != 0)
                                                 {
@@ -3603,7 +3608,7 @@ namespace BetterAI
                                 ImprovementType eImprovement = pTile.getImprovement();
                                 SpecialistType eSpecialist = pTile.getSpecialist();
 
-                                int iBase = pGame.tileYieldOutputModified(pTile.getImprovement(), SpecialistType.NONE, eYield, pTile);
+                                int iBase = pTile.yieldOutputModified(pTile.getImprovement(), SpecialistType.NONE, eYield);
                                 if (iBase != 0)
                                 {
                                     if (!dImprovementYields.ContainsKey(eImprovement))
@@ -3618,7 +3623,7 @@ namespace BetterAI
 
                                 if (eSpecialist != SpecialistType.NONE)
                                 {
-                                    int iSpecialist = (pGame.tileYieldOutputModified(pTile.getImprovement(), eSpecialist, eYield, pTile) - iBase);
+                                    int iSpecialist = (pTile.yieldOutputModified(pTile.getImprovement(), eSpecialist, eYield) - iBase);
                                     if (iSpecialist != 0)
                                     {
                                         if (!dSpecialistYields.ContainsKey(eSpecialist))
@@ -3636,7 +3641,7 @@ namespace BetterAI
                             {
                                 ResourceType eResource = pTile.getResource();
 
-                                int iValue = pGame.tileYieldOutputModified(ImprovementType.NONE, SpecialistType.NONE, eYield, pTile);
+                                int iValue = pTile.yieldOutputModified(ImprovementType.NONE, SpecialistType.NONE, eYield);
                                 if (iValue != 0)
                                 {
                                     if (!dResourceYields.ContainsKey(eResource))
@@ -3753,7 +3758,7 @@ namespace BetterAI
 
                     if (pGovernor != null)
                     {
-                        int iValue = pCity.calculateGovernorOpinionYield(eYield);
+                        int iValue = pCity.calculateGovernorOpinionYield(eYield, pCity.governor());
                         if (bReverseSign)
                         {
                             iValue = -(iValue);
@@ -3805,7 +3810,7 @@ namespace BetterAI
                 }
 
                 int iBaseYield = pCity.getBaseYieldNet(eYield);
-                int iModifiedYield = pCity.calculateModifiedYieldBase(eYield);
+                int iModifiedYield = pCity.calculateModifiedYield(eYield);
                 if (iBaseYield != iModifiedYield)
                 {
                     if (bReverseSign)
@@ -3853,10 +3858,9 @@ namespace BetterAI
                         }
                     }
 
-                    foreach (var p in pCity.getEffectCityCounts())
+                    foreach (EffectCityType eLoopEffectCity in pCity.getActiveEffectCity())
                     {
-                        EffectCityType eLoopEffectCity = p.Key;
-                        int iCount = p.Value;
+                        int iCount = pCity.getEffectCityCount(eLoopEffectCity);
                         int iValue = (infos().effectCity(eLoopEffectCity).maiYieldModifier[(int)eYield] * iCount);
                         if (bReverseSign)
                         {
@@ -3942,7 +3946,7 @@ namespace BetterAI
                             //buildCityYieldNetHelp(builder, pCity, eLoopYield, pManager, bNetOnly: true, bReverseSign: true);
                             //builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(-(pCity.calculateModifiedYieldBase(eLoopYield)), iMultiplier: Constants.YIELDS_MULTIPLIER));
                             buildCityYieldNetHelp(builder, pCity, eLoopYield, pManager, bNetOnly: true, bReverseSign: false);
-                            builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(pCity.calculateModifiedYieldBase(eLoopYield), iMultiplier: Constants.YIELDS_MULTIPLIER));
+                            builder.AddTEXT("TEXT_HELPTEXT_TOTAL_YIELD", buildYieldLinkVariable(eLoopYield), buildSignedTextVariable(pCity.calculateModifiedYield(eLoopYield), iMultiplier: Constants.YIELDS_MULTIPLIER));
 /*####### Better Old World AI - Base DLL #######
   ### don't reverse sign                 END ###
   ##############################################*/

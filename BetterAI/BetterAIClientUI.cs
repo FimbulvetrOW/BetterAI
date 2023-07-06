@@ -329,8 +329,8 @@ namespace BetterAI
                 bool bWorker = pUnit.isWorker();
                 Player pActivePlayer = ClientMgr.activePlayer();
                 bool bTeamTest = ((pTile.hasOwner()) ? (pTile.owner().getTeam() == pActivePlayer.getTeam() || pTile.owner().getTeam() == TeamType.NONE) : false);
-                bool bQueue = (pUnit.hasQueueList() || Interfaces.Input.isShiftDown());
-                bool bControl = Interfaces.Input.isControlDown();
+                bool bQueue = (pUnit.hasQueueList() || Interfaces.Input.isShiftPressed());
+                bool bControl = Interfaces.Input.isControlPressed();
                 bool bImprovedTile = pTile.hasImprovement() || pTile.hasCity()   //also for city center tile, because you can't build any improvement there anyway.
                     || ((BetterAIInfoGlobals)Infos.Globals).BAI_WORKERLIST_EXTRA >= 2; //option to always show extra items (Franz)
                 bool bShowExtraImprovements = bWorker && !bControl && !bQueue && bTeamTest && bImprovedTile;
@@ -396,6 +396,7 @@ namespace BetterAI
                         bool bShowButton = false;
                         InfoImprovement improvement = Infos.improvement(eLoopImprovement);
                         if (improvement == null) continue;
+                        if (!(pUnit.canBuildImprovementType(eLoopImprovement))) continue;
 
                         if (improvement.mbShowAlways && (improvement.mbUrban == pTile.isUrban()))
                         {
@@ -407,7 +408,7 @@ namespace BetterAI
                         }
                         else
                         {
-                            if ((pUnit.canBuildImprovementType(eLoopImprovement) && pActivePlayer.canStartImprovement(eLoopImprovement, null)))
+                            if (pActivePlayer.canStartImprovement(eLoopImprovement, null))
                             {
                                 bool bPrimaryUnlock = true;
                                 if (!(pCityTerritory.canCityHaveImprovement(eLoopImprovement, ref bPrimaryUnlock)))
@@ -573,9 +574,9 @@ namespace BetterAI
                     {
                         StringBuilder colorSB = colorScope.Value;
                         List<int> cityList = cityListScoped.Value;
-                        for (int iI = 0; iI < pActivePlayer.getNumCities(); ++iI)
+                        foreach (int iLoopCity in pActivePlayer.getCities())
                         {
-                            cityList.Add(pActivePlayer.cityAt(iI).getID());
+                            cityList.Add(iLoopCity);
                         }
 
                         if (!isCityListInitialized)

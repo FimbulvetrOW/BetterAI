@@ -803,113 +803,64 @@ namespace BetterAI
 
         //Hurry changes START
 
-        //lines 6196-6274
-        //method rewritten
-        protected virtual void getNetCityProductionYieldHelper(YieldType eYield, out int iProgress, out int iLocalOverflow, out int iToStockpile, out int iExcessOverflow, out bool bComplete, bool bReturnLocalOverflowForBuildYieldOnly = false)
+        //lines 6385-6427
+        protected override CityProductionYield getNetCityProductionYieldHelper(YieldType eYield)
         {
-            using (new UnityProfileScope("City.getNetCityProductionYield"))
-            {
-                bool isBuildYield = isYieldBuildCurrent(eYield);
-                int iRate = calculateCurrentYield(eYield, true, false); // total rate, build or not
+            using var profileScoped = new UnityProfileScope("City.getNetCityProductionYield");
 
-                int iTotalRate = iRate + getYieldOverflow(eYield);
-                int iMissingYieldCost = 0;
-                int iOverflow = 0;
-                iExcessOverflow = 0;
-                iLocalOverflow = 0;
-                if (!bReturnLocalOverflowForBuildYieldOnly && !isBuildYield) //just in case we want to see overflow remaining from previous turns for all yields
+            CityProductionYield zYield = new CityProductionYield();
+
+            zYield.iRate = calculateCurrentYield(eYield);
+
+            CityQueueData pCurrentBuild = getCurrentBuild();
+            if (isYieldBuildCurrent(eYield) && getBuildThreshold(pCurrentBuild) > 0)
+            {
+                int iTotalRate = zYield.iRate + getYieldOverflow(eYield);
+                int iMissingYieldCost = getBuildThreshold(pCurrentBuild) - pCurrentBuild.miProgress;
+                int iExtraYield = iTotalRate - iMissingYieldCost;
+
+//slightly restructured
+                if (iExtraYield >= 0)
                 {
-                    iLocalOverflow = getYieldOverflow(eYield);
-                }
-                bComplete = false;
-                if (isBuildYield)
-                {
-                    int iTotalProductionCost = getBuildThreshold(getCurrentBuild());
-                    int iFinalProgress = getCurrentBuild().miProgress + iTotalRate;
-                    iMissingYieldCost = iTotalProductionCost - getCurrentBuild().miProgress;
+                    if (pCurrentBuild.mbHurried)
+                    {
+                        zYield.iProduction = iMissingYieldCost;
 
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry               START ###
   ##############################################*/
-                    if (getCurrentBuild().mbHurried && (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED >= 3))
-                    {
-                        iProgress = iMissingYieldCost; //should be 0
-                        iLocalOverflow = 0;
-                        iToStockpile = 0;
-                        iExcessOverflow = 0;
-                        return;
-                    }
+                        if (((BetterAIInfoGlobals)infos().Globals).BAI_HURRY_COST_REDUCED < 3)
+                        {
+                            zYield.iStockpile = iExtraYield;
+                        }
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry                 END ###
   ##############################################*/
 
-
-                    if (iFinalProgress - iTotalProductionCost >= 0) // completes this turn
-                    {
-                        iOverflow = iFinalProgress - iTotalProductionCost;
-                        bComplete = true;
-                    }
-                    iExcessOverflow = Math.Max(iOverflow - iRate, 0);
-                    iLocalOverflow = iOverflow - iExcessOverflow;
-                }
-
-                if (!isBuildYield)
-                {
-                    iProgress = 0;
-                    iToStockpile = iRate;
-                }
-                else if (getCurrentBuild().mbHurried)
-                {
-                    if (bComplete)
-                    {
-                        iProgress = iMissingYieldCost;
-                        iToStockpile = iTotalRate - iMissingYieldCost;
-                        iLocalOverflow = 0; //no overflow after hurrying, everything just goes to stockpile
-                        iExcessOverflow = iToStockpile;
                     }
                     else
                     {
-                        iProgress = iTotalRate;
-                        iToStockpile = 0;
+                        //int iOverflow = Math.Max(0, iExtraYield);
+                        zYield.iProductionOverflow = Math.Min(iExtraYield, zYield.iRate);
+                        zYield.iStockpileOverflow = iExtraYield - zYield.iProductionOverflow;
+                        zYield.iStockpile = zYield.iStockpileOverflow;
+                        zYield.iProduction = iTotalRate - zYield.iStockpileOverflow;
                     }
                 }
                 else
                 {
-                    // whether the build finishes this turn or not, production stays local apart from Excess overflow (OF is capped at current production rate)
-                    iProgress = iTotalRate - iOverflow; //this value doesn't include iLocalOverflow
-                    iToStockpile = iExcessOverflow;
+                    zYield.iProduction = iTotalRate;
                 }
-            }
-        }
-        //overriding to make use of rewritten getNetCityProductionYieldHelper method
-        public override int getNetCityProductionYield(YieldType eYield, bool bToStockpile)
-        {
-            //return getNetCityProductionYieldHelper(eYield, bToStockpile, false, out int iOverflow);
-            getNetCityProductionYieldHelper(eYield, out int iProgress, out int iLocalOverflow, out int iToStockpile, out int iExcessOverflow, out bool bComplete, bReturnLocalOverflowForBuildYieldOnly: true);
-            if (bToStockpile)
-            {
-                return iToStockpile;
             }
             else
             {
-                return iProgress + iLocalOverflow;
+                zYield.iStockpile = zYield.iRate;
             }
-        }
-        public override int getExcessOverflow(YieldType eYield)
-        {
-            //getNetCityProductionYieldHelper(eYield, false, bNextTurnOverflow: false, out int iExcessOverflow);
-            getNetCityProductionYieldHelper(eYield, out int iProgress, out int iLocalOverflow, out int iToStockpile, out int iExcessOverflow, out bool bComplete, bReturnLocalOverflowForBuildYieldOnly: true);
-            return iExcessOverflow;
-        }
-        public override int getNextTurnOverflow(YieldType eYield)
-        {
-            //getNetCityProductionYieldHelper(eYield, false, bNextTurnOverflow: true, out int iNextTurnOverflow);
-            getNetCityProductionYieldHelper(eYield, out int iProgress, out int iLocalOverflow, out int iToStockpile, out int iExcessOverflow, out bool bComplete, bReturnLocalOverflowForBuildYieldOnly: true);
-            return iLocalOverflow;
+
+            return zYield;
         }
 
-
-        //base game code paste START
+         //base game code paste START
         //lines 7180-7295
         public override void doPlayerTurn(List<int> aiPlayerYieldAmounts)
         {
@@ -954,6 +905,8 @@ namespace BetterAI
 
                 clearCompletedBuild();
 
+                //to be changed to use new getNetCityProductionYieldHelper once it's fixed in base game.
+                //until then it stays, since it's working fine.
                 using (var yieldMapScoped = CollectionCache.GetDictionaryScoped<YieldType, int>())
                 {
                     Dictionary<YieldType, int> mapYieldAmounts = yieldMapScoped.Value;
@@ -1172,17 +1125,163 @@ namespace BetterAI
   ### City Biome                         END ###
   ##############################################*/
 
+
+        protected override bool canRaidFrom(Tile pFromTile)
+        {
+            if (!(pFromTile.adjacentToBoundary()))
+            {
+                return false;
+            }
+
+            if (pFromTile.impassable())
+            {
+                return false;
+            }
+
+            if (pFromTile.hasCityTerritory())
+            {
+                return false;
+            }
+
+            if (pFromTile.isWater())
+            {
+                if (pFromTile.getAreaTileCount() < 2 * infos().Globals.FRESH_WATER_THRESHOLD)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                if (pFromTile.getLandSection() != tile().getLandSection())
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        //copy-paste START
+
+        //lines 7447-7544
+        public override bool doDistantRaid(bool bTest = false)
+        {
+            using var profileScope = new UnityProfileScope("City.doDistantRaid");
+
+            Tile pCityTile = tile();
+
+            Tile pBestTile = null;
+            int iBestValue = 0;
+
+            using (var tilesScoped = CollectionCache.GetListScoped<int>())
+            {
+                List<int> liTiles = tilesScoped.Value;
+                pCityTile.getTilesInRange(infos().Globals.MAX_CITY_RAID_DIST, liTiles);
+                RandomStruct pRandom = new RandomStruct(game().getSeedForId(getID() + game().getCitySiteCount() * game().getTurn()));
+                foreach (int iLoopTile in liTiles)
+                {
+                    Tile pLoopTile = game().tile(iLoopTile);
+
+                    if (canRaidFrom(pLoopTile))
+                    {
+                        if (bTest)
+                        {
+                            return true;
+                        }
+
+                        int iValue = pRandom.Next(1000) + 1;
+
+                        iValue += ((infos().Globals.MAX_CITY_RAID_DIST - pLoopTile.distanceTile(pCityTile)) * 250);
+
+                        if (iValue > iBestValue)
+                        {
+                            pBestTile = pLoopTile;
+                            iBestValue = iValue;
+                        }
+                    }
+                }
+
+                if (pBestTile == null)
+                {
+                    return false;
+                }
+
+                using (var dieMapScoped = CollectionCache.GetListScoped<PairStruct<UnitType, int>>())
+                {
+                    List<PairStruct<UnitType, int>> mapUnitDie = dieMapScoped.Value;
+
+                    int iTotalWeight = 0;
+                    for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); ++eLoopUnit)
+                    {
+                        if (infos().unit(eLoopUnit).mbBarbRaid)
+                        {
+                            if (!infos().unit(eLoopUnit).mbWater || pBestTile.isWater())
+                            {
+                                int iWeight = game().countUnits(x => x.getType() == eLoopUnit) + 1;
+                                mapUnitDie.Add(PairStruct.Create(eLoopUnit, iWeight));
+                                iTotalWeight += iWeight;
+                            }
+                        }
+                    }
+
+/*####### Better Old World AI - Base DLL #######
+  ### No Raider Ships                  START ###
+  ##############################################*/
+                    if (pBestTile.isWater() && (((BetterAIInfoGlobals)(infos().Globals)).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS) == 0)
+/*####### Better Old World AI - Base DLL #######
+  ### No Raider Ships                    END ###
+  ##############################################*/
+                    {
+                        for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); ++eLoopUnit)
+                        {
+                            if (!infos().unit(eLoopUnit).mbBarbRaid && infos().unit(eLoopUnit).mbWater && canBuildUnitPossible(eLoopUnit))
+                            {
+                                mapUnitDie.Add(PairStruct.Create(eLoopUnit, iTotalWeight));
+                            }
+                        }
+                    }
+
+                    if (mapUnitDie.Count == 0)
+                    {
+                        return false;
+                    }
+
+                    int iCount = pRandom.Next(player().difficulty().miRaidNumCity) + infos().Globals.MIN_DISTANT_RAID_UNITS;
+                    for (int iI = 0; iI < iCount; iI++)
+                    {
+                        UnitType eUnitType = infos().utils().randomDieMap(mapUnitDie, pRandom.NextSeed(), UnitType.NONE);
+                        if (eUnitType != UnitType.NONE)
+                        {
+                            Unit pUnit = game().createUnitNearby(eUnitType, pBestTile, PlayerType.NONE, infos().Globals.RAIDERS_TRIBE);
+                            if (pUnit != null)
+                            {
+                                pUnit.startRaid(getTeam());
+                            }
+                        }
+                    }
+
+                    setRaidedTurn(game().getTurn());
+
+                    player().addTurnSummary(() => TextManager.TEXT("TEXT_GAME_BOUNDARY_RAID_WARNING", HelpText.buildCityLinkVariable(this, player())), TurnLogType.TRIBAL_RAID);
+                }
+            }
+
+            return true;
+        }
+//copy-paste END
+
+
 /*####### Better Old World AI - Base DLL #######
   ### self-aaiEffectCityYieldRate      START ###
   ##############################################*/
-        //lines 10267-10405
-        public override int getEffectCityYieldRate(EffectCityType eEffectCity, YieldType eYield, bool bComplete = false)
+        //lines 10420-10563
+        public override int getEffectCityYieldRate(EffectCityType eEffectCity, YieldType eYield, Character pGovernor, bool bComplete = false)
         {
-            int iRate = base.getEffectCityYieldRate(eEffectCity, eYield, bComplete);
+            int iRate = base.getEffectCityYieldRate(eEffectCity, eYield, pGovernor, bComplete: bComplete);
 
             if (bComplete)
             {
-                foreach (var p in getEffectCityCounts())
+                foreach (var p in getCurrentEffectCityCounts())
                 {
                     EffectCityType eLoopEffectCity = p.Key;
                     if (eLoopEffectCity == eEffectCity) //this is counted twice
