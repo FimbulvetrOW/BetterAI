@@ -984,6 +984,11 @@ namespace BetterAI
                                 builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_REMOVE_PILLAGE");
                             }
 
+                            if (bEncyclopedia && infos().improvement(eImprovement).mbNoAdjacentReligion)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT_RELIGION");
+                            }
+
                             if (!(infos().improvement(eImprovement).mbTribe))
                             {
                                 int iValue = infos().improvement(eImprovement).miUnitTurns;

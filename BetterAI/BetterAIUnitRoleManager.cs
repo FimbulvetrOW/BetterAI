@@ -76,7 +76,7 @@ namespace BetterAI
                     {
                         if (BAI_AI.shouldOccupyCity(pLoopCity))
                         {
-                            mmapBlockableCitySiteValues.Add(pLoopCity.getTileID(), pLoopCity.getPopulation() * BAI_AI.getTileSettleValue(pLoopCity.tile()));
+                            mmapBlockableCitySiteValues[pLoopCity.getTileID()] = pLoopCity.getPopulation() * AI.getTileSettleValue(pLoopCity.tile());
                         }
                     }
                 }

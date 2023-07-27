@@ -17,6 +17,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using static BetterAI.BetterAIInfos;
 using System.Text.RegularExpressions;
+using System.IO;
 
 namespace BetterAI
 {
@@ -171,7 +172,8 @@ namespace BetterAI
                             if (getTeam() != TeamType.NONE && pFromTile.getTeam() != TeamType.NONE && pToTile.getTeam() != TeamType.NONE)
                             {
                                 //if (getTeam() == pFromTile.getTeam() && getTeam() == pToTile.getTeam())
-                                if (game().areTeamsAllied(pFromTile.getTeam(), getTeam()) && game().areTeamsAllied(pToTile.getTeam(), getTeam()))
+                                //if (game().areTeamsAllied(pFromTile.getTeam(), getTeam()) && game().areTeamsAllied(pToTile.getTeam(), getTeam()))
+                                if (isAlliedWith(pFromTile.getTeam(), TribeType.NONE) && isAlliedWith(pToTile.getTeam(), TribeType.NONE))
                                 {
                                     iCost -= ((BetterAIInfoGlobals)infos().Globals).BAI_TEAM_TERRITORY_ROAD_RIVER_CROSSING_DISCOUNT;
                                 }
