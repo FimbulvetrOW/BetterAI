@@ -347,6 +347,66 @@ namespace BetterAI
             else return false;
         }
 
+        //lines 10445-10488
+        public override void buyTile(City pNewCity, YieldType eYield, Player pActingPlayer)
+        {
+            MohawkAssert.Assert(canBuyTile(tile(), pNewCity, eYield, pActingPlayer));
+
+            Tile pTile = tile();
+
+            City pOldCity = pTile.cityTerritory();
+
+            int iTileCost = pNewCity.getBuyTileCost(pTile, eYield);
+
+            using (var tileExpansionScoped = CollectionCache.GetListScoped<PairStruct<int, CityTerritory>>())
+            using (var tileTerritoryScoped = CollectionCache.GetDictionaryScoped<int, CityTerritory>())
+            {
+/*####### Better Old World AI - Base DLL #######
+  ### Border growth fix                START ###
+  ##############################################*/
+                if (pOldCity != null)
+                {
+                    tileExpansionScoped.Value.Add(PairStruct.Create(pTile.getID(), new CityTerritory(pNewCity)));
+                    game().setTilesOwner(tileExpansionScoped.Value, (game().areTeamsAllied(pOldCity.getTeam(), pNewCity.getTeam())));
+                }
+                else
+/*####### Better Old World AI - Base DLL #######
+  ### Border growth fix                  END ###
+  ##############################################*/
+                {
+                    pTile.getExpansionTiles(tileExpansionScoped.Value, 0, new CityTerritory(pNewCity), TeamType.NONE, tileTerritoryScoped.Value);
+                    game().setTilesOwner(tileExpansionScoped.Value, true);
+                }
+
+            }
+
+            pNewCity.incrementBuyTileCount();
+            pNewCity.player().incrementBuyTileCount();
+
+            if ((pOldCity != null) && (pOldCity.getFamily() != pNewCity.getFamily()))
+            {
+                if (pOldCity.hasPlayer() && pOldCity.hasFamily())
+                {
+                    pOldCity.player().addMemoryFamily(infos().Globals.GAVE_AWAY_TILE_MEMORY_FAMILY, pOldCity.getFamily());
+                }
+                if (pNewCity.hasFamily())
+                {
+                    pNewCity.player().addMemoryFamily(infos().Globals.GIVEN_TILE_MEMORY_FAMILY, pNewCity.getFamily());
+                }
+            }
+
+            pActingPlayer.changeYieldStockpileWhole(eYield, -(iTileCost));
+
+            List<TileText> azTileTexts = null;
+            act(pActingPlayer, infos().Globals.UNIT_BUY_TILE_COST, ref azTileTexts);
+            doCooldown(infos().Globals.BUY_TILE_COOLDOWN);
+
+            UnitBuyTileAction unitAction = new UnitBuyTileAction(getID());
+            unitAction.meActingPlayer = pActingPlayer?.getPlayer() ?? PlayerType.NONE;
+            unitAction.maTileTexts = azTileTexts;
+            game().sendUnitAction(unitAction, true);
+        }
+
 /*####### Better Old World AI - Base DLL #######
   ### Agent Network Cost Scaling       START ###
   ##############################################*/
