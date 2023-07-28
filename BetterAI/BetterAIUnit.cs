@@ -367,7 +367,7 @@ namespace BetterAI
                 if (pOldCity != null)
                 {
                     tileExpansionScoped.Value.Add(PairStruct.Create(pTile.getID(), new CityTerritory(pNewCity)));
-                    game().setTilesOwner(tileExpansionScoped.Value, (game().areTeamsAllied(pOldCity.getTeam(), pNewCity.getTeam())));
+                    game().setTilesOwner(tileExpansionScoped.Value, !(game().areTeamsAllied(pOldCity.getTeam(), pNewCity.getTeam())));
                 }
                 else
 /*####### Better Old World AI - Base DLL #######
