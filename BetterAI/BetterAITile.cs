@@ -266,16 +266,7 @@ namespace BetterAI
                     getTilesInRange(iRange, aiTiles);
                     foreach (int iTileID in aiTiles)
                     {
-/*####### Better Old World AI - Base DLL #######
-  ### Border growth fix                START ###
-  ##############################################*/
-                        if (!game().tile(iTileID).hasOwner())
-/*####### Better Old World AI - Base DLL #######
-  ### Border growth fix                  END ###
-  ##############################################*/
-                        {
-                            aTileQueue.AddBack(PairStruct.Create(iTileID, cityTerritory));
-                        }
+                        aTileQueue.AddBack(PairStruct.Create(iTileID, cityTerritory));
                     }
                 }
 
@@ -292,12 +283,21 @@ namespace BetterAI
                             pLoopTile.getOwnerChangeTiles(front.Second, aTiles, eVisibilityTeam, dTerritoryTiles);
                             foreach (PairStruct<int, CityTerritory> p in aTiles)
                             {
-                                if (!dTerritoryTiles.TryGetValue(p.First, out CityTerritory existingTerritory))
+/*####### Better Old World AI - Base DLL #######
+  ### Border growth fix                START ###
+  ##############################################*/
+                                if (!game().tile(p.First).hasOwner())
+/*####### Better Old World AI - Base DLL #######
+  ### Border growth fix                  END ###
+  ##############################################*/
                                 {
-                                    aTileQueue.AddBack(p);
+                                    if (!dTerritoryTiles.TryGetValue(p.First, out CityTerritory existingTerritory))
+                                    {
+                                        aTileQueue.AddBack(p);
+                                    }
+                                    dTerritoryTiles[p.First] = p.Second;
+                                    aExpansionTiles.Add(p);
                                 }
-                                dTerritoryTiles[p.First] = p.Second;
-                                aExpansionTiles.Add(p);
                             }
 
                             for (DirectionType eDir = 0; eDir < DirectionType.NUM_TYPES; ++eDir)
