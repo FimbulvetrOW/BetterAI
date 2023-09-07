@@ -45,7 +45,7 @@ namespace BetterAI
                         iValue = pCity.getHurryOrdersCost() * yieldValue(infos.Globals.ORDERS_YIELD);
                         break;
                     case CityBuildHurryType.POPULATION:
-                        iValue = pCity.getHurryPopulationCost() * citizenValue(pCity);
+                        iValue = pCity.getHurryPopulationCost() * citizenValue(pCity, true);
                         break;
                 }
 
@@ -289,9 +289,9 @@ namespace BetterAI
             }
 
             //lines 11463-11855
-            protected override long calculateEffectCityValue(EffectCityType eEffectCity, City pCity)
+            protected override long calculateEffectCityValue(EffectCityType eEffectCity, City pCity, bool bRemove)
             {
-                long iValue = base.calculateEffectCityValue(eEffectCity, pCity);
+                long iValue = base.calculateEffectCityValue(eEffectCity, pCity, bRemove);
 /*####### Better Old World AI - Base DLL #######
   ### self-aaiEffectCityYieldRate      START ###
   ##############################################*/
