@@ -84,6 +84,87 @@ namespace BetterAI
 
         }
 
+
+        protected override void ReadInfoListData(List<XmlDataListItemBase> items)
+        {
+            using var profileScope = new UnityProfileScope("Infos.ReadInfoListData");
+
+            foreach (XmlDataListItemBase item in items)
+            {
+                MohawkAssert.IsNull(mCurrentReadType);
+
+                mCurrentReadType = item.GetType().GenericTypeArguments[1];
+                mFieldTypeDictionary[mCurrentReadType] = new Dictionary<string, FieldTypeData>();
+                AddFieldType("zType", typeof(string), false);
+
+                //base xml
+                foreach (XmlDocument xmlDoc in getModdableBaseXML(item.GetFileName()))
+                {
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, false);
+                }
+
+                //added xml
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD))
+                {
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, true);
+                }
+
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD_ALWAYS))
+                {
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, true);
+                }
+
+                //change xml
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetChangedXML(item.GetFileName()))
+                {
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, true);
+                }
+
+                ////change xml
+                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.CHANGE))
+                //{
+                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                //    item.ReadData(nodes, this, true);
+                //}
+
+                ////append xml
+                //mbAppendLists = true;
+                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND))
+                //{
+                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                //    item.ReadData(nodes, this, true);
+                //}
+
+/*####### Better Old World AI - Base DLL #######
+  ### modmod fix                       START ###
+  ##############################################*/
+                //make mod load order the only significant factor for change and append
+                //with this, you can -change, then a modmod can -append to that same item
+
+                //change and append xml
+                List<XmlDocument> appends = new List<XmlDocument>();
+                appends = mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND);
+
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.CHANGE | ModdedXMLType.APPEND))
+                {
+                    mbAppendLists = appends.Contains(xmlDoc);
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, true);
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### modmod fix                         END ###
+  ##############################################*/
+                mbAppendLists = false;
+
+                EndReadValidation(item.GetFileName());
+                mCurrentReadType = null; //clear active readtype
+            }
+        }
+
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/

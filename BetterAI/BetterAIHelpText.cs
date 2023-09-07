@@ -1620,6 +1620,16 @@ namespace BetterAI
                     }
                 }
 
+
+                {
+                    TextType eDescription = infos().improvement(eImprovement).meDescription;
+
+                    if (eDescription != TextType.NONE)
+                    {
+                        builder.AddTEXT(eDescription);
+                    }
+                }
+
                 using (TextBuilder extraText = TextBuilder.GetTextBuilder(TextManager))
                 {
                     extraText.AddTEXT(infos().improvement(eImprovement).mExtraHelp);
@@ -2015,7 +2025,7 @@ namespace BetterAI
 
                     for (TerrainType eLoopTerrain = 0; eLoopTerrain < infos().terrainsNum(); eLoopTerrain++)
                     {
-                        if (eLoopTerrain != infos().Globals.WATER_TERRAIN) // don't clutter the help text with obvious requirements
+                        if (!infos().terrain(eLoopTerrain).mbWater) // don't clutter the help text with obvious requirements
                         {
                             if (eInfoImprovement.mabTerrainInvalid[(int)eLoopTerrain] && (pTile == null || pTile.getTerrain() == eLoopTerrain))
                             {
@@ -2623,6 +2633,27 @@ namespace BetterAI
                     }
                 }
 
+
+                if (infos().unit(eUnit).mltModVariables.Count > 0)
+                {
+                    foreach (TripleStruct<string, string, TextType> modVariable in infos().unit(eUnit).mltModVariables)
+                    {
+                        if (modVariable.Third != TextType.NONE)
+                        {
+                            builder.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", TEXTVAR_TYPE(modVariable.Third), TEXTVAR(modVariable.Second)));
+                        }
+                    }
+                }
+
+                {
+                    TextType eDescription = infos().unit(eUnit).meDescription;
+
+                    if (eDescription != TextType.NONE)
+                    {
+                        builder.AddTEXT(eDescription);
+                    }
+                }
+
                 return builder;
             }
         }
@@ -2903,6 +2934,22 @@ namespace BetterAI
                         if (yieldListBuilder.HasContent)
                         {
                             outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_CONSUMPTION"), yieldListBuilder.ToTextVariable());
+                        }
+                    }
+
+
+                    if (pUnit.isModVariables())
+                    {
+                        foreach (TripleStruct<string, string, TextType> mvType in infos().unit(pUnit.getType()).mltModVariables)
+                        {
+                            if (mvType.Third != TextType.NONE)
+                            {
+                                string sVariable = pUnit.getModVariable(mvType.First);
+                                if (!string.IsNullOrWhiteSpace(sVariable))
+                                {
+                                    outUnitData.AddStat(TextManager, TEXTVAR_TYPE(mvType.Third), TEXTVAR(sVariable));
+                                }
+                            }
                         }
                     }
                 }
