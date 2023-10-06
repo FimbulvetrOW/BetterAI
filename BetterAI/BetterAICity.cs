@@ -195,10 +195,6 @@ namespace BetterAI
             {
                 pWriter.WriteElementString("Capital", "");
             }
-            if (getSecondaryTileID() != -1)
-            {
-                pWriter.WriteElementString("SecondaryTileID", getSecondaryTileID().ToStringCached());
-            }
             pWriter.WriteElementString("FirstPlayer", ((int)(getFirstPlayer())).ToStringCached());
             pWriter.WriteElementString("LastPlayer", ((int)(getLastPlayer())).ToStringCached());
             if (hasCapturePlayer())
@@ -678,7 +674,7 @@ namespace BetterAI
   ##############################################*/
         //copy & paste START
         //lines 6613-6628
-        protected override bool verifyBuildUnit(CityQueueData pBuild)
+        protected override bool verifyBuildUnit(CityQueueData pBuild, bool bHurry = false)
         {
             UnitType eUnit = (UnitType)(pBuild.miType);
 
@@ -690,7 +686,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###
   ##############################################*/
-            if (!canContinueBuildUnitCurrent(eUnit)) //ignore number limits
+            if (!bHurry && !canContinueBuildUnitCurrent(eUnit)) //ignore number limits
 /*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again        END ###
   ##############################################*/
@@ -1440,6 +1436,18 @@ namespace BetterAI
                     //        return false;
                     //    }
                     //}
+
+                    {
+                        FamilyType eFamilyPrereq = infos().improvement(eImprovement).meFamilyPrereq;
+
+                        if (eFamilyPrereq != FamilyType.NONE && game().isCharacters())
+                        {
+                            if (getFamily() != eFamilyPrereq)
+                            {
+                                return false;
+                            }
+                        }
+                    }
 
                     {
                         ImprovementType eImprovementPrereq = eInfoImprovement.meImprovementPrereq;

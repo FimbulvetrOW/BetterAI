@@ -24,7 +24,7 @@ namespace BetterAI
                     return false;
                 }
 
-                if (!unit.canPillage(pTile, player))
+                if (!unit.canPillage(pTile, actingPlayer))
                 {
                     return false;
                 }

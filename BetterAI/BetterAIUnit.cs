@@ -49,7 +49,7 @@ namespace BetterAI
                         mbAmphibious = false;
                         //miAmphibiousCount = 0;
                     }
-                    else mbAmphibious = true; //iCount is > 0 anyway
+                    else mbAmphibious = true;
                 }
             }
         }

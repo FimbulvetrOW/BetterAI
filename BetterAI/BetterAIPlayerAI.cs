@@ -25,10 +25,224 @@ namespace BetterAI
         public partial class BetterAIPlayerAI : BetterAIPlayer.PlayerAI
         {
 
+
+            //lines 2290-2491
+            protected override void doExpansionTargets(bool bCanDeclareWar, int iPriorityTargets)
+            {
+                using var profileScope = new UnityProfileScope("PlayerAI.doExpansionTargets");
+
+                bool bDeclareWarToExpand = (getExpansionTargets().Count == 0 && getValidCitySites().Count == 0 && areAllCitiesDefended() && bCanDeclareWar);
+
+                // expansion targets left from previous turn should be just city sites, after a call to resetExpansionTargets at the end of the turn
+
+                if (player != null)
+                {
+                    foreach (int iExpansionTarget in getExpansionTargets())
+                    {
+                        Tile pTile = game.tile(iExpansionTarget);
+                        if (pTile != null && pTile.isVisible(Team))
+                        {
+                            Player pStealingPlayer = null;
+
+                            if (pTile.isCitySiteActive(Team))
+                            {
+                                Unit pBlockUnit = pTile.connectedNoFoundUnit(Team);
+                                if (pBlockUnit != null)
+                                {
+                                    pStealingPlayer = pBlockUnit.player();
+                                }
+                            }
+                            else if (pTile.hasRevealedCityTerritory(Team))
+                            {
+                                pStealingPlayer = pTile.revealedCityTerritory(Team).player();
+                            }
+
+                            if ((pStealingPlayer != null) &&
+                                (pStealingPlayer.getTeam() != Team) &&
+                                !(game.isHostile(Team, Tribe, pStealingPlayer.getTeam(), TribeType.NONE)))
+                            {
+                                if (pTile.getRecentAttacks(pStealingPlayer.getPlayer()) < (pTile.getRecentAttacks(getPlayer()) / 2))
+                                {
+                                    pStealingPlayer.doEventTrigger(infos.Globals.PLAYER_STOLE_CITY_SITE_EVENTTRIGGER, getPlayer(), pTile);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                using (var valueListScoped = CollectionCache.GetListScoped<PairStruct<Tile, ExpansionValue>>())
+                {
+                    List<PairStruct<Tile, ExpansionValue>> azExpansionValues = valueListScoped.Value;
+
+                    for (int iI = 0; iI < game.getNumTiles(); ++iI)
+                    {
+                        Tile pLoopTile = game.tile(iI);
+                        if (pLoopTile != null)
+                        {
+                            long iValue = tileExpansionValue(pLoopTile, bDeclareWarToExpand);
+                            if (iValue > 0)
+                            {
+                                var p = getTileTargetTerritory(pLoopTile);
+                                PlayerType eTilePlayer = p.First;
+                                Player pTilePlayer = eTilePlayer != PlayerType.NONE ? game.player(eTilePlayer) : null;
+                                TeamType eTileTeam = pTilePlayer != null ? pTilePlayer.getTeam() : TeamType.NONE;
+                                TribeType eTileTribe = p.Second;
+
+                                if (game.isPeace(eTileTeam, eTileTribe, Team, Tribe))
+                                {
+                                    continue; // don't break peace, just to expand - only diplomacy AI does this
+                                }
+                                if (!game.isHostile(eTileTeam, eTileTribe, Team, Tribe))
+                                {
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI fix                           START ###
+  ##############################################*/
+                                    //if (Tribe == TribeType.NONE)
+                                    if (player == null)
+                                    {
+                                        continue;
+                                    }
+/*####### Better Old World AI - Base DLL #######
+  ### AI fix                             END ###
+  ##############################################*/
+
+                                    if (!bDeclareWarToExpand)
+                                    {
+                                        continue;
+                                    }
+
+                                    if (pTilePlayer != null)
+                                    {
+                                        if (!(player.canDeclareWar(pTilePlayer)))
+                                        {
+                                            continue;
+                                        }
+                                    }
+
+                                    if (eTileTribe != TribeType.NONE)
+                                    {
+                                        if (!(player.canDeclareWarTribe(eTileTribe)))
+                                        {
+                                            continue;
+                                        }
+                                    }
+
+                                    if (eTilePlayer != PlayerType.NONE)
+                                    {
+                                        continue; // don't declare war on other players to expand, just tribes
+                                    }
+                                }
+
+                                if (player != null)
+                                {
+                                    if (isAtWarWithPlayer() && !getEnemyPlayers().Contains(eTilePlayer)) // only target major enemies, if they exist
+                                    {
+                                        continue;
+                                    }
+                                }
+
+                                ExpansionValue zNewValue = new ExpansionValue();
+                                zNewValue.iFoundValue = iValue;
+                                zNewValue.iAttackPercent = getDiplomacyAttackPercentPerTurn(pLoopTile);
+                                zNewValue.iPriority = 0;
+                                if (pLoopTile.hasCityTerritory())
+                                {
+                                    zNewValue.iPriority += getPriorityCityTiles(pLoopTile.cityTerritory());
+                                }
+                                else if (pLoopTile.isCitySiteActive())
+                                {
+                                    zNewValue.iPriority += isPriorityTarget(iI) ? 1 : 0;
+                                }
+
+                                azExpansionValues.Add(PairStruct.Create(pLoopTile, zNewValue));
+                            }
+                        }
+                    }
+
+                    azExpansionValues.Sort(ExpansionValue.Compare);
+
+                    using (var teamsChecked = CollectionCache.GetHashSetScoped<TeamType>())
+                    using (var tribesChecked = CollectionCache.GetHashSetScoped<TribeType>())
+                    using (var expansionTargetsScoped = CollectionCache.GetHashSetScoped<int>())
+                    {
+                        HashSet<TeamType> seTeamsChecked = teamsChecked.Value;
+                        HashSet<TribeType> seTribesChecked = tribesChecked.Value;
+
+                        for (int iExpansionIndex = 0; iExpansionIndex < azExpansionValues.Count; ++iExpansionIndex)
+                        {
+                            Tile pLoopTile = azExpansionValues[iExpansionIndex].First;
+
+                            var p = getTileTargetTerritory(pLoopTile);
+                            PlayerType eTilePlayer = p.First;
+                            TribeType eTileTribe = p.Second;
+                            TeamType eTileTeam = eTilePlayer != PlayerType.NONE ? game.player(eTilePlayer).getTeam() : TeamType.NONE;
+
+                            bool bValid = game.isHostile(Team, Tribe, eTileTeam, eTileTribe);
+                            if (!bValid && iExpansionIndex < iPriorityTargets)
+                            {
+                                if (!seTeamsChecked.Contains(eTileTeam) || !seTribesChecked.Contains(eTileTribe))
+                                {
+                                    seTeamsChecked.Add(eTileTeam);
+                                    seTribesChecked.Add(eTileTribe);
+                                    bValid = game.randomNext(100) < azExpansionValues[iExpansionIndex].Second.iAttackPercent;
+                                }
+                            }
+
+                            if (bValid)
+                            {
+                                expansionTargetsScoped.Value.Add(pLoopTile.getID());
+
+                                if (!getExpansionTargets().Contains(pLoopTile.getID()))
+                                {
+                                    if (player != null)
+                                    {
+                                        if (pLoopTile.isRevealedCity(Team))
+                                        {
+                                            player.pushDebugLogData(new GameLogData("New target: " + pLoopTile.city().getName(), GameLogType.AI_DEBUG, "", "", "", game.getTurn(), game.getTeamTurn()));
+                                        }
+                                        else if (pLoopTile.hasRevealedTribeImprovement(Team))
+                                        {
+                                            player.pushDebugLogData(new GameLogData("New target: " + game.textManager().TEXT(pLoopTile.revealedImprovement(Team).mName) + " at " + pLoopTile.ToString(), GameLogType.AI_DEBUG, "", "", "", game.getTurn(), game.getTeamTurn()));
+                                        }
+                                        else
+                                        {
+                                            player.pushDebugLogData(new GameLogData("New target: Tile at " + pLoopTile.ToString(), GameLogType.AI_DEBUG, "", "", "", game.getTurn(), game.getTeamTurn()));
+                                        }
+                                    }
+
+                                    if (!game.isHostile(Team, Tribe, eTileTeam, eTileTribe))
+                                    {
+                                        if (eTileTribe != TribeType.NONE)
+                                        {
+                                            if (player != null)
+                                            {
+                                                player.declareWarTribe(eTileTribe);
+                                            }
+                                            if (Tribe != TribeType.NONE)
+                                            {
+                                                MohawkAssert.Assert(false, "tribe war declarations should be made in doPlayerDiplomacy");
+                                            }
+                                        }
+                                        else if (eTileTeam != TeamType.NONE)
+                                        {
+                                            MohawkAssert.Assert(false, "war declarations against other players should be made in doPlayerDiplomacy");
+                                            //declareWar(eTileTeam);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        setExpansionTargets(expansionTargetsScoped.Value);
+                    }
+                }
+            }
+
             //lines 8034-8058
             protected override long getHurryCostValue(City pCity, CityBuildHurryType eHurry)
             {
                 long iValue = 0;
+                if (player == null) return iValue;
 
                 switch (eHurry)
                 {
@@ -84,6 +298,8 @@ namespace BetterAI
             //calculateCityYieldValue: lines 4141-4240
             public virtual long discontentValue(City pCity)
             {
+                if (player == null) return 0;
+
                 YieldType eYield = infos.Globals.HAPPINESS_YIELD;
 
                 //copy-pasted from calculateCityValue START
@@ -164,6 +380,10 @@ namespace BetterAI
             //lines 6951-6973
             protected override bool shouldRespectCitySiteOwnership(Player pOtherPlayer)
             {
+                if (player == null)
+                {
+                    return false;
+                }
 /*####### Better Old World AI - Base DLL #######
   ### AI: Don't treat humans differently START #
   ##############################################*/
@@ -176,11 +396,11 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: Don't treat humans differently END ###
   ##############################################*/
-                if (game.isHostile(player.getTeam(), TribeType.NONE, pOtherPlayer.getTeam(), TribeType.NONE))
+                if (game.isHostile(Team, Tribe, pOtherPlayer.getTeam(), TribeType.NONE))
                 {
                     return false;
                 }
-                if (pOtherPlayer.getTeam() != player.getTeam())
+                if (pOtherPlayer.getTeam() != Team)
                 {
                     if (game.isGameOption(infos.Globals.GAMEOPTION_PLAY_TO_WIN))
                     {
@@ -202,6 +422,11 @@ namespace BetterAI
             protected override bool shouldClaimCitySite(Tile pTile)
             {
                 //using var profileScope = new UnityProfileScope("PlayerAI.shouldClaimCitySite");
+
+                if (player == null)
+                {
+                    return false;
+                }
 
                 if (!canEverSettle())
                 {
@@ -264,7 +489,7 @@ namespace BetterAI
                                 {
                                     BetterAIPlayer pLoopPlayer = (BetterAIPlayer)game.player(eLoopPlayer);
 
-                                    if (eLoopPlayer != player.getPlayer())
+                                    if (eLoopPlayer != getPlayer())
                                     {
                                         if (pTile.isCitySiteActive(player.getTeam()) && pLoopPlayer.getStartingTiles().Contains(pTile.getID()))
                                         {
@@ -291,6 +516,11 @@ namespace BetterAI
             //lines 11463-11855
             protected override long calculateEffectCityValue(EffectCityType eEffectCity, City pCity, bool bRemove)
             {
+                if (player == null)
+                {
+                    return 0;
+                }
+
                 long iValue = base.calculateEffectCityValue(eEffectCity, pCity, bRemove);
 /*####### Better Old World AI - Base DLL #######
   ### self-aaiEffectCityYieldRate      START ###
@@ -324,6 +554,10 @@ namespace BetterAI
             //lines 11966-13545
             protected override long bonusValue(BonusType eBonus, ref BonusParameters zParameters)
             {
+                if (player == null)
+                {
+                    return 0;
+                }
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/
@@ -487,8 +721,13 @@ namespace BetterAI
             {
                 //using var profileScope = new UnityProfileScope("PlayerAI.getWarOfferPercent");
 
+                if (player == null)
+                {
+                    return 0;
+                }
+
                 BetterAIPlayer pOtherPlayer = (BetterAIPlayer)game.player(eOtherPlayer);
-                PlayerType eThisPlayer = player.getPlayer();
+                PlayerType eThisPlayer = getPlayer();
 
                 if (!(player.canDeclareWar(pOtherPlayer)))
                 {
@@ -654,11 +893,11 @@ namespace BetterAI
 
                     for (TeamType eLoopTeam = 0; eLoopTeam < game.getNumTeams(); eLoopTeam++)
                     {
-                        if ((eLoopTeam != player.getTeam()) && (eLoopTeam != pOtherPlayer.getTeam()))
+                        if ((eLoopTeam != Team) && (eLoopTeam != pOtherPlayer.getTeam()))
                         {
                             if (game.isTeamAlive(eLoopTeam))
                             {
-                                if (game.teamDiplomacy(eLoopTeam, player.getTeam()).mbHostile && game.teamDiplomacy(eLoopTeam, pOtherPlayer.getTeam()).mbHostile)
+                                if (game.teamDiplomacy(eLoopTeam, Team).mbHostile && game.teamDiplomacy(eLoopTeam, pOtherPlayer.getTeam()).mbHostile)
                                 {
                                     iPercent /= 2;
                                 }

@@ -859,6 +859,13 @@ namespace BetterAI
                                                     }
                                                 }
                                             }
+                                            using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_CITY_HELP_SPAWN_POINT_UNIT_TRAIT")))
+                                            {
+                                                foreach (UnitTraitType eXpTrait in seUnitTraitsAdded)
+                                                {
+                                                    builder.Add(buildUnitTraitLinkVariable(eXpTrait));
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1963,6 +1970,14 @@ namespace BetterAI
                     //    }
                     //}
 
+                    {
+                        FamilyType eFamilyPrereq = infos().improvement(eImprovement).meFamilyPrereq;
+
+                        if (eFamilyPrereq != FamilyType.NONE && pGame.isCharacters())
+                        {
+                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_FAMILY", buildFamilyLinkVariable(eFamilyPrereq, pGame), ((pCityTerritory != null) ? (pCityTerritory.getFamily() == eFamilyPrereq) : false))));
+                        }
+                    }
 
                     {
                         ImprovementType eImprovementPrereq = eInfoImprovement.meImprovementPrereq;
@@ -2055,14 +2070,6 @@ namespace BetterAI
                             }
                         }
 
-                        if (eInfoImprovement.mbRequiresUrban)
-                        {
-                            if (!(pTile.urbanEligible()))
-                            {
-                                lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_URBAN", TEXTVAR(pTile.isAnyCoastLand()), buildUrbanLinkVariable())));
-                            }
-                        }
-
                         if (eImprovementClass != ImprovementClassType.NONE)
                         {
                             if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !(pTile.notAdjacentToImprovementClass(eImprovementClass)))
@@ -2080,6 +2087,19 @@ namespace BetterAI
                                     lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT_RELIGION")));
                                 }
                             }
+                        }
+                    }
+
+                    if (infos().improvement(eImprovement).mbRequiresUrban)
+                    {
+                        TextVariable textvar = TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_URBAN_BUILDING", buildUrbanLinkVariable());
+                        if (pTile != null && !pTile.urbanEligible())
+                        {
+                            lRequirements.Add(buildWarningTextVariable(textvar));
+                        }
+                        else
+                        {
+                            lRequirements.Add(textvar);
                         }
                     }
 
@@ -2304,7 +2324,14 @@ namespace BetterAI
 
                         if (eReligion != ReligionType.NONE)
                         {
-                            builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_SPREADS_RELIGION", buildReligionLinkVariable(eReligion, pGame, null));
+                            foreach (UnitTraitType eLoopUnitTrait in infos().unit(eUnit).maeUnitTrait)
+                            {
+                                if (infos().effectUnit(infos().unitTrait(eLoopUnitTrait).meEffectUnit).mbSpreadReligion)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_SPREADS_RELIGION", buildReligionLinkVariable(eReligion, pGame, null));
+                                    break;
+                                }
+                            }
                         }
                     }
 
@@ -2789,7 +2816,7 @@ namespace BetterAI
                                     {
                                         if (pUnit.hasEffectUnit(eLoopEffectUnit))
                                         {
-                                            buildEffectUnitHelp(builder, eLoopEffectUnit, pGame, bRightJustify: true);
+                                            buildEffectUnitHelp(builder, eLoopEffectUnit, pGame, bRightJustify: true, bIncludeIndirect: false);
                                         }
                                     }
                                 }
@@ -2806,13 +2833,13 @@ namespace BetterAI
                     {
                         if (!(pUnit.isGeneralEffectUnit(eLoopEffect)))
                         {
-                            if (infos().effectUnit(eLoopEffect).meSourceUnitTrait == UnitTraitType.NONE)
+                            if (pUnit.getEffectUnitSource(eLoopEffect) != SourceEffectUnitType.UNIT)
                             {
                                 using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
                                 {
                                     using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
                                     {
-                                        buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true);
+                                        buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true, bIncludeIndirect: false);
                                     }
 
                                     outUnitData.AddStat(TextManager, buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable());
@@ -2822,7 +2849,7 @@ namespace BetterAI
                             {
                                 using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
                                 {
-                                    buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true);
+                                    buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true, bIncludeIndirect: false);
                                     outUnitData.AddStat(TextManager, buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable());
                                 }
                             }
@@ -2845,7 +2872,7 @@ namespace BetterAI
                                 using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
                                 {
                                     using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
-                                        buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true);
+                                        buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true, bIncludeIndirect: false);
                                     outUnitData.AddStat(TextManager, buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable());
                                 }
                             }
@@ -2958,7 +2985,7 @@ namespace BetterAI
         //copy-paste END
 
         //lines 23001-23650
-        public override TextBuilder buildEffectUnitHelp(TextBuilder builder, EffectUnitType eEffectUnit, Game pGame, bool bSkipIcons = false, bool bRightJustify = false)
+        public override TextBuilder buildEffectUnitHelp(TextBuilder builder, EffectUnitType eEffectUnit, Game pGame, bool bSkipIcons = false, bool bRightJustify = false, bool bIncludeIndirect = true)
         {
             //ToDo: group maiImprovementToModifier effects by improvementClasses, like specialist improvement prereqs
 

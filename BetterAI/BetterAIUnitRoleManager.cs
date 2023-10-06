@@ -13,7 +13,7 @@ namespace BetterAI
             public class BetterAIUnitRoleManager : BetterAIPlayer.BetterAIPlayerAI.UnitRoleManager
             {
                 protected Dictionary<int, long> BAI_mmapStartingTileBlockableCitySiteValues = new Dictionary<int, long>();
-                protected BetterAIPlayerAI BAI_AI { get { return (BetterAIPlayer.BetterAIPlayerAI)Player?.AI; } }
+                protected BetterAIPlayerAI BAI_AI { get; set; } = null;
                 public BetterAIUnitRoleManager(Game game) : base(game)
                 { }
 
@@ -25,7 +25,7 @@ namespace BetterAI
                     //isTeamContact(TeamType eIndex1, TeamType eIndex2)
                     for (PlayerType eLoopToPlayer = 0; eLoopToPlayer < Game.getNumPlayers(); eLoopToPlayer++)
                     {
-                        if (Game.isTeamContact(Player.getTeam(), Game.getPlayerTeam(eLoopToPlayer)) && Game.isTeamAlive(Game.getPlayerTeam(eLoopToPlayer)))
+                        if (Game.isTeamContact(BAI_AI.Team, Game.getPlayerTeam(eLoopToPlayer)) && Game.isTeamAlive(Game.getPlayerTeam(eLoopToPlayer)))
                         {
                             if (BAI_AI.isOtherPlayerSneaky(Game.player(eLoopToPlayer)))
                             {
@@ -37,9 +37,10 @@ namespace BetterAI
                 }
 
                 //lines 414-455
-                public override void reset(Player player, Unit.MovePriority eMovePriority, int saveOrders)
+                public override void reset(Player player, Tribe tribe, Unit.MovePriority eMovePriority, int saveOrders)
                 {
-                    base.reset(player, eMovePriority, saveOrders);
+                    BAI_AI = (BetterAIPlayerAI)(player?.AI ?? tribe?.AI);
+                    base.reset(player, tribe, eMovePriority, saveOrders);
                     BAI_mmapStartingTileBlockableCitySiteValues.Clear();
                 }
 /*####### Better Old World AI - Base DLL #######
@@ -57,7 +58,7 @@ namespace BetterAI
   ### Don't defend free City Sites     START ###
   ##############################################*/
                         //don't bother defending free city sites at the start of the game with your only military unit, but allow using Militia for that purpose
-                        if (((BetterAIPlayer)Player).getStartingTiles().Contains(iTileID) && 
+                        if (((BetterAIPlayer)BAI_AI.player).getStartingTiles().Contains(iTileID) && 
                             (Game.getTurn() < ((Game.isGameOption(Infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? BAI_AI.AI_PLAY_TO_WIN_GRACE_TURNS : BAI_AI.AI_GRACE_TURNS)) &&
                             !(isAnyContactedPlayerSneaky()))
                         {
@@ -103,7 +104,7 @@ namespace BetterAI
                     //    return;
                     //}
 
-                    UnitType eFoundUnit = ((BetterAIPlayer)Player).getCurrentFoundUnitType();
+                    UnitType eFoundUnit = ((BetterAIPlayer)BAI_AI.player).getCurrentFoundUnitType();
 
                     foreach (var p in BAI_mmapStartingTileBlockableCitySiteValues) //only the free starting city sites
                     {
@@ -113,7 +114,7 @@ namespace BetterAI
 
                         if (eFoundUnit != UnitType.NONE)
                         {
-                            if (!(pCitySite.canBothUnitsOccupy(eFoundUnit, Player.getPlayer(), pUnit))) //to prevent blocking a site with a Scout
+                            if (!(pCitySite.canBothUnitsOccupy(eFoundUnit, BAI_AI.getPlayer(), pUnit))) //to prevent blocking a site with a Scout
                             {
                                 continue; //probably break, right
                             }
@@ -177,7 +178,7 @@ namespace BetterAI
                                 {
                                     iSteps = 0;
                                 }
-                                else if (pUnit.canPathTo(pCitySite, iMaxSteps, true, false, false, Player.getTeam(), pPathfinder))
+                                else if (pUnit.canPathTo(pCitySite, iMaxSteps, true, false, false, BAI_AI.Team, pPathfinder))
                                 {
                                     iSteps = pPathfinder.getNumStepsTo(pCitySite);
                                 }
