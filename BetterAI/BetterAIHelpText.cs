@@ -181,8 +181,9 @@ namespace BetterAI
   ##############################################*/
                     }
 
-                    foreach (OccurrenceData pLoopData in pGame.getOccurrenceDataList())
+                    for (int i = 0; i < pGame.getNumOccurrences(); ++i)
                     {
+                        OccurrenceData pLoopData = pGame.getOccurrenceDataAt(i);
                         if (pLoopData.isActive())
                         {
                             InfoOccurrence occurrence = infos().occurrence(pLoopData.meType);
@@ -203,7 +204,7 @@ namespace BetterAI
                                 }
                             }
                             iValue = occurrence.miTileBaseYieldModifier;
-                            if (iValue != 0 && pLoopData.getAffectedTiles().Contains(pTile.getID()))
+                            if (iValue != 0 && pLoopData.isAffectedTile(pTile.getID()))
                             {
                                 using (buildSecondaryTextScope(builder))
                                 {
@@ -216,7 +217,7 @@ namespace BetterAI
                                 for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
                                 {
                                     Tile pAdjacentTile = pTile.tileAdjacent(eLoopDirection);
-                                    if (pAdjacentTile != null && pLoopData.getAffectedTiles().Contains(pAdjacentTile.getID()))
+                                    if (pAdjacentTile != null && pLoopData.isAffectedTile(pAdjacentTile.getID()))
                                     {
                                         using (buildSecondaryTextScope(builder))
                                         {
@@ -607,6 +608,10 @@ namespace BetterAI
                         {
                             buildImprovementBreakdownEffectCityHelp(builder, eImprovement, infos().specialist(eSpecialist).meEffectCity, true, eLoopYield, pCityTerritory, pManager);
                             buildImprovementBreakdownEffectCityHelp(builder, eImprovement, infos().specialist(eSpecialist).meEffectCityExtra, true, eLoopYield, pCityTerritory, pManager);
+                            if (infos().specialist(eSpecialist).meClass != SpecialistClassType.NONE)
+                            {
+                                buildImprovementBreakdownEffectCityHelp(builder, eImprovement, infos().specialistClass(infos().specialist(eSpecialist).meClass).meEffectCity, true, eLoopYield, pCityTerritory, pManager);
+                            }
 
                             if (eResource != ResourceType.NONE)
                             {
@@ -981,11 +986,6 @@ namespace BetterAI
                                 builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_HEAL");
                             }
 
-                            if (infos().improvement(eImprovement).mbCitySite)
-                            {
-                                builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_CITY_SITE");
-                            }
-
                             if (infos().improvement(eImprovement).mbRemovePillage)
                             {
                                 builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_REMOVE_PILLAGE");
@@ -1062,6 +1062,14 @@ namespace BetterAI
                                         if (infos().improvement(eLoopImprovement).meImprovementPrereq == eImprovement)
                                         {
                                             builder.Add(buildImprovementLinkVariable(eLoopImprovement, pGame));
+                                        }
+
+                                        if (infos().improvement(eLoopImprovement).meEffectCityPrereq != EffectCityType.NONE && infos().improvement(eImprovement).meEffectPlayer != EffectPlayerType.NONE)
+                                        {
+                                            if (infos().improvement(eLoopImprovement).meEffectCityPrereq == infos().effectPlayer(infos().improvement(eImprovement).meEffectPlayer).meEffectCity)
+                                            {
+                                                builder.Add(buildImprovementLinkVariable(eLoopImprovement, pGame));
+                                            }
                                         }
                                     }
                                 }
@@ -1973,9 +1981,19 @@ namespace BetterAI
                     {
                         FamilyType eFamilyPrereq = infos().improvement(eImprovement).meFamilyPrereq;
 
-                        if (eFamilyPrereq != FamilyType.NONE && pGame.isCharacters())
+                        if (eFamilyPrereq != FamilyType.NONE)
                         {
-                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_FAMILY", buildFamilyLinkVariable(eFamilyPrereq, pGame), ((pCityTerritory != null) ? (pCityTerritory.getFamily() == eFamilyPrereq) : false))));
+                            if (pGame != null)
+                            {
+                                if (pGame.isCharacters())
+                                {
+                                    lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_FAMILY", buildFamilyLinkVariable(eFamilyPrereq, pGame), ((pCityTerritory != null) ? (pCityTerritory.getFamily() != eFamilyPrereq) : false))));
+                                }
+                            }
+                            else
+                            {
+                                lRequirements.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_FAMILY", buildFamilyLinkVariable(eFamilyPrereq, pGame)));
+                            }
                         }
                     }
 
@@ -2833,7 +2851,7 @@ namespace BetterAI
                     {
                         if (!(pUnit.isGeneralEffectUnit(eLoopEffect)))
                         {
-                            if (pUnit.getEffectUnitSource(eLoopEffect) != SourceEffectUnitType.UNIT)
+                            if (!pUnit.isEffectUnitSource(eLoopEffect, SourceEffectUnitType.UNIT))
                             {
                                 using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
                                 {

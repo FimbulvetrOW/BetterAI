@@ -24,35 +24,6 @@ namespace BetterAI
         {
         }
 
-/*####### Better Old World AI - Base DLL #######
-  ### Remove Improvement recommendations START #
-  ##############################################*/
-
-        //still needs testing
-
-        //protected override void updateTileWidgets()
-        //{
-        //    TileWidgetModeType currentTileWidgetMode = mTileWidgetMode;
-        //    if (mTileWidgetMode == TileWidgetModeType.BUILD && mTileWidgetImprovement == ImprovementType.NONE) mTileWidgetMode = TileWidgetModeType.NONE;
-        //    base.updateTileWidgets();
-        //    mTileWidgetMode = currentTileWidgetMode;
-        //}
-
-        //protected override bool updateTileWidget(Tile tile)
-        //{
-        //    TileWidgetModeType currentTileWidgetMode = mTileWidgetMode;
-        //    if (mTileWidgetMode == TileWidgetModeType.BUILD && mTileWidgetImprovement == ImprovementType.NONE) mTileWidgetMode = TileWidgetModeType.NONE;
-        //    bool bReturnValue = base.updateTileWidget(tile);
-        //    mTileWidgetMode = currentTileWidgetMode;
-        //    return bReturnValue;
-        //}
-
-        //still needs testing
-/*####### Better Old World AI - Base DLL #######
-  ### Remove Improvement recommendations END ###
-  ##############################################*/
-
-
         private const string YIELD_ARROW = "Sprites/GuitarPickUp";
         private const string YIELD_NORMAL = "Sprites/GuitarPick";
         //copy-paste START
