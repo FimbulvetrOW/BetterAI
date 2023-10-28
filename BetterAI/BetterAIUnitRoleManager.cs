@@ -82,6 +82,179 @@ namespace BetterAI
                     }
                 }
 
+                //lines 1016-1153
+                protected override void assignAttackUnits(AttackTactics eTactics, AttackThreat eMinThreat, bool bExpansionOnly, bool bNoFatigue, bool bPlayerOnly, int iMinPowerPercent, int iMaxPowerPercent = int.MaxValue)
+                {
+                    using var profileScope = new UnityProfileScope("UnitRoleManager.assignAttackUnits");
+
+                    using var tileSetScoped = CollectionCache.GetHashSetScoped<int>();
+                    HashSet<int> targetsChecked = tileSetScoped.Value;
+
+                    for (int iTargetIndex = 0; iTargetIndex < maTargetUnitValues.Count; ++iTargetIndex)
+                    {
+                        TargetUnitValue val = maTargetUnitValues[iTargetIndex];
+                        if (eTactics != AttackTactics.Approach && eTactics != AttackTactics.Individual)
+                        {
+                            if (msiAttackTargetsDone.Contains(val.miTargetID))
+                            {
+                                continue;
+                            }
+                        }
+                        if (!msiAvailableUnits.Contains(val.miUnitID))
+                        {
+                            continue;
+                        }
+                        if (val.meThreat < eMinThreat)
+                        {
+                            continue;
+                        }
+                        int iTargetTile = val.miTargetID;
+                        if (targetsChecked.Contains(iTargetTile))
+                        {
+                            continue;
+                        }
+                        Tile pTargetTile = Game.tile(iTargetTile);
+                        if (pTargetTile == null)
+                        {
+                            continue;
+                        }
+                        if (pTargetTile.isCitySiteActive() || pTargetTile.hasCity())
+                        {
+                            if (eTactics == AttackTactics.Kill)
+                            {
+                                continue; // don't clear settlements if you're not going to capture them
+                            }
+                        }
+                        else
+                        {
+                            if (eTactics == AttackTactics.Capture)
+                            {
+                                continue;
+                            }
+                        }
+                        if (val.IsFatigue && bNoFatigue)
+                        {
+                            continue;
+                        }
+                        if (eTactics == AttackTactics.Stun)
+                        {
+                            if (!val.mbStun)
+                            {
+                                continue;
+                            }
+                        }
+                        if (eTactics == AttackTactics.Stun || eTactics == AttackTactics.Kill)
+                        {
+                            Unit pTargetUnit = pTargetTile.defendingUnit();
+                            if (pTargetUnit != null && !pTargetUnit.AI.canAttackNextTurn(pTargetTile))
+                            {
+                                continue;
+                            }
+                        }
+
+                        if (bPlayerOnly)
+                        {
+                            PlayerType eDefendingPlayer = pTargetTile.defendingUnit()?.getPlayer() ?? pTargetTile.getOwner();
+                            if (eDefendingPlayer == PlayerType.NONE || !BAI_AI.getEnemyPlayers().Contains(eDefendingPlayer))
+                            {
+                                continue;
+                            }
+                        }
+
+                        Tile pMoveTile = Game.tile(val.miMoveTileID);
+                        Unit pUnit = Game.unit(val.miUnitID);
+
+                        if (eTactics != AttackTactics.Approach)
+                        {
+                            if (!pUnit.AI.canTargetTileThisTurn(pTargetTile, pMoveTile))
+                            {
+                                continue;
+                            }
+                        }
+                        if (bExpansionOnly)
+                        {
+                            if (!BAI_AI.getExpansionTargets().Contains(iTargetTile))
+                            {
+                                continue;
+                            }
+                        }
+
+                        int iExtraDanger = 0;
+                        if (eTactics == AttackTactics.Kill || eTactics == AttackTactics.Capture || eTactics == AttackTactics.Stun)
+                        {
+                            Unit pDefender = pTargetTile.defendingUnit();
+                            if (pDefender != null)
+                            {
+                                iExtraDanger -= pDefender.attackUnitStrength(pDefender.tile(), pMoveTile, null, false);
+                            }
+                        }
+
+
+                        if (iMinPowerPercent > 0)
+                        {
+/*####### Better Old World AI - Base DLL #######
+  ### AI most not be timid when expanding START#
+  ##############################################*/
+                            if (bExpansionOnly && iMinPowerPercent > 100)
+                            {
+                                int iMin = 125;
+                                Unit pDefender = pTargetTile.defendingUnit();
+                                if (pDefender != null)
+                                {
+                                    if (!pDefender.AI.hasCentralAI())
+                                    {
+                                        if (pDefender.getTribe() != TribeType.NONE)
+                                        {
+                                            if (Game.getTribeAllyTeam(pDefender.getTribe()) != TeamType.NONE)
+                                            {
+                                                iMin = 115;
+                                            }
+                                            else
+                                            {
+                                                iMin = 100;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                iMinPowerPercent = Math.Min(iMin, iMinPowerPercent);
+                            }
+/*####### Better Old World AI - Base DLL #######
+  ### AI most not be timid when expanding END###
+  ##############################################*/
+                            if (!pUnit.AI.isProtectedTile(pMoveTile, true, iMinPowerPercent, iExtraDanger))
+                            {
+                                continue;
+                            }
+                        }
+
+
+                        if (iMaxPowerPercent < int.MaxValue)
+                        {
+                            if (pUnit.AI.isProtectedTile(pMoveTile, true, iMaxPowerPercent, iExtraDanger))
+                            {
+                                continue;
+                            }
+                        }
+                        if (eTactics != AttackTactics.Kill && eTactics != AttackTactics.Capture && eTactics != AttackTactics.Approach)
+                        {
+                            if (!pUnit.AI.isProtectedTile(pMoveTile, true, Unit.UnitAI.UNIT_HEAL_HEALTH_PERCENT, iExtraDanger))
+                            {
+                                if (!bExpansionOnly && !pUnit.isHealPossibleTile(pMoveTile))
+                                {
+                                    continue;
+                                }
+                            }
+                        }
+
+                        if (assignUnitstoTarget(eTactics, pTargetTile, eMinThreat, bNoFatigue, iMinPowerPercent))
+                        {
+                            --iTargetIndex;
+                        }
+                        targetsChecked.Add(iTargetTile);
+                    }
+                }
+
                 //line 5081-5189
                 //copy-paste START
                 protected override void getUnitCitySiteGuardValues(PathFinder pPathfinder, Unit pUnit, int iMaxSteps, int iMaxTargets)

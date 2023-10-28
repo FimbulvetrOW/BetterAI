@@ -67,9 +67,9 @@ namespace BetterAI
             {
                 using var profileScope = new UnityProfileScope("UnitAI.doTribeCaptureSite");
 
-/*####### Better Old World AI - Base DLL #######
-  ### Attack cities and defended sites START ###
-  ##############################################*/
+                /*####### Better Old World AI - Base DLL #######
+                  ### Attack cities and defended sites START ###
+                  ##############################################*/
                 //bool shouldCaptureTile(Tile pTile)
                 //{
                 //    if (pTile.isHostileUnit(unit))
@@ -89,34 +89,18 @@ namespace BetterAI
 
                 bool shouldCaptureTile(Tile pTile)
                 {
-                    if (pTile.isSettlement())
+                    if (pTile.hasCity() && game.isHostileUnitCity(unit, pTile.city()))
                     {
-                        if (pTile.isHostileUnit(unit))
-                        {
-                            return true;
-                        }
+                        return true;
                     }
-
+                    TribeType eTribe = pTile.getTribeSettlementOrRuins();
+                    if (eTribe != TribeType.NONE && (eTribe == unit.getTribe() || game.isHostileUnit(TeamType.NONE, eTribe, unit)))
                     {
-                        TribeType eTribe = pTile.getTribeSettlementOrRuins();
-                        if (eTribe != TribeType.NONE)
-                        {
-                            if (pTile.defendingUnit() == null || game.isHostileUnitUnit(pTile.defendingUnit(), unit))
-                            {
-                                return true;
-                            }
-                        }
-                        //not sure if we need to have tribes opportunistically grab (non-start, non-reserved) active sites without cities or ruins
-                        else if ((pTile.getCitySite() == CitySiteType.ACTIVE))
-                        {
-                            if (pTile.defendingUnit() == null)
-                            {
-                                return true;
-                            }
-                        }
+                        return true;
                     }
                     return false;
                 }
+
 /*####### Better Old World AI - Base DLL #######
   ### Attack cities and defended sites   END ###
   ##############################################*/
