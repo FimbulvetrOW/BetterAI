@@ -29,6 +29,63 @@ namespace BetterAI
         {
         }
 
+        //lines 2749-2811
+        //fix from Test branch 69366
+        public override TextVariable buildEffectUnitLinkVariable(EffectUnitType eEffectUnit, Unit pUnit = null, bool bIcon = false, Character pCharacter = null)
+        {
+            using (new UnityProfileScope("HelpText.buildEffectUnitLinkVariable"))
+            {
+                InfoEffectUnit effectUnit = infos().effectUnit(eEffectUnit);
+                TextType eEffectUnitName = getGenderedEffectUnitName(effectUnit, pCharacter?.getGender() ?? GenderType.NONE);
+                TextType eSourceEffectUnitName = getSourceEffectUnitName(eEffectUnit, pUnit, pCharacter);
+
+                if (eSourceEffectUnitName != TextType.NONE)
+                {
+                    eEffectUnitName = eSourceEffectUnitName;
+                }
+                else
+                {
+                    GrammaticalGenderType eUnitGrammaticalGender = pUnit != null ? pUnit.getGrammaticalGender() : GrammaticalGenderType.NONE;
+                    if (eUnitGrammaticalGender != GrammaticalGenderType.NONE)
+                    {
+                        foreach (PairStruct<GrammaticalGenderType, TextType> pair in infos().effectUnit(eEffectUnit).mlpGrammaticalGenderNames)
+                        {
+                            GrammaticalGenderType eGrammaticalGender = pair.First;
+                            if (eGrammaticalGender == eUnitGrammaticalGender)
+                            {
+                                eEffectUnitName = pair.Second;
+                            }
+                        }
+                    }
+                }
+
+                TextVariable result;
+
+                using (new AllowLinksScope(this, false))
+                {
+                    if (bIcon)
+                    {
+                        result = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_TWO", mSpriteRepository?.GetInlineIconVariable(effectUnit.mzIconName), TEXTVAR_TYPE(eEffectUnitName));
+                    }
+                    else
+                    {
+                        result = TEXTVAR_TYPE(eEffectUnitName);
+                    }
+                }
+
+                if (pUnit != null)
+                {
+                    int iTurns = pUnit.getEffectUnitTurnRemaining(eEffectUnit);
+                    if (iTurns > 0)
+                    {
+                        concatenateSpace(result, buildTurnsTextVariable(iTurns, pUnit.game(), true));
+                    }
+                }
+
+                return buildLinkTextVariable(result, ItemType.HELP_LINK, nameof(LinkType.HELP_EFFECT_UNIT), effectUnit.SafeTypeString(), ((pUnit != null) ? pUnit.getID() : -1).ToStringCached());
+            }
+        }
+
         //lines 2998-3012
         public override TextVariable buildHappinessLevelLinkVariable(City pCity, bool bShort = false)
         {

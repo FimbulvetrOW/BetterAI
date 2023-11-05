@@ -146,8 +146,7 @@ namespace BetterAI
                 //with this, you can -change, then a modmod can -append to that same item
 
                 //change and append xml
-                List<XmlDocument> appends = new List<XmlDocument>();
-                appends = mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND);
+                List<XmlDocument> appends = mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND);
 
                 foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.CHANGE | ModdedXMLType.APPEND))
                 {
@@ -515,6 +514,10 @@ namespace BetterAI
         public int BAI_ENLIST_NO_FAMILY = 0;
         public int BAI_DISCONTENT_LEVEL_ZERO = 0;
         public int BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS = 0;
+        public int BAI_PROPER_REGENT_LEGITIMACY_DECAY = 0;
+        public int BAI_ASSUMED_AVERAGE_REIGN_TURNS = 0;
+        public int BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER = 0;
+        public int BAI_RANGED_UNIT_ROUTING_REQUIRES_MELEE_RANGE = 0;
         //override for more variables
         public override void ReadData(Infos infos)
         {
@@ -538,6 +541,13 @@ namespace BetterAI
             BAI_ENLIST_NO_FAMILY = infos.getGlobalInt("BAI_ENLIST_NO_FAMILY");
             BAI_DISCONTENT_LEVEL_ZERO = infos.getGlobalInt("BAI_DISCONTENT_LEVEL_ZERO");
             BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS = infos.getGlobalInt("BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS");
+
+            BAI_PROPER_REGENT_LEGITIMACY_DECAY = infos.getGlobalInt("BAI_PROPER_REGENT_LEGITIMACY_DECAY");
+            BAI_ASSUMED_AVERAGE_REIGN_TURNS = infos.getGlobalInt("BAI_ASSUMED_AVERAGE_REIGN_TURNS");
+            BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER = infos.getGlobalInt("BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER");
+
+            BAI_RANGED_UNIT_ROUTING_REQUIRES_MELEE_RANGE = infos.getGlobalInt("BAI_RANGED_UNIT_ROUTING_REQUIRES_MELEE_RANGE");
+
         }
     }
 /*####### Better Old World AI - Base DLL #######

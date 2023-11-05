@@ -164,6 +164,11 @@ namespace BetterAI
                         Tile pMoveTile = Game.tile(val.miMoveTileID);
                         Unit pUnit = Game.unit(val.miUnitID);
 
+                        if (pUnit == null)
+                        {
+                            continue;
+                        }
+
                         if (eTactics != AttackTactics.Approach)
                         {
                             if (!pUnit.AI.canTargetTileThisTurn(pTargetTile, pMoveTile))
@@ -193,21 +198,21 @@ namespace BetterAI
                         if (iMinPowerPercent > 0)
                         {
 /*####### Better Old World AI - Base DLL #######
-  ### AI most not be timid when expanding START#
+  ### AI must not be timid when expanding START#
   ##############################################*/
                             if (bExpansionOnly && iMinPowerPercent > 100)
                             {
-                                int iMin = 125;
+                                int iMin = 140;
                                 Unit pDefender = pTargetTile.defendingUnit();
                                 if (pDefender != null)
                                 {
-                                    if (!pDefender.AI.hasCentralAI())
+                                    if (!pDefender.AI.hasCentralAI()) //Tribes are easy. Go kill them.
                                     {
                                         if (pDefender.getTribe() != TribeType.NONE)
                                         {
                                             if (Game.getTribeAllyTeam(pDefender.getTribe()) != TeamType.NONE)
                                             {
-                                                iMin = 115;
+                                                iMin = 120;
                                             }
                                             else
                                             {
@@ -220,7 +225,7 @@ namespace BetterAI
                                 iMinPowerPercent = Math.Min(iMin, iMinPowerPercent);
                             }
 /*####### Better Old World AI - Base DLL #######
-  ### AI most not be timid when expanding END###
+  ### AI must not be timid when expanding END###
   ##############################################*/
                             if (!pUnit.AI.isProtectedTile(pMoveTile, true, iMinPowerPercent, iExtraDanger))
                             {
@@ -254,6 +259,283 @@ namespace BetterAI
                         targetsChecked.Add(iTargetTile);
                     }
                 }
+
+                //Less retreating, more attacking (Just an attempt, will probably be removed in the next update)
+                //lines 2299-2519
+                public override void assignUnitRoles(Player player, Tribe tribe, Unit.MovePriority ePriorityFlags, int saveOrders)
+                {
+                    using var profileScope = new UnityProfileScope("UnitRoleManager.assignUnitRoles");
+
+                    reset(player, tribe, ePriorityFlags, saveOrders);
+                    updateMoveTiles();
+                    BAI_AI.updateUnitAttacksInPlace();
+                    findAvailableUnits();
+                    findTerrainTiles();
+                    findBestRoadTiles();
+                    calculateBlockableCitySiteValues();
+                    calculateSortedUnitRoleValues();
+
+                    TileType eClaimTileType = TileType.CapturedCity;
+                    if (!AI.isWarDefending())
+                    {
+                        eClaimTileType |= TileType.CitySite;
+                    }
+
+                    bool bPlayerOnly = !ePriorityFlags.HasFlag(Unit.MovePriority.TribeKill);
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Military))
+                    {
+                        // stun first to focus on other threats
+                        assignAttackUnits(AttackTactics.Stun, AttackThreat.CityThreat, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 100);
+
+                        // push city threats to expose them
+                        assignAttackUnits(AttackTactics.Push, AttackThreat.CityThreat, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 100);
+
+                        // deal with city threats and captures, even if there is danger
+                        assignAttackUnits(AttackTactics.Kill, AttackThreat.CityThreat, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 0, iMaxPowerPercent: 100);
+                        assignAttackUnits(AttackTactics.Capture, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 100);
+
+                        // kill other important targets
+                        assignAttackUnits(AttackTactics.Stun, AttackThreat.Priority, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 75);
+                        assignAttackUnits(AttackTactics.Push, AttackThreat.Priority, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 100);
+                        assignAttackUnits(AttackTactics.Kill, AttackThreat.Priority, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 0);
+
+                        // guard city sites and captured cities
+                        assignCitySiteGuardUnits(AttackThreat.Priority, Unit.RoleType.CLAIM_TILE, Unit.SubRoleType.URGENT, bNoFatigue: true, eClaimTileType, iMinPowerPercent: 100);
+                    }
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI must ATTACK                   START ###
+  ##############################################*/
+                    //removing high priority retreating
+                    //moved into Military NonCritical
+
+                    //if (ePriorityFlags.HasFlag(Unit.MovePriority.Retreat) || ePriorityFlags.HasFlag(Unit.MovePriority.Military))
+                    //{
+                    //    // retreat from grave danger
+                    //    assignRetreatUnits(bFromCombat: true, iMinPowerPercent: 75, false);
+                    //}
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI must ATTACK                     END ###
+  ##############################################*/
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Improve) && !ePriorityFlags.HasFlag(Unit.MovePriority.NonCritical))
+                    {
+                        // finish wonders
+                        assignWorkers(bBuyGoods: false, AttackThreat.Priority);
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Military) && ePriorityFlags.HasFlag(Unit.MovePriority.NonCritical))
+                    {
+                        // hit important targets
+                        assignAttackUnits(AttackTactics.Group, AttackThreat.Priority, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 50);
+                        assignAttackUnits(AttackTactics.Individual, AttackThreat.Priority, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 75);
+                        // kill something, anything
+                        assignAttackUnits(AttackTactics.Stun, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 100);
+                        assignAttackUnits(AttackTactics.Push, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 100);
+                        assignAttackUnits(AttackTactics.Kill, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: false, iMinPowerPercent: 75);
+
+                        // cities in danger
+                        assignCitySiteGuardUnits(AttackThreat.Baseline, Unit.RoleType.DEFEND_TILE, Unit.SubRoleType.URGENT, bNoFatigue: false, TileType.OurCity, iMinPowerPercent: 0, iMaxPowerPercent: 100);
+
+                        // city sites that need march to claim
+                        assignCitySiteGuardUnits(AttackThreat.Priority, Unit.RoleType.CLAIM_TILE, Unit.SubRoleType.NONE, bNoFatigue: AI.isWarDefending(), eClaimTileType, iMinPowerPercent: 100);
+
+                        // kill with march
+                        if (AI.canForceMarch())
+                        {
+                            assignAttackUnits(AttackTactics.Kill, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: false, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 100);
+                        }
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI must ATTACK                   START ###
+  ##############################################*/
+                        //removing high priority retreating
+                        //instead, this is now just part of non-critical military
+
+                        //if (ePriorityFlags.HasFlag(Unit.MovePriority.Retreat) || ePriorityFlags.HasFlag(Unit.MovePriority.Military))
+                        {
+                            // retreat from grave danger
+                            assignRetreatUnits(bFromCombat: true, iMinPowerPercent: 75, false);
+                        }
+/*####### Better Old World AI - Base DLL #######
+  ### AI must ATTACK                     END ###
+  ##############################################*/
+                        // move towards threats
+                        assignAttackUnits(AttackTactics.Approach, AttackThreat.Priority, bExpansionOnly: false, bNoFatigue: false, bPlayerOnly: false, iMinPowerPercent: 0, iMaxPowerPercent: 100);
+
+                        // protect threatened cities
+                        assignCityDefendUnits(BAI_AI.AI_CITY_MIN_DANGER, Unit.RoleType.DEFEND_CITY, Unit.SubRoleType.NONE, bNoFatigue: false, iMinPowerPercent: 0);
+
+                        // expansion targets are highest priority
+                        if (!AI.isWarDefending())
+                        {
+/*####### Better Old World AI - Base DLL #######
+  ### AI must not be timid when expanding START#
+  ##############################################*/
+                            //assignAttackUnits(AttackTactics.Group, AttackThreat.Baseline, bExpansionOnly: true, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 150);
+                            //assignAttackUnits(AttackTactics.Individual, AttackThreat.Baseline, bExpansionOnly: true, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 150);
+                            assignAttackUnits(AttackTactics.Group, AttackThreat.Baseline, bExpansionOnly: true, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 130);
+                            assignAttackUnits(AttackTactics.Individual, AttackThreat.Baseline, bExpansionOnly: true, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 140);
+/*####### Better Old World AI - Base DLL #######
+  ### AI must not be timid when expanding END###
+  ##############################################*/
+                            assignAttackUnits(AttackTactics.Approach, AttackThreat.Baseline, bExpansionOnly: true, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 0);
+                        }
+
+                        // attack other targets
+                        assignAttackUnits(AttackTactics.Group, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 150);
+                        assignAttackUnits(AttackTactics.Individual, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 150);
+                        assignAttackUnits(AttackTactics.Approach, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: false, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 100);
+
+                        // forts outside our borders
+                        assignFortUnits(Unit.RoleType.DEFEND_TILE, AttackThreat.Baseline, iMinPowerPercent: 100);
+
+                        // retreat any units not retreated earlier
+                        assignRetreatUnits(bFromCombat: true, iMinPowerPercent: 100, bInTheWayOnly: false);
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI must ATTACK                   START ###
+  ##############################################*/
+                        //moved back to up here
+                        // not retreating, so attack something, anything
+                        assignAttackUnits(AttackTactics.Individual, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 0);
+/*####### Better Old World AI - Base DLL #######
+  ### AI must ATTACK                     END ###
+  ##############################################*/
+
+                    }
+
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Settle))
+                    {
+                        assignFoundCityUnits();
+                    }
+
+                    if ((ePriorityFlags.HasFlag(Unit.MovePriority.Improve) && ePriorityFlags.HasFlag(Unit.MovePriority.NonCritical)) || ePriorityFlags.HasFlag(Unit.MovePriority.Automated))
+                    {
+                        // workers
+                        assignChoppers(YieldShortage.Current);
+                        assignWorkers(bBuyGoods: false, AttackThreat.Baseline);
+                        assignChoppers(YieldShortage.Expected);
+                        assignWorkers(bBuyGoods: true, AttackThreat.Baseline);
+                        assignChoppers(YieldShortage.None);
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Religion))
+                    {
+                        // desciples
+                        assignDesciples();
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Trade))
+                    {
+                        assignCaravans();
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Transport) && BAI_AI.getPlayer() != PlayerType.NONE)
+                    {
+                        // Pop goody huts nearby
+                        assignCitySiteGuardUnits(AttackThreat.None, Unit.RoleType.BONUS_IMPROVEMENT, Unit.SubRoleType.NONE, bNoFatigue: false, TileType.Occupy, iMinPowerPercent: 100);
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Transport) && ePriorityFlags.HasFlag(Unit.MovePriority.Military) && ePriorityFlags.HasFlag(Unit.MovePriority.NonCritical))
+                    {
+                        if (!AI.isWarDefending())
+                        {
+                            // guard city sites we are not planning to settle
+                            if (Game.isGameOption(Infos.Globals.GAMEOPTION_PLAY_TO_WIN))
+                            {
+                                assignCitySiteGuardUnits(AttackThreat.Baseline, Unit.RoleType.CLAIM_TILE, Unit.SubRoleType.NONE, bNoFatigue: true, TileType.CitySite, iMinPowerPercent: 100);
+                            }
+
+                            // Move towards a target
+                            assignAttackUnits(AttackTactics.Approach, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: false, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 0);
+                        }
+                        else
+                        {
+                            assignAttackUnits(AttackTactics.Approach, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: false, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 50 + AI.getWarEnemyPowerPercent() / 2);
+                        }
+
+                        // kill any workers, if nothing else interesting is happening
+                        assignAttackUnits(AttackTactics.Kill, AttackThreat.None, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: true, iMinPowerPercent: 100);
+
+                        // retreat units not in mortal danger
+                        assignRetreatUnits(bFromCombat: false, iMinPowerPercent: 100, bInTheWayOnly: false);
+
+                        // garrison in-border forts
+                        assignFortUnits(Unit.RoleType.DEFEND_TILE, AttackThreat.None, iMinPowerPercent: 100);
+
+                        // guard potentially threatened cities
+                        assignCityDefendUnits(0, Unit.RoleType.REINFORCE_CITY, Unit.SubRoleType.NONE, bNoFatigue: false, iMinPowerPercent: 100);
+
+                        // Ships
+                        assignWaterControlUnits();
+
+                        // garrison empty cities
+                        assignCityDefendUnits(-1, Unit.RoleType.GARRISON, Unit.SubRoleType.NONE, bNoFatigue: false, iMinPowerPercent: 100);
+
+                        // Harrass opponents
+                        assignRaidUnits();
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI must ATTACK                   START ###
+  ##############################################*/
+                        //this part is moved back up to the other attacking stuff
+                        // attack something, anything
+                        //assignAttackUnits(AttackTactics.Individual, AttackThreat.Baseline, bExpansionOnly: false, bNoFatigue: true, bPlayerOnly: bPlayerOnly, iMinPowerPercent: 0);
+/*####### Better Old World AI - Base DLL #######
+  ### AI must ATTACK                     END ###
+  ##############################################*/
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Transport))
+                    {
+                        // Workers
+                        assignWorkerTransfer();
+
+                        // Scouts
+                        assignAgentUnits();
+                        assignSentryUnits();
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Transport) || ePriorityFlags.HasFlag(Unit.MovePriority.Automated))
+                    {
+                        assignExploreUnits();
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Transport) && !ePriorityFlags.HasFlag(Unit.MovePriority.Military))
+                    {
+                        // sit on yield producing tiles
+                        assignTileYieldProducers();
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Military) && ePriorityFlags.HasFlag(Unit.MovePriority.NonCritical))
+                    {
+                        assignUrgentMoveUnits();
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Military))
+                    {
+                        assignRetreatUnits(bFromCombat: false, iMinPowerPercent: 100, bInTheWayOnly: true);
+                        assignUnitsInTheWay();
+                    }
+
+                    if (ePriorityFlags.HasFlag(Unit.MovePriority.Default))
+                    {
+                        foreach (int iUnitID in BAI_AI.getUnits())
+                        {
+                            if (msiAvailableUnits.Contains(iUnitID))
+                            {
+                                assignDefaultRoleIfUnassigned(Game.unit(iUnitID));
+                            }
+                        }
+                    }
+                }
+
+
 
                 //line 5081-5189
                 //copy-paste START

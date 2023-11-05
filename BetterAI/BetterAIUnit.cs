@@ -347,6 +347,20 @@ namespace BetterAI
             else return false;
         }
 
+        //lines 6933-7061
+        public override bool canTargetTile(Tile pFromTile, Tile pToTile)
+        {
+            if (base.canTargetTile(pFromTile, pToTile))
+            {
+                if (!info().mbMelee && getCooldown() == infos().Globals.ROUT_COOLDOWN && ((BetterAIInfoGlobals)infos().Globals).BAI_RANGED_UNIT_ROUTING_REQUIRES_MELEE_RANGE == 1)
+                {
+                    return pFromTile.isTileAdjacent(pToTile);
+                }
+                return true;
+            }
+            return false;
+        }
+
 /*####### Better Old World AI - Base DLL #######
   ### Agent Network Cost Scaling       START ###
   ##############################################*/

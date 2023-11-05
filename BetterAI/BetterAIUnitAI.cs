@@ -67,25 +67,10 @@ namespace BetterAI
             {
                 using var profileScope = new UnityProfileScope("UnitAI.doTribeCaptureSite");
 
-                /*####### Better Old World AI - Base DLL #######
-                  ### Attack cities and defended sites START ###
-                  ##############################################*/
-                //bool shouldCaptureTile(Tile pTile)
-                //{
-                //    if (pTile.isHostileUnit(unit))
-                //    {
-                //        return true;
-                //    }
-                //    TribeType eTribe = pTile.getTribeSettlementOrRuins();
-                //    if (eTribe != TribeType.NONE)
-                //    {
-                //        if (game.isHostileUnit(TeamType.NONE, eTribe, unit))
-                //        {
-                //            return true;
-                //        }
-                //    }
-                //    return false;
-                //}
+/*####### Better Old World AI - Base DLL #######
+  ### Attack cities and defended sites START ###
+  ##############################################*/
+                //this is fixed on Test branch now
 
                 bool shouldCaptureTile(Tile pTile)
                 {
@@ -94,13 +79,15 @@ namespace BetterAI
                         return true;
                     }
                     TribeType eTribe = pTile.getTribeSettlementOrRuins();
-                    if (eTribe != TribeType.NONE && (eTribe == unit.getTribe() || game.isHostileUnit(TeamType.NONE, eTribe, unit)))
+                    if (eTribe != TribeType.NONE)
                     {
-                        return true;
+                        if (eTribe == unit.getTribe() || game.isHostileUnit(TeamType.NONE, eTribe, unit))
+                        {
+                            return true;
+                        }
                     }
                     return false;
                 }
-
 /*####### Better Old World AI - Base DLL #######
   ### Attack cities and defended sites   END ###
   ##############################################*/
@@ -147,6 +134,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI fix: Enlister attacks last    START ###
   ##############################################*/
+                            //this is fixed on Test branch now
                             //// push last
                             //bool bPush = unit.hasPush(pTargetTile);
                             //if (bPush != pOther.hasPush(pTargetTile))
