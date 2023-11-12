@@ -946,9 +946,7 @@ namespace BetterAI
                 base.moveBuildQueue(iNewIndex, iOldIndex);
             }
         }
-
         //Hurry changes END
-
 
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
@@ -975,6 +973,102 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                         END ###
   ##############################################*/
+
+        //copy-paste START
+        //lines 7356-7440
+        public override void doPlayerTurn(List<int> aiPlayerYieldAmounts)
+        {
+            MohawkAssert.Assert(hasPlayer());
+
+            if (isDamaged())
+            {
+                changeDamage(-((infos().Globals.CITY_HEAL_PERCENT_PER_TURN * getHPMax()) / 100));
+            }
+
+            if (getAssimilateTurns() > 0)
+            {
+                changeAssimilateTurns(culture().miAssimilationRate);
+            }
+
+            doDistantRaidTurn();
+
+/*####### Better Old World AI - Base DLL #######
+  ### Governor Remains                 START ###
+  ##############################################*/
+            //if (!isEnablesGovernor() && hasGovernor())
+            //{
+            //    clearGovernor();
+            //}
+/*####### Better Old World AI - Base DLL #######
+  ### Governor Remains                   END ###
+  ##############################################*/
+
+            if (hasPlayer() && !player().isFirstTurnProcessing())
+            {
+                if (!hasBuild())
+                {
+                    if (isAutoBuild())
+                    {
+                        player().AI.chooseBuild(this, BuildType.NONE, false);
+                    }
+                }
+
+                if (!hasBuild())
+                {
+                    ProjectType eDefaultProject = culture().meDefaultProject;
+
+                    if (eDefaultProject != ProjectType.NONE)
+                    {
+                        pushBuildProjectFirst(eDefaultProject);
+                    }
+                }
+
+                clearCompletedBuild();
+
+                CityQueueData pCurrentBuild = getCurrentBuild();
+                YieldType eBuildYield = pCurrentBuild != null ? getBuildYieldType(pCurrentBuild) : YieldType.NONE;
+                bool bFinished = false;
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                {
+                    if (infos().yield(eLoopYield).meSubtractFromYield == YieldType.NONE)
+                    {
+                        CityProductionYield zYield = getNetCityProductionYieldHelper(eLoopYield);
+                        if (zYield.iRate != 0)
+                        {
+                            if (!infos().yield(eLoopYield).mbGlobal)
+                            {
+                                changeYieldProgress(eLoopYield, zYield.iStockpile);
+                            }
+                            else
+                            {
+                                aiPlayerYieldAmounts[(int)eLoopYield] += zYield.iStockpile;
+                            }
+
+                            changeCurrentBuildProgress(zYield.iProduction);
+                            setYieldOverflow(eLoopYield, zYield.iProductionOverflow);
+
+                            if (eBuildYield == eLoopYield && getBuildDiff(pCurrentBuild, bIncludeOverflow: false) <= 0)
+                            {
+                                bFinished = true; // don't remove the build before going through all the yields, in case of positive project aiYieldModifiers
+                            }
+                        }
+                    }
+                }
+
+                if (bFinished)
+                {
+                    finishBuild();
+                }
+
+                decayBuildQueue();
+            }
+
+            verifyBuildProjects();
+            verifyBuildSpecialists();
+            verifyBuildUnits();
+        }
+        //copy-paste END
+
 
 
         public override bool canRaidFrom(Tile pFromTile, bool bDistantRaid)

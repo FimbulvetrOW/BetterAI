@@ -501,6 +501,104 @@ namespace BetterAI
                 return iPlayerValue + base.bonusValue(eBonus, ref zParameters);
             }
 
+
+            //lines 14763-14815
+            protected override int getNeedSettlers(City pCity)
+            {
+                using var profileScope = new UnityProfileScope("PlayerAI.getNeedSettlers");
+
+/*####### Better Old World AI - Base DLL #######
+  ### Segmented Territory Settler number START##
+  ##############################################*/
+                if (pCity == null)
+                {
+                    List<City> SeparatedCities = new List<City>();
+                    SeparatedCities.Add(player.capitalCity());
+                    bool bSeparated = true;
+                    foreach (int iLoopCity in getCities())
+                    {
+                        City pLoopCity = game.city(iLoopCity);
+                        bSeparated = true;
+                        foreach (City pSeparateCity in SeparatedCities)
+                        {
+                            if (isTileReachable(pSeparateCity.tile(), pLoopCity.tile()))
+                            {
+                                bSeparated = false;
+                                break;
+                            }
+                        }
+
+                        if (bSeparated)
+                        {
+                            SeparatedCities.Add(pLoopCity);
+                        }
+                    }
+
+                    int iValue = 0;
+                    foreach (City pSeparateCity in SeparatedCities)
+                    {
+                        iValue += getNeedSettlers(pSeparateCity);
+                    }
+                    return iValue;
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Segmented Territory Settler number  END ##
+  ##############################################*/
+
+                int iNeedUnits = 0;
+                using (var citySiteScoped = CollectionCache.GetListScoped<int>())
+                {
+                    game.getCitySites(citySiteScoped.Value, ReachableDesirableSafeCitySiteDelegate);
+                    foreach (int iCitySite in citySiteScoped.Value)
+                    {
+                        Tile pCitySiteTile = game.tile(iCitySite);
+
+                        if (isTileReachable(pCitySiteTile, pCity?.tile()))
+                        {
+                            if (isVacantCitySite(pCitySiteTile))
+                            {
+                                ++iNeedUnits;
+                            }
+                            else
+                            {
+                                TribeType eTribe = pCitySiteTile.getImprovementTribeSite(player.getTeam());
+                                if (eTribe != TribeType.NONE)
+                                {
+                                    if (game.getTribeAllyTeam(eTribe) == Team || game.isHostile(Team, Tribe, TeamType.NONE, eTribe))
+                                    {
+                                        ++iNeedUnits;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                foreach (int iUnitID in getUnits())
+                {
+                    Unit pUnit = game.unit(iUnitID);
+                    if (pUnit != null && pUnit.isAlive() && isSettler(pUnit))
+                    {
+                        if (isTileReachable(pUnit.tile(), pCity?.tile()))
+                        {
+                            --iNeedUnits;
+                        }
+                    }
+                }
+
+                foreach (int iCityID in getCities())
+                {
+                    City pLoopCity = game.city(iCityID);
+                    if (isTileReachable(pLoopCity.tile(), pCity?.tile()))
+                    {
+                        iNeedUnits -= pLoopCity.countBuilds(IsSettlerBuildDelegate);
+                    }
+                }
+
+                return iNeedUnits;
+            }
+
+
             //copy-paste START
             //lines 17008-17183
             // Chance that we will declare war on them

@@ -427,5 +427,25 @@ namespace BetterAI
   ### Agent Network Cost Scaling         END ###
   ##############################################*/
 
+
+        public override bool canUpgradeFromToUnit(UnitType eFromUnit, UnitType eToUnit, int iTimeout = 0)
+        {
+/*####### Better Old World AI - Base DLL #######
+  ### Circular Upgrades                START ###
+  ##############################################*/
+            if (eFromUnit == eToUnit)
+            {
+                return false;
+            }
+            else
+/*####### Better Old World AI - Base DLL #######
+  ### Circular Upgrades                  END ###
+  ##############################################*/
+            {
+                return base.canUpgradeFromToUnit(eFromUnit, eToUnit, iTimeout);
+            }
+        }
+
+
     }
 }
