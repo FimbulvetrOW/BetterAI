@@ -510,28 +510,34 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Segmented Territory Settler number START##
   ##############################################*/
+                if (player == null) return 0;
+
                 if (pCity == null)
                 {
                     List<City> SeparatedCities = new List<City>();
-                    SeparatedCities.Add(player.capitalCity());
-                    bool bSeparated = true;
+
+                    bool bSeparated;
                     foreach (int iLoopCity in getCities())
                     {
                         City pLoopCity = game.city(iLoopCity);
-                        bSeparated = true;
-                        foreach (City pSeparateCity in SeparatedCities)
+                        if (pLoopCity != null)
                         {
-                            if (isTileReachable(pSeparateCity.tile(), pLoopCity.tile()))
+                            bSeparated = true;
+                            foreach (City pSeparateCity in SeparatedCities)
                             {
-                                bSeparated = false;
-                                break;
+                                if (isTileReachable(pSeparateCity.tile(), pLoopCity.tile()))
+                                {
+                                    bSeparated = false;
+                                    break;
+                                }
+                            }
+
+                            if (bSeparated)
+                            {
+                                SeparatedCities.Add(pLoopCity);
                             }
                         }
 
-                        if (bSeparated)
-                        {
-                            SeparatedCities.Add(pLoopCity);
-                        }
                     }
 
                     int iValue = 0;
