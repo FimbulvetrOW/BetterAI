@@ -683,13 +683,26 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Happiness Level Sort             START ###
   ##############################################*/
-                if (city.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD) == otherCity.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD))
+                int iCityRate = city.calculateCurrentYield(Infos.Globals.HAPPINESS_YIELD, true);
+                int iOtherCityRate = otherCity.calculateCurrentYield(Infos.Globals.HAPPINESS_YIELD, true);
+                if (iCityRate == 0 || iOtherCityRate == 0)
                 {
-                    return (otherCity.getYieldProgress(Infos.Globals.HAPPINESS_YIELD) - city.getYieldProgress(Infos.Globals.HAPPINESS_YIELD)) * (city.isDiscontent() ? -1 : 1);
+                    return (iOtherCityRate - iCityRate);
                 }
-                else
+                else if ((iCityRate > 0) == (iOtherCityRate > 0)) //either both increasing or both decreasing
                 {
-                    return (city.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD) - otherCity.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD)) * (city.isDiscontent() ? -1 : 1);
+                    if (city.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD) == otherCity.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD))
+                    {
+                        return (otherCity.getYieldProgress(Infos.Globals.HAPPINESS_YIELD) - city.getYieldProgress(Infos.Globals.HAPPINESS_YIELD)) * (city.isDiscontent() ? -1 : 1);
+                    }
+                    else
+                    {
+                        return (city.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD) - otherCity.getYieldTurnsLeft(Infos.Globals.HAPPINESS_YIELD)) * (iCityRate < 0 ? -1 : 1);
+                    }
+                }
+                else //one is + the other - so they move in different directions
+                {
+                    return (iOtherCityRate - iCityRate);
                 }
 /*####### Better Old World AI - Base DLL #######
   ### Happiness Level Sort               END ###
