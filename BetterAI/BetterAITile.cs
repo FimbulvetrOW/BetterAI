@@ -55,7 +55,7 @@ namespace BetterAI
 
 
         //canHaveImprovement: lines 4805-5098
-        public virtual bool canCityTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public virtual bool canCityTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
@@ -97,7 +97,7 @@ namespace BetterAI
         }
 
         //canHaveImprovement: lines 4805-5098
-        public virtual bool canGeneralTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public virtual bool canGeneralTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             if (getTerrain() == TerrainType.NONE)
             {
@@ -121,15 +121,29 @@ namespace BetterAI
                 return false;
             }
 
-            if (eTeamTerritory != TeamType.NONE)
+            if (bTestTerritory)
             {
-                if ((getTeam() != eTeamTerritory) && !(getTeam() == TeamType.NONE && getOwnerTribe() == TribeType.NONE && !eInfoImprovement.mbTerritoryOnly))
+                if (infos().improvement(eImprovement).mbTerritoryOnly)
                 {
-                    return false;
+                    if (!hasCityTerritory())
+                    {
+                        return false;
+                    }
+
+                    if (eTeamTerritory != TeamType.NONE)
+                    {
+                        if (getTeam() != eTeamTerritory)
+                        {
+                            return false;
+                        }
+                    }
                 }
             }
-            else if (eInfoImprovement.mbTerritoryOnly)
+
+            ReligionType eReligionPrereq = eInfoImprovement.meReligionPrereq;
+            if (!bTestReligion && eReligionPrereq != ReligionType.NONE)
             {
+
                 if (!hasCityTerritory())
                 {
                     return false;
@@ -163,7 +177,6 @@ namespace BetterAI
                 }
 
                 ImprovementClassType eImprovementClass = eInfoImprovement.meClass;
-                ReligionType eReligionPrereq = eInfoImprovement.meReligionPrereq;
                 if (bTestAdjacent)
                 {
                     if (bTestReligion && eReligionPrereq != ReligionType.NONE)
@@ -216,7 +229,7 @@ namespace BetterAI
         }
 
         //lines 4805-5098
-        public override bool canHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public override bool canHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             //split into 3:
             //tile.canGeneralTileHaveImprovement (not tied to city)
@@ -226,7 +239,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
   ##############################################*/
-            if (!(canGeneralTileHaveImprovement(eImprovement, eTeamTerritory, bTestEnabled, bTestAdjacent, bTestReligion, bUpgradeImprovement, bForceImprovement)))
+            if (!(canGeneralTileHaveImprovement(eImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestAdjacent, bTestReligion, bUpgradeImprovement, bForceImprovement)))
             {
                 return false;
             }
@@ -236,12 +249,12 @@ namespace BetterAI
             if (pCityTerritory != null)
             {
                 bool bPrimaryUnlock = true;
-                if (!(pCityTerritory.canCityHaveImprovement(eImprovement, ref bPrimaryUnlock, eTeamTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement, bForceImprovement)))
+                if (!(pCityTerritory.canCityHaveImprovement(eImprovement, ref bPrimaryUnlock, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement, bForceImprovement)))
                 {
                     return false;
                 }
 
-                if (!(canCityTileHaveImprovement(eImprovement, eTeamTerritory, bTestEnabled, bTestAdjacent, bTestReligion, bUpgradeImprovement, bForceImprovement)))
+                if (!(canCityTileHaveImprovement(eImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestAdjacent, bTestReligion, bUpgradeImprovement, bForceImprovement)))
                 {
                     return false;
                 }

@@ -191,7 +191,7 @@ namespace BetterAI
 
             for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
             {
-                int iTotalOutput = pTile.yieldOutputModified(eImprovement, eSpecialist, eLoopYield, true);
+                int iTotalOutput = pTile.yieldOutputModified(eImprovement, eSpecialist, eLoopYield, pTile.cityTerritory());
                 if (iTotalOutput != 0)
                 {
                     builder.AddTEXT("TEXT_HELPTEXT_YIELD_PER_YEAR", buildYieldValueIconLinkVariable(eLoopYield, iTotalOutput, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
@@ -2797,9 +2797,7 @@ namespace BetterAI
 
                 if (pUnit.hasRebelPlayer())
                 {
-                    City pCity = pUnit.rebelPlayer().capitalCity();
-
-                    if (pCity != null)
+                    if (pUnit.rebelPlayer().isAlive())
                     {
                         outUnitData.AddStat(TextManager, buildTribeLinkVariable(infos().Globals.REBELS_TRIBE, pGame), buildPlayerLinkVariable(pUnit.rebelPlayer(), pActivePlayer));
                     }

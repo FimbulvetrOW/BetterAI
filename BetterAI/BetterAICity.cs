@@ -982,7 +982,7 @@ namespace BetterAI
 
             if (isDamaged())
             {
-                changeDamage(-((infos().Globals.CITY_HEAL_PERCENT_PER_TURN * getHPMax()) / 100));
+                changeDamage(-getPassiveHealDamage());
             }
 
             if (getAssimilateTurns() > 0)
@@ -992,24 +992,17 @@ namespace BetterAI
 
             doDistantRaidTurn();
 
-/*####### Better Old World AI - Base DLL #######
-  ### Governor Remains                 START ###
-  ##############################################*/
-            //if (!isEnablesGovernor() && hasGovernor())
-            //{
-            //    clearGovernor();
-            //}
-/*####### Better Old World AI - Base DLL #######
-  ### Governor Remains                   END ###
-  ##############################################*/
-
             if (hasPlayer() && !player().isFirstTurnProcessing())
             {
-                if (!hasBuild())
+                if (isAutoBuild())
                 {
-                    if (isAutoBuild())
+                    if (getDamage() > getPassiveHealDamage())
                     {
-                        player().AI.chooseBuild(this, BuildType.NONE, false);
+                        player().AI.chooseRepairBuild(this);
+                    }
+                    if (!hasBuild())
+                    {
+                        player().AI.chooseBuild(this, BuildType.NONE, false, true);
                     }
                 }
 
@@ -1419,7 +1412,7 @@ namespace BetterAI
         }
 
         //Tile.canHaveImprovement: lines 4805-5098
-        public virtual bool canCityHaveImprovement(ImprovementType eImprovement, ref bool bPrimaryUnlock, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public virtual bool canCityHaveImprovement(ImprovementType eImprovement, ref bool bPrimaryUnlock, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             if (!bForceImprovement && !ImprovementUnlocked(eImprovement, ref bPrimaryUnlock, bTestEnabled, false)) //testing without tech
             {
@@ -1474,6 +1467,8 @@ namespace BetterAI
 
                 ReligionType eReligionPrereq = eInfoImprovement.meReligionPrereq;
 
+                //as of v1.0.69678, Improvement religion checks are changed and mostly also run with bTestReligion = false.
+                //This makes sense since bTestReligion is only false when called by PlayerAI.calculateImprovementValueForTile
                 if (bTestReligion)
                 {
                     if (eReligionPrereq != ReligionType.NONE)
@@ -1483,7 +1478,7 @@ namespace BetterAI
                             return false;
                         }
 
-                        if (eInfoImprovement.mbHolyCity) //without eReligionPrereq, mbHolyCity is ignored. must use mbHolyCityValid
+                        if (eInfoImprovement.mbHolyCity)
                         {
                             if (!(isReligionHolyCity(eReligionPrereq)))
                             {
@@ -1491,14 +1486,26 @@ namespace BetterAI
                             }
                         }
                     }
-
-                    if (eInfoImprovement.mbHolyCityValid)
+                }
+                else if (eReligionPrereq != ReligionType.NONE)
+                {
+                    if (!hasPlayer() || player().getReligionCount(eReligionPrereq) == 0)
                     {
-                        if (isReligionHolyCityAny())
+                        return false;
+                    }
+
+                    if (eInfoImprovement.mbHolyCity)
+                    {
+                        if (!(isReligionHolyCity(eReligionPrereq)))
                         {
-                            return true;
+                            return false;
                         }
                     }
+                }
+
+                if (eInfoImprovement.mbHolyCity && eReligionPrereq == ReligionType.NONE) //invalid Improvement Info
+                {
+                    return false;
                 }
 
                 {

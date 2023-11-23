@@ -160,11 +160,10 @@ namespace BetterAI
   ### Disconent Level 0                START ###
   ##############################################*/
                             bool bDiscontent = ((eLoopYield == Infos.Globals.HAPPINESS_YIELD) && (((BetterAICity)pSelectedCity).isDiscontent()));
+                            YieldType eDisplayYield = ((bDiscontent) ? Infos.Globals.DISCONTENT_YIELD : eLoopYield);
 /*####### Better Old World AI - Base DLL #######
   ### Disconent Level 0                  END ###
   ##############################################*/
-
-                            YieldType eDisplayYield = ((bDiscontent) ? Infos.Globals.DISCONTENT_YIELD : eLoopYield);
 
                             UIAttributeTag cityProgressYieldTag = mSelectedPanel.GetSubTag("-City-ProgressYield", numProgressYields);
                             cityProgressYieldTag.SetKey("Icon", Infos.yield(eDisplayYield).mzIconName);
@@ -190,17 +189,43 @@ namespace BetterAI
                                 }
                             }
 
+                            ColorType eNextColor = ColorType.NONE;
+
                             int iRate = pSelectedCity.calculateCurrentYield(eLoopYield, true);
+
+                            float currentProgress = pSelectedCity.getYieldProgress(eLoopYield);
+                            float yieldThreshold = pSelectedCity.getYieldThreshold(eLoopYield);
+
+                            cityProgressYieldTag.SetTEXT("Progress", TextManager, HelpText.buildSlashText(HelpText.buildValueTextVariable(pSelectedCity.getYieldProgress(eLoopYield), Constants.YIELDS_MULTIPLIER),
+                                TEXTVAR(pSelectedCity.getYieldThresholdWhole(eLoopYield))));
+
+                            float nextTurnProgress = (float)(iRate) / yieldThreshold;
+
+                            currentProgress /= yieldThreshold;
+
+                            if (eLoopYield == Infos.Globals.HAPPINESS_YIELD)
+                            {
 /*####### Better Old World AI - Base DLL #######
   ### Disconent Level 0                START ###
   ##############################################*/
-                            if ((eLoopYield == Infos.Globals.HAPPINESS_YIELD) && (((BetterAICity)pSelectedCity).isDiscontent()))
+                                if (bDiscontent)
 /*####### Better Old World AI - Base DLL #######
   ### Disconent Level 0                  END ###
   ##############################################*/
-                            {
-                                iRate = -(iRate);
+                                {
+                                    iRate = -(iRate);
+                                    nextTurnProgress = -nextTurnProgress;
+                                }
+
+                                if (nextTurnProgress < 0)
+                                {
+                                    currentProgress += nextTurnProgress;
+                                    nextTurnProgress = -nextTurnProgress;
+                                    eNextColor = (eDisplayYield == Infos.Globals.HAPPINESS_YIELD) ? Infos.yield(Infos.Globals.DISCONTENT_YIELD).meColor : Infos.yield(Infos.Globals.HAPPINESS_YIELD).meColor;
+                                }
                             }
+
+
 
                             TextVariable rateText = HelpText.buildYieldTextVariable(iRate, true, false, Constants.YIELDS_MULTIPLIER);
                             rateText = HelpText.buildColorTextOptionalVariable(rateText, !(Infos.Helpers.yieldWarning(eDisplayYield, iRate)), (iRate != 0));
@@ -215,17 +240,7 @@ namespace BetterAI
                                 rateText = HelpText.buildEnclosedParenthesis(rateText, HelpText.getQueueIconLinkVariable(pSelectedCity.getCurrentBuild(), pSelectedCity));
                             }
 
-                            float currentProgress = pSelectedCity.getYieldProgress(eLoopYield);
-                            float yieldThreshold = pSelectedCity.getYieldThreshold(eLoopYield);
-
-                            cityProgressYieldTag.SetTEXT("Progress", TextManager, HelpText.buildSlashText(HelpText.buildValueTextVariable(pSelectedCity.getYieldProgress(eLoopYield), Constants.YIELDS_MULTIPLIER),
-                                TEXTVAR(pSelectedCity.getYieldThresholdWhole(eLoopYield))));
-
-                            float nextTurnProgress = (float)(iRate) / yieldThreshold;
-
-                            currentProgress /= yieldThreshold;
-
-                            setProgressBarFillData(cityProgressYieldTag, currentProgress, nextTurnProgress, Infos.yield((bDiscontent) ? Infos.Globals.DISCONTENT_YIELD : eLoopYield).meColor);
+                            setProgressBarFillData(cityProgressYieldTag, currentProgress, nextTurnProgress, Infos.yield(eDisplayYield).meColor, eNextColor);
 
                             cityProgressYieldTag.SetTEXT("Label", TextManager, rateText);
                             using (var yieldDataScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_CITY_YIELD), pSelectedCity.getID().ToStringCached(), eLoopYield.ToStringCached()))
@@ -315,6 +330,7 @@ namespace BetterAI
                 }
 
                 lastSelectedCityID = pSelectedCity.getID();
+                ClientMgr.UI.updateExpansionPreview(null, null, false);
                 makeDirty(DirtyType.ACTION_PANEL);
             }
         }

@@ -37,10 +37,10 @@ namespace BetterAI
                 }
 
                 //lines 414-455
-                public override void reset(Player player, Tribe tribe, Unit.MovePriority eMovePriority, int saveOrders)
+                public override void reset(Player player, Tribe tribe, Unit.MovePriority eMovePriority, int saveOrders, bool bReassign)
                 {
                     BAI_AI = (BetterAIPlayerAI)(player?.AI ?? tribe?.AI);
-                    base.reset(player, tribe, eMovePriority, saveOrders);
+                    base.reset(player, tribe, eMovePriority, saveOrders, bReassign);
                     BAI_mmapStartingTileBlockableCitySiteValues.Clear();
                 }
 /*####### Better Old World AI - Base DLL #######
@@ -118,11 +118,25 @@ namespace BetterAI
                         {
                             continue;
                         }
-                        if (pTargetTile.isCitySiteActive() || pTargetTile.hasCity())
+                        if (pTargetTile.isCitySiteActive())
                         {
                             if (eTactics == AttackTactics.Kill)
                             {
                                 continue; // don't clear settlements if you're not going to capture them
+                            }
+                        }
+                        else if (pTargetTile.hasCity())
+                        {
+                            if (eTactics == AttackTactics.Kill)
+                            {
+                                continue;
+                            }
+                            else if (eTactics == AttackTactics.Capture)
+                            {
+                                if (!BAI_AI.isExpansionCityValid(pTargetTile.city()))
+                                {
+                                    continue;
+                                }
                             }
                         }
                         else
@@ -165,6 +179,11 @@ namespace BetterAI
                         Unit pUnit = Game.unit(val.miUnitID);
 
                         if (pUnit == null)
+                        {
+                            continue;
+                        }
+
+                        if (BAI_AI.mpAICache.isNoAttackTarget(val.miTargetID))
                         {
                             continue;
                         }
@@ -212,11 +231,11 @@ namespace BetterAI
                                         {
                                             if (Game.getTribeAllyTeam(pDefender.getTribe()) != TeamType.NONE)
                                             {
-                                                iMin = 120;
+                                                iMin = 125;
                                             }
                                             else
                                             {
-                                                iMin = 100;
+                                                iMin = 110;
                                             }
                                         }
                                     }
@@ -243,7 +262,7 @@ namespace BetterAI
                         }
                         if (eTactics != AttackTactics.Kill && eTactics != AttackTactics.Capture && eTactics != AttackTactics.Approach)
                         {
-                            if (!pUnit.AI.isProtectedTile(pMoveTile, true, Unit.UnitAI.UNIT_HEAL_HEALTH_PERCENT, iExtraDanger))
+                            if (!pUnit.AI.isProtectedTile(pMoveTile, true, iMinPowerPercent, iExtraDanger))
                             {
                                 if (!bExpansionOnly && !pUnit.isHealPossibleTile(pMoveTile))
                                 {
@@ -271,7 +290,7 @@ namespace BetterAI
   ### Don't defend free City Sites     START ###
   ##############################################*/
                     //don't defend starting tiles at the start of the game with your only military unit, but allow using Militia for defending free city sites.
-                    if (!(AI.isEmergencyUnit(pUnit.getType())) || (Game.getTurn() >= ((Game.isGameOption(Infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? BAI_AI.AI_PLAY_TO_WIN_GRACE_TURNS : BAI_AI.AI_GRACE_TURNS)))
+                    if (!(Infos.Helpers.isEmergencyUnit(pUnit.getType())) || (Game.getTurn() >= ((Game.isGameOption(Infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? BAI_AI.AI_PLAY_TO_WIN_GRACE_TURNS : BAI_AI.AI_GRACE_TURNS)))
                     {
                         return;
                     }

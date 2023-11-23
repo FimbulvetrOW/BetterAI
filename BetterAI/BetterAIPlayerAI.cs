@@ -543,7 +543,7 @@ namespace BetterAI
                     int iValue = 0;
                     foreach (City pSeparateCity in SeparatedCities)
                     {
-                        iValue += getNeedSettlers(pSeparateCity);
+                        iValue += base.getNeedSettlers(pSeparateCity);
                     }
                     return iValue;
                 }
@@ -551,64 +551,15 @@ namespace BetterAI
   ### Segmented Territory Settler number  END ##
   ##############################################*/
 
-                int iNeedUnits = 0;
-                using (var citySiteScoped = CollectionCache.GetListScoped<int>())
-                {
-                    game.getCitySites(citySiteScoped.Value, ReachableDesirableSafeCitySiteDelegate);
-                    foreach (int iCitySite in citySiteScoped.Value)
-                    {
-                        Tile pCitySiteTile = game.tile(iCitySite);
+                return base.getNeedSettlers(pCity);
 
-                        if (isTileReachable(pCitySiteTile, pCity?.tile()))
-                        {
-                            if (isVacantCitySite(pCitySiteTile))
-                            {
-                                ++iNeedUnits;
-                            }
-                            else
-                            {
-                                TribeType eTribe = pCitySiteTile.getImprovementTribeSite(player.getTeam());
-                                if (eTribe != TribeType.NONE)
-                                {
-                                    if (game.getTribeAllyTeam(eTribe) == Team || game.isHostile(Team, Tribe, TeamType.NONE, eTribe))
-                                    {
-                                        ++iNeedUnits;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                foreach (int iUnitID in getUnits())
-                {
-                    Unit pUnit = game.unit(iUnitID);
-                    if (pUnit != null && pUnit.isAlive() && isSettler(pUnit))
-                    {
-                        if (isTileReachable(pUnit.tile(), pCity?.tile()))
-                        {
-                            --iNeedUnits;
-                        }
-                    }
-                }
-
-                foreach (int iCityID in getCities())
-                {
-                    City pLoopCity = game.city(iCityID);
-                    if (isTileReachable(pLoopCity.tile(), pCity?.tile()))
-                    {
-                        iNeedUnits -= pLoopCity.countBuilds(IsSettlerBuildDelegate);
-                    }
-                }
-
-                return iNeedUnits;
             }
 
 
             //copy-paste START
             //lines 17008-17183
             // Chance that we will declare war on them
-            public override int getWarOfferPercent(PlayerType eOtherPlayer, bool bDeclare)
+            public override int getWarOfferPercent(PlayerType eOtherPlayer, bool bDeclare = true, bool bPreparedOnly = false, bool bCurrentPlayer = true)
             {
                 //using var profileScope = new UnityProfileScope("PlayerAI.getWarOfferPercent");
 
@@ -635,9 +586,12 @@ namespace BetterAI
                     return 0;
                 }
 
-                if (!isPlayerCityReachable(eOtherPlayer))
+                if (bCurrentPlayer)
                 {
-                    return 0;
+                    if (!isPlayerCityReachable(eOtherPlayer))
+                    {
+                        return 0;
+                    }
                 }
 
                 ProximityType eProximity = pOtherPlayer.calculateProximityPlayer(eThisPlayer);
@@ -679,7 +633,32 @@ namespace BetterAI
                             return 0;
                         }
 
-                        if (!areAllCitiesDefended())
+                        if (bCurrentPlayer)
+                        {
+                            if (!areAllCitiesDefended())
+                            {
+                                return 0;
+                            }
+                        }
+                    }
+                }
+
+                if (bCurrentPlayer)
+                {
+                    if (getWarPreparingPlayer() != PlayerType.NONE)
+                    {
+                        if (getWarPreparingPlayer() != eOtherPlayer)
+                        {
+                            return 0;
+                        }
+                        if (bPreparedOnly)
+                        {
+                            return getWarPreparingTurns() > 0 ? 0 : 100;
+                        }
+                    }
+                    else
+                    {
+                        if (bPreparedOnly)
                         {
                             return 0;
                         }
@@ -698,7 +677,7 @@ namespace BetterAI
   ### more precision for WarOffer        END ###
   ##############################################*/
 
-                if (bPlayToWin)
+                if (bPlayToWin && bCurrentPlayer)
                 {
                     if (pOtherPlayer.isCloseToWinning(5))
                     {
@@ -766,7 +745,7 @@ namespace BetterAI
                 iPercent *= (5 + pOtherPlayer.countTeamWars());
                 iPercent /= (5 + 0);
 
-                iPercent /= (player.countTeamWars() + 1);
+                iPercent /= (player.countTeamWars() + (getWarPreparingPlayer() != PlayerType.NONE ? 2 : 1));
 
                 if (game.hasTeamAlliance(pOtherPlayer.getTeam()))
                 {
@@ -805,6 +784,12 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### more precision for WarOffer        END ###
   ##############################################*/
+
+                if (bCurrentPlayer && isWarPreparing(pOtherPlayer.getPlayer()) && getWarPreparingTurns() <= 0)
+                {
+                    iPercent *= 2;
+                }
+
                 return infos.utils().range(iPercent, 0, 100);
             }
             //copy-paste END
