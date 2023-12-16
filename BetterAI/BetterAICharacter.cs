@@ -23,17 +23,6 @@ namespace BetterAI
 {
     public class BetterAICharacter : Character
     {
-        //lines 4670-4673
-/*####### Better Old World AI - Base DLL #######
-  ### Leader yield preview fix         START ###
-  ##############################################*/
-        public override int getRatingYieldRateLeader(RatingType eRating, YieldType eYield)
-        {
-            return infos().Helpers.getRatingYieldRateCourt(eRating, eYield, getRating(eRating), OpinionCharacterType.NONE, game());
-        }
-/*####### Better Old World AI - Base DLL #######
-  ### Leader yield preview fix           END ###
-  ##############################################*/
 
         public override int getLegitimacy(int iIndex, int iNumLeaders)
         {
@@ -106,5 +95,73 @@ namespace BetterAI
   ##############################################*/
             base.generateRatingsCourtier(eCourtier);
         }
+
+        public override void doUpgradeEvent()
+        {
+
+            if (!(player().doEventTrigger(infos().Globals.UPGRADE_CHARACTER_EVENTTRIGGER, this)))
+            {
+                using (var ratingsListScoped = CollectionCache.GetListScoped<RatingType>())
+                using (var traitListScoped = CollectionCache.GetListScoped<TraitType>())
+                {
+                    List<RatingType> aeRatings = ratingsListScoped.Value;
+                    List<TraitType> aeTraits = traitListScoped.Value;
+
+                    for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
+                    {
+                        if (isValidUpgradeTrait(eLoopTrait))
+                        {
+                            aeTraits.Add(eLoopTrait);
+                        }
+                    }
+                    aeTraits.Shuffle(nextRandomSeed());
+
+/*####### Better Old World AI - Base DLL #######
+  ### Min Ratings Options on upgrade   START ###
+  ##############################################*/
+                    //int iExtraTraits = aeTraits.Count - infos().Globals.UPGRADES_AVAILABLE;
+                    int iExtraTraits = aeTraits.Count - infos().Globals.UPGRADES_AVAILABLE + ((BetterAIInfoGlobals)infos().Globals).BAI_MIN_UPGRADE_RATINGS_OPTIONS;
+                    if (iExtraTraits > 0)
+                    {
+                        aeTraits.RemoveRange(0, iExtraTraits);
+                    }
+                    //else if (iExtraTraits < 0)
+                    if (aeTraits.Count < infos().Globals.UPGRADES_AVAILABLE)
+/*####### Better Old World AI - Base DLL #######
+  ### Min Ratings Options on upgrade     END ###
+  ##############################################*/
+                    {
+                        for (RatingType eRating = 0; eRating < infos().ratingsNum(); ++eRating)
+                        {
+                            aeRatings.Add(eRating);
+                        }
+                        aeRatings.Shuffle(nextRandomSeed());
+
+                        int iExtraRatings = aeRatings.Count + aeTraits.Count - infos().Globals.UPGRADES_AVAILABLE;
+                        if (iExtraRatings > 0)
+                        {
+                            aeRatings.RemoveRange(0, iExtraRatings);
+                        }
+                    }
+
+                    if (aeTraits.Count + aeRatings.Count > 0)
+                    {
+                        UpgradeCharacterDecision pDecision = new UpgradeCharacterDecision(player().nextDecisionID(), infos(), getID(), !(player().isProcessingTurn()));
+                        for (int i = 0; i < aeTraits.Count; ++i)
+                        {
+                            pDecision.setTrait(i, aeTraits[i]);
+                        }
+                        for (int i = 0; i < aeRatings.Count; ++i)
+                        {
+                            pDecision.setRating(aeTraits.Count + i, aeRatings[i]);
+                        }
+                        player().pushDecisionDataNext(pDecision);
+                    }
+                }
+            }
+        }
+
+
+
     }
 }

@@ -31,6 +31,12 @@ namespace BetterAI
         {
             return new BetterAIInfoGlobals();
         }
+
+        public override InfoHelpers CreateInfoHelpers(Infos pInfos)
+        {
+            return new BetterAIInfoHelpers(pInfos);
+        }
+
         public override HelpText CreateHelpText(ModSettings pModSettings)
         {
             return new BetterAIHelpText(pModSettings);

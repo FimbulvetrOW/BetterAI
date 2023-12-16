@@ -56,8 +56,8 @@ namespace BetterAI
                 //fix discontent value
                 //no use calculating the effect of AI_YIELD_TURNS (100 turns) of discontent, when it only happens once
 
-                //iValue += cityYieldValue(infos.Globals.DISCONTENT_YIELD, pCity) * pCity.getHurryDiscontent() / Constants.YIELDS_MULTIPLIER;
-                iValue += discontentValue(pCity) * pCity.getHurryDiscontent() / Constants.YIELDS_MULTIPLIER;
+                //iValue -= cityYieldValue(infos.Globals.DISCONTENT_YIELD, pCity) * pCity.getHurryDiscontent();
+                iValue -= discontentValue(pCity) * pCity.getHurryDiscontent() / (Constants.YIELDS_MULTIPLIER);
 /*####### Better Old World AI - Base DLL #######
   ### AI fix                             END ###
   ##############################################*/
@@ -102,7 +102,7 @@ namespace BetterAI
   ### AI fix                           START ###
   ##############################################*/
                         //iValue += getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) * AI_YIELD_TURNS * 5 / (100 * iNextThreshold);
-                        iValue -= getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) * 5 / 100; //without AI_YIELD_TURNS, division by iNextThreshold moved down
+                        iValue += getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) * 5 / 100; //without * 5 * AI_YIELD_TURNS, division by iNextThreshold moved down
 /*####### Better Old World AI - Base DLL #######
   ### AI fix                             END ###
   ##############################################*/
@@ -118,8 +118,8 @@ namespace BetterAI
                             //iExtraYieldInNextLevel -= infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel(), eLoopYield) * iCityYield / 100;
                             //more interesting to look at one level below instead, just as the original method did
 
-                            iExtraYieldInNextLevel -= infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel() - 1, eLoopYield) * iCityYield / 100;
-                            iExtraYieldInNextLevel += infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel(), eLoopYield) * iCityYield / 100;
+                            iExtraYieldInNextLevel += infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel() - 1, eLoopYield) * iCityYield / 100;
+                            iExtraYieldInNextLevel -= infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel(), eLoopYield) * iCityYield / 100;
 
                             if (iExtraYieldInNextLevel != 0)
                             {
@@ -312,20 +312,20 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### self-aaiEffectCityYieldRate      START ###
   ##############################################*/
-                foreach (var zTriple in infos.effectCity(eEffectCity).maaiEffectCityYieldRate)
+                foreach ((EffectCityType, YieldType, int) zTriple in infos.effectCity(eEffectCity).maaiEffectCityYieldRate)
                 {
-                    if (zTriple.First == eEffectCity)
+                    if (zTriple.Item1 == eEffectCity)
                     {
-                        int iCount = pCity.getEffectCityCount(zTriple.First);
+                        int iCount = pCity.getEffectCityCount(zTriple.Item1);
                         if (iCount == 0) continue; //unless effects can be part of multiple zTriples, I can probably break here
 
                         //iCount++; //(x+1)^2 - x^2 - x = x+1 //but for the value of removing a current effect, I'd need to do iCount--;
                         for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
                         {
                             long iSubValue = 0;
-                            if (zTriple.Second == eLoopYield)
+                            if (zTriple.Item2 == eLoopYield)
                             {
-                                iSubValue += zTriple.Third * iCount;
+                                iSubValue += zTriple.Item3 * iCount;
                                 iValue += ((iSubValue * cityYieldValue(eLoopYield, pCity) * AI_YIELD_TURNS) / Constants.YIELDS_MULTIPLIER);
                             }
                         }

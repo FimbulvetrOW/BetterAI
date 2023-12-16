@@ -55,9 +55,9 @@ namespace BetterAI
                 }
 
                 BetterAIInfoTerrain eLoopTileInfoTerrain = (BetterAIInfoTerrain)game().tile(iTileID).terrain();
-                for (int iBiome = 0; iBiome < (int)((BetterAIInfos)infos()).cityBiomesNum(); iBiome++)
+                for (CityBiomeType iBiome = 0; iBiome < ((BetterAIInfos)infos()).cityBiomesNum(); iBiome++)
                 {
-                    iaBiomeScore[iBiome] += eLoopTileInfoTerrain.maiBiomePoints[iBiome];
+                    iaBiomeScore[(int)iBiome] += eLoopTileInfoTerrain.maiBiomePoints[iBiome];
                     iBiomeScoreTotal += eLoopTileInfoTerrain.maiBiomePoints[iBiome];
                 }
             }
@@ -1152,9 +1152,9 @@ namespace BetterAI
                     return false;
                 }
 
-                using (var dieMapScoped = CollectionCache.GetListScoped<PairStruct<UnitType, int>>())
+                using (var dieMapScoped = CollectionCache.GetListScoped<(UnitType, int)>())
                 {
-                    List<PairStruct<UnitType, int>> mapUnitDie = dieMapScoped.Value;
+                    List<(UnitType, int)> mapUnitDie = dieMapScoped.Value;
 
                     int iTotalWeight = 0;
                     for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); ++eLoopUnit)
@@ -1164,7 +1164,7 @@ namespace BetterAI
                             if (!infos().unit(eLoopUnit).mbWater || pBestTile.isWater())
                             {
                                 int iWeight = game().countUnits(x => x.getType() == eLoopUnit) + 1;
-                                mapUnitDie.Add(PairStruct.Create(eLoopUnit, iWeight));
+                                mapUnitDie.Add((eLoopUnit, iWeight));
                                 iTotalWeight += iWeight;
                             }
                         }
@@ -1182,7 +1182,7 @@ namespace BetterAI
                         {
                             if (!infos().unit(eLoopUnit).mbBarbRaid && infos().unit(eLoopUnit).mbWater && canBuildUnitPossible(eLoopUnit))
                             {
-                                mapUnitDie.Add(PairStruct.Create(eLoopUnit, iTotalWeight));
+                                mapUnitDie.Add((eLoopUnit, iTotalWeight));
                             }
                         }
                     }

@@ -18,7 +18,6 @@ using UnityEngine.UI;
 using static TenCrowns.ClientCore.ClientUI;
 using System.Xml;
 using static BetterAI.BetterAIInfos;
-using System.IO.Ports;
 
 namespace BetterAI
 {
@@ -29,62 +28,6 @@ namespace BetterAI
         {
         }
 
-        //lines 2749-2811
-        //fix from Test branch 69366
-        public override TextVariable buildEffectUnitLinkVariable(EffectUnitType eEffectUnit, Unit pUnit = null, bool bIcon = false, Character pCharacter = null)
-        {
-            using (new UnityProfileScope("HelpText.buildEffectUnitLinkVariable"))
-            {
-                InfoEffectUnit effectUnit = infos().effectUnit(eEffectUnit);
-                TextType eEffectUnitName = getGenderedEffectUnitName(effectUnit, pCharacter?.getGender() ?? GenderType.NONE);
-                TextType eSourceEffectUnitName = getSourceEffectUnitName(eEffectUnit, pUnit, pCharacter);
-
-                if (eSourceEffectUnitName != TextType.NONE)
-                {
-                    eEffectUnitName = eSourceEffectUnitName;
-                }
-                else
-                {
-                    GrammaticalGenderType eUnitGrammaticalGender = pUnit != null ? pUnit.getGrammaticalGender() : GrammaticalGenderType.NONE;
-                    if (eUnitGrammaticalGender != GrammaticalGenderType.NONE)
-                    {
-                        foreach (PairStruct<GrammaticalGenderType, TextType> pair in infos().effectUnit(eEffectUnit).mlpGrammaticalGenderNames)
-                        {
-                            GrammaticalGenderType eGrammaticalGender = pair.First;
-                            if (eGrammaticalGender == eUnitGrammaticalGender)
-                            {
-                                eEffectUnitName = pair.Second;
-                            }
-                        }
-                    }
-                }
-
-                TextVariable result;
-
-                using (new AllowLinksScope(this, false))
-                {
-                    if (bIcon)
-                    {
-                        result = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_TWO", mSpriteRepository?.GetInlineIconVariable(effectUnit.mzIconName), TEXTVAR_TYPE(eEffectUnitName));
-                    }
-                    else
-                    {
-                        result = TEXTVAR_TYPE(eEffectUnitName);
-                    }
-                }
-
-                if (pUnit != null)
-                {
-                    int iTurns = pUnit.getEffectUnitTurnRemaining(eEffectUnit);
-                    if (iTurns > 0)
-                    {
-                        concatenateSpace(result, buildTurnsTextVariable(iTurns, pUnit.game(), true));
-                    }
-                }
-
-                return buildLinkTextVariable(result, ItemType.HELP_LINK, nameof(LinkType.HELP_EFFECT_UNIT), effectUnit.SafeTypeString(), ((pUnit != null) ? pUnit.getID() : -1).ToStringCached());
-            }
-        }
 
         //lines 2998-3012
         public override TextVariable buildHappinessLevelLinkVariable(City pCity, bool bShort = false)
@@ -295,7 +238,7 @@ namespace BetterAI
                     //}
 
                     {
-                        int iValue = infos().improvement(eImprovement).maiAdjacentWonderYieldOutput[(int)eLoopYield];
+                        int iValue = infos().improvement(eImprovement).maiAdjacentWonderYieldOutput[eLoopYield];
                         if (iValue != 0)
                         {
                             int iCount = pTile.countTeamAdjacentWonders();
@@ -312,7 +255,7 @@ namespace BetterAI
                     }
 
                     {
-                        int iValue = infos().improvement(eImprovement).maiAdjacentResourceYieldOutput[(int)eLoopYield];
+                        int iValue = infos().improvement(eImprovement).maiAdjacentResourceYieldOutput[eLoopYield];
                         if (iValue != 0)
                         {
                             int iCount = pTile.countTeamAdjacentResources();
@@ -329,7 +272,7 @@ namespace BetterAI
                     }
 
                     {
-                        int iValue = infos().improvement(eImprovement).maiTradeNetworkYieldOutput[(int)eLoopYield];
+                        int iValue = infos().improvement(eImprovement).maiTradeNetworkYieldOutput[eLoopYield];
                         if (iValue != 0)
                         {
                             if (pCityTerritory != null)
@@ -383,7 +326,7 @@ namespace BetterAI
                         }
 
                         {
-                            int iValue = infos().improvementClass(eImprovementClass).maiAdjacentResourceYieldOutput[(int)eLoopYield];
+                            int iValue = infos().improvementClass(eImprovementClass).maiAdjacentResourceYieldOutput[eLoopYield];
                             if (iValue != 0)
                             {
                                 int iCount = pTile.countTeamAdjacentResources();
@@ -491,7 +434,7 @@ namespace BetterAI
 
                         if (pTile.isFreshWaterAccess())
                         {
-                            int iValue = infos().improvement(eImprovement).miFreshWaterModifier + infos().improvement(eImprovement).maiYieldFreshWaterModifier[(int)eLoopYield];
+                            int iValue = infos().improvement(eImprovement).miFreshWaterModifier + infos().improvement(eImprovement).maiYieldFreshWaterModifier[eLoopYield];
                             if (iValue != 0)
                             {
                                 using (buildSecondaryTextScope(builder))
@@ -503,7 +446,7 @@ namespace BetterAI
 
                         if (pTile.isRiver())
                         {
-                            int iValue = infos().improvement(eImprovement).miRiverModifier + infos().improvement(eImprovement).maiYieldRiverModifier[(int)eLoopYield];
+                            int iValue = infos().improvement(eImprovement).miRiverModifier + infos().improvement(eImprovement).maiYieldRiverModifier[eLoopYield];
                             if (iValue != 0)
                             {
                                 using (buildSecondaryTextScope(builder))
@@ -559,7 +502,7 @@ namespace BetterAI
                         {
                             if (eImprovementClass != ImprovementClassType.NONE)
                             {
-                                int iValue = infos().specialist(eSpecialist).maiImprovementClassModifier[(int)eImprovementClass];
+                                int iValue = infos().specialist(eSpecialist).maiImprovementClassModifier[eImprovementClass];
                                 if (iValue != 0)
                                 {
                                     using (buildSecondaryTextScope(builder))
@@ -581,7 +524,7 @@ namespace BetterAI
 
                             if (eResource != ResourceType.NONE)
                             {
-                                buildImprovementBreakdownEffectCityHelp(builder, eImprovement, infos().improvementClass(eImprovementClass).maeResourceCityEffect[(int)eResource], true, eLoopYield, pCityTerritory, pManager);
+                                buildImprovementBreakdownEffectCityHelp(builder, eImprovement, infos().improvementClass(eImprovementClass).maeResourceCityEffect[eResource], true, eLoopYield, pCityTerritory, pManager);
                             }
 
                             {
@@ -593,7 +536,7 @@ namespace BetterAI
                                     {
                                         if (pGame.isReligionTheology(ePrereqReligion, eLoopTheology))
                                         {
-                                            EffectCityType eEffectCity = mInfos.improvementClass(eImprovementClass).maeTheologyCityEffect[(int)eLoopTheology];
+                                            EffectCityType eEffectCity = mInfos.improvementClass(eImprovementClass).maeTheologyCityEffect[eLoopTheology];
 
                                             if (eEffectCity != EffectCityType.NONE)
                                             {
@@ -672,7 +615,7 @@ namespace BetterAI
 
                             if (eResource != ResourceType.NONE)
                             {
-                                buildImprovementBreakdownEffectCityHelp(builder, eImprovement, infos().specialistClass(infos().specialist(eSpecialist).meClass).maeResourceCityEffect[(int)eResource], true, eLoopYield, pCityTerritory, pManager);
+                                buildImprovementBreakdownEffectCityHelp(builder, eImprovement, infos().specialistClass(infos().specialist(eSpecialist).meClass).maeResourceCityEffect[eResource], true, eLoopYield, pCityTerritory, pManager);
                             }
                         }
                     }
@@ -817,7 +760,7 @@ namespace BetterAI
                             {
                                 for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                                 {
-                                    int iOutput = infos().improvement(eImprovement).maiYieldConsumption[(int)eLoopYield];
+                                    int iOutput = infos().improvement(eImprovement).maiYieldConsumption[eLoopYield];
                                     if (iOutput != 0)
                                     {
                                         builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
@@ -862,7 +805,7 @@ namespace BetterAI
                                 {
                                     if (!(seUnitTraitsAdded.Contains(eLoopUnitTrait)))
                                     {
-                                        int iValue = infos().improvement(eImprovement).maiUnitTraitHeal[(int)eLoopUnitTrait];
+                                        int iValue = infos().improvement(eImprovement).maiUnitTraitHeal[eLoopUnitTrait];
                                         if (iValue != 0)
                                         {
                                             using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_UNIT_TRAIT_HEALS_UNIT", buildSignedTextVariable(iValue))))
@@ -876,7 +819,7 @@ namespace BetterAI
                                                 {
                                                     if (eOtherUnitTrait != eLoopUnitTrait)
                                                     {
-                                                        if (infos().improvement(eImprovement).maiUnitTraitHeal[(int)eOtherUnitTrait] == iValue)
+                                                        if (infos().improvement(eImprovement).maiUnitTraitHeal[eOtherUnitTrait] == iValue)
                                                         {
                                                             builder.Add(buildUnitTraitLinkVariable(eOtherUnitTrait));
                                                             seUnitTraitsAdded.Add(eOtherUnitTrait);
@@ -899,7 +842,7 @@ namespace BetterAI
                                 {
                                     if (!(seUnitTraitsAdded.Contains(eLoopUnitTrait)))
                                     {
-                                        int iValue = infos().improvement(eImprovement).maiUnitTraitXP[(int)eLoopUnitTrait];
+                                        int iValue = infos().improvement(eImprovement).maiUnitTraitXP[eLoopUnitTrait];
                                         if (iValue != 0)
                                         {
                                             using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_UNIT_TRAIT_XP", buildSignedTextVariable(iValue), buildTurnScaleName(pGame))))
@@ -913,7 +856,7 @@ namespace BetterAI
                                                 {
                                                     if (eOtherUnitTrait != eLoopUnitTrait)
                                                     {
-                                                        if (infos().improvement(eImprovement).maiUnitTraitXP[(int)eOtherUnitTrait] == iValue)
+                                                        if (infos().improvement(eImprovement).maiUnitTraitXP[eOtherUnitTrait] == iValue)
                                                         {
                                                             builder.Add(buildUnitTraitLinkVariable(eOtherUnitTrait));
                                                             seUnitTraitsAdded.Add(eOtherUnitTrait);
@@ -1062,7 +1005,7 @@ namespace BetterAI
                                     {
                                         for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); eLoopUnit++)
                                         {
-                                            if (infos().improvement(eImprovement).maiUnitDie[(int)eLoopUnit] > 0)
+                                            if (infos().improvement(eImprovement).maiUnitDie[eLoopUnit] > 0)
                                             {
                                                 builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, pCity: pCityTerritory));
                                             }
@@ -1084,7 +1027,7 @@ namespace BetterAI
                                         {
                                             if (pTile.hasResource())
                                             {
-                                                EffectCityType eEffectCity = infos().specialistClass(infos().specialist(eSpecialist).meClass).maeResourceCityEffect[(int)(pTile.getResource())];
+                                                EffectCityType eEffectCity = infos().specialistClass(infos().specialist(eSpecialist).meClass).maeResourceCityEffect[pTile.getResource()];
 
                                                 if (eEffectCity != EffectCityType.NONE)
                                                 {
@@ -1303,7 +1246,7 @@ namespace BetterAI
                         {
                             for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                             {
-                                int iOutput = infos().improvement(eImprovement).maiAdjacentWonderYieldOutput[(int)eLoopYield];
+                                int iOutput = infos().improvement(eImprovement).maiAdjacentWonderYieldOutput[eLoopYield];
                                 if (iOutput != 0)
                                 {
                                     subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
@@ -1315,7 +1258,7 @@ namespace BetterAI
                         {
                             for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                             {
-                                int iOutput = infos().improvement(eImprovement).maiAdjacentResourceYieldOutput[(int)eLoopYield];
+                                int iOutput = infos().improvement(eImprovement).maiAdjacentResourceYieldOutput[eLoopYield];
                                 if (iOutput != 0)
                                 {
                                     subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
@@ -1327,7 +1270,7 @@ namespace BetterAI
                         {
                             for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                             {
-                                int iOutput = infos().improvement(eImprovement).maiTradeNetworkYieldOutput[(int)eLoopYield];
+                                int iOutput = infos().improvement(eImprovement).maiTradeNetworkYieldOutput[eLoopYield];
                                 if (iOutput != 0)
                                 {
                                     subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
@@ -1385,7 +1328,7 @@ namespace BetterAI
                             {
                                 for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                                 {
-                                    int iOutput = infos().improvementClass(eImprovementClass).maiAdjacentResourceYieldOutput[(int)eLoopYield];
+                                    int iOutput = infos().improvementClass(eImprovementClass).maiAdjacentResourceYieldOutput[eLoopYield];
                                     if (iOutput != 0)
                                     {
                                         subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iOutput, iMultiplier: Constants.YIELDS_MULTIPLIER));
@@ -1455,7 +1398,7 @@ namespace BetterAI
 
                         for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                         {
-                            int iValue = infos().improvement(eImprovement).maiYieldFreshWaterModifier[(int)eLoopYield];
+                            int iValue = infos().improvement(eImprovement).maiYieldFreshWaterModifier[eLoopYield];
                             if (iValue != 0)
                             {
                                 subText.Add(buildColonSpaceOne(buildFreshWaterLinkVariable(), buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, bPercent: true)));
@@ -1472,7 +1415,7 @@ namespace BetterAI
 
                         for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                         {
-                            int iValue = infos().improvement(eImprovement).maiYieldRiverModifier[(int)eLoopYield];
+                            int iValue = infos().improvement(eImprovement).maiYieldRiverModifier[eLoopYield];
                             if (iValue != 0)
                             {
                                 subText.Add(buildColonSpaceOne(buildRiverLinkVariable(), buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, bPercent: true)));
@@ -1523,10 +1466,10 @@ namespace BetterAI
                                         (infos().effectCity(eLoopEffectCity).meSourceImprovement != ImprovementType.NONE) ||
                                         (infos().effectCity(eLoopEffectCity).meSourceImprovementClass != ImprovementClassType.NONE))
                                     {
-                                        int iValue = infos().effectCity(eLoopEffectCity).maiImprovementModifier[(int)eImprovement];
+                                        int iValue = infos().effectCity(eLoopEffectCity).maiImprovementModifier[eImprovement];
                                         if (eImprovementClass != ImprovementClassType.NONE)
                                         {
-                                            iValue += infos().effectCity(eLoopEffectCity).maiImprovementClassModifier[(int)eImprovementClass];
+                                            iValue += infos().effectCity(eLoopEffectCity).maiImprovementClassModifier[eImprovementClass];
                                         }
                                         if (iValue != 0)
                                         {
@@ -1981,7 +1924,7 @@ namespace BetterAI
 
                         for (VegetationType eLoopVegetation = 0; eLoopVegetation < infos().vegetationNum(); eLoopVegetation++)
                         {
-                            if (eInfoImprovement.mabVegetationValid[(int)eLoopVegetation])
+                            if (eInfoImprovement.mabVegetationValid[eLoopVegetation])
                             {
                                 orList.AddItem(buildVegetationLinkVariable(eLoopVegetation));
                             }
@@ -1998,9 +1941,20 @@ namespace BetterAI
                             }
                         }
 
+                        for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < mInfos.effectCitiesNum(); eLoopEffectCity++)
+                        {
+                            foreach ((TerrainType, ImprovementType) pLoopPair in infos().effectCity(eLoopEffectCity).mlpTerrainImprovementValid)
+                            {
+                                if (pLoopPair.Item2 == eImprovement)
+                                {
+                                    orList.AddItem(buildSlashText(buildTerrainLinkVariable(pLoopPair.Item1, pTile), buildEffectCityLinkVariable(eLoopEffectCity, pCityTerritory, pCityTerritory?.governor())));
+                                }
+                            }
+                        }
+
                         if (orList.Count > 0)
                         {
-                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", orList.Finalize()), ((pTile != null) && !(pTile.isImprovementValid(eImprovement)))));
+                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", orList.Finalize()), ((pTile != null) && !(pTile.isImprovementValid(eImprovement, pCityTerritory)))));
                         }
                     }
 
@@ -2551,7 +2505,7 @@ namespace BetterAI
 
                                             foreach (UnitTraitType eLoopUnitTrait in infos().unit(eUnit).maeUnitTrait)
                                             {
-                                                PromotionType ePromotion = infos().effectCity(eLoopEffectCity).maeTraitPromotion[(int)eLoopUnitTrait];
+                                                PromotionType ePromotion = infos().effectCity(eLoopEffectCity).maeTraitPromotion[eLoopUnitTrait];
 
                                                 if (ePromotion != PromotionType.NONE)
                                                 {
@@ -2576,7 +2530,7 @@ namespace BetterAI
                         {
                             for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                             {
-                                int iValue = (infos().unit(eUnit).maiYieldConsumption[(int)eLoopYield] * Constants.YIELDS_MULTIPLIER);
+                                int iValue = (infos().unit(eUnit).maiYieldConsumption[eLoopYield] * Constants.YIELDS_MULTIPLIER);
                                 if (iValue != 0)
                                 {
                                     builder.Add(buildYieldValueIconLinkVariable(eLoopYield, -(iValue), bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER));
@@ -2681,19 +2635,41 @@ namespace BetterAI
                             }
                             if (eTribe != TribeType.NONE)
                             {
-                                if (infos().unit(eLoopUnit).maeTribeUpgradeUnit[(int)eTribe] == eUnit)
+                                if (infos().unit(eLoopUnit).maeTribeUpgradeUnit[eTribe] == eUnit)
                                 {
                                     builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
                                 }
                             }
                             else
                             {
-                                if (infos().unit(eLoopUnit).maeTribeUpgradeUnit.Contains(eUnit))
-                                {
-                                    builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
-                                }
+                                //old
+                                //if (infos().unit(eLoopUnit).maeTribeUpgradeUnit.Contains(eUnit))
+                                //{
+                                //    builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
+                                //}
+
+                                //new
+                                //foreach (var p in infos().unit(eLoopUnit).maeTribeUpgradeUnit)
+                                //{
+                                //    if (p.Value == eUnit)
+                                //    {
+                                //        builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
+                                //        break;
+                                //    }
+                                //}
+
+                                //using derivative info instead
                             }
                         }
+                        if (eTribe == TribeType.NONE)
+                        {
+                            foreach (UnitType eLoopUnit in ((BetterAIInfoUnit)infos().unit(eUnit)).maeTribeUpgradesFromAccumulated)
+                            {
+                                builder.Add(buildUnitTypeLinkVariable(eLoopUnit, pGame, null, pCity, eTribe));
+                            }
+                        }
+
+
                     }
                 }
 
@@ -2712,7 +2688,7 @@ namespace BetterAI
                         }
                         if (eTribe != TribeType.NONE)
                         {
-                            UnitType eUpgrade = infos().unit(eUnit).maeTribeUpgradeUnit[(int)eTribe];
+                            UnitType eUpgrade = infos().unit(eUnit).maeTribeUpgradeUnit[eTribe];
                             if (eUpgrade != UnitType.NONE)
                             {
                                 seUpgrades.Add(eUpgrade);
@@ -2720,13 +2696,22 @@ namespace BetterAI
                         }
                         else
                         {
-                            foreach (UnitType eLoopUnit in infos().unit(eUnit).maeTribeUpgradeUnit)
+                            //foreach (UnitType eLoopUnit in infos().unit(eUnit).maeTribeUpgradeUnit)
+                            //{
+                            //    if (eLoopUnit != UnitType.NONE)
+                            //    {
+                            //        seUpgrades.Add(eLoopUnit);
+                            //    }
+                            //}
+                            
+                            foreach (KeyValuePair<TribeType, UnitType> TribeUpgradeUnit in infos().unit(eUnit).maeTribeUpgradeUnit)
                             {
-                                if (eLoopUnit != UnitType.NONE)
+                                if (TribeUpgradeUnit.Value != UnitType.NONE)
                                 {
-                                    seUpgrades.Add(eLoopUnit);
+                                    seUpgrades.Add(TribeUpgradeUnit.Value);
                                 }
                             }
+
                         }
                         foreach (UnitType eLoopUnit in seUpgrades)
                         {
@@ -2738,7 +2723,7 @@ namespace BetterAI
 
                 if (infos().unit(eUnit).mltModVariables.Count > 0)
                 {
-                    foreach (TripleStruct<string, string, TextType> modVariable in infos().unit(eUnit).mltModVariables)
+                    foreach ((string First, string Second, TextType Third) modVariable in infos().unit(eUnit).mltModVariables)
                     {
                         if (modVariable.Third != TextType.NONE)
                         {
@@ -3040,7 +3025,7 @@ namespace BetterAI
 
                     if (pUnit.isModVariables())
                     {
-                        foreach (TripleStruct<string, string, TextType> mvType in infos().unit(pUnit.getType()).mltModVariables)
+                        foreach ((string First, string Second, TextType Third) mvType in infos().unit(pUnit.getType()).mltModVariables)
                         {
                             if (mvType.Third != TextType.NONE)
                             {
@@ -3134,7 +3119,7 @@ namespace BetterAI
                     {
                         if (pPlayer.isFamilyStarted(eLoopFamily))
                         {
-                            int iValue = pGame.familyClass(eLoopFamily).maiLuxuryMissingOpinion[(int)eResource];
+                            int iValue = pGame.familyClass(eLoopFamily).maiLuxuryMissingOpinion[eResource];
                             if (iValue != 0)
                             {
                                 builder.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_RESOURCE_MISSING", buildFamilyLinkVariable(eLoopFamily, pGame), TEXTVAR(iValue)), !pPlayer.isFamilyLuxury(eLoopFamily, eResource)));
@@ -3150,7 +3135,7 @@ namespace BetterAI
                     {
                         for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
                         {
-                            int iValue = infos().resource(eResource).maiYieldNoImprovement[(int)eLoopYield];
+                            int iValue = infos().resource(eResource).maiYieldNoImprovement[eLoopYield];
                             if (iValue > 0)
                             {
                                 commaList.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER));
@@ -3203,7 +3188,7 @@ namespace BetterAI
   ##############################################*/
 
                         {
-                            EffectCityType eEffectCity = infos().improvementClass(eLoopImprovementClass).maeResourceCityEffect[(int)eResource];
+                            EffectCityType eEffectCity = infos().improvementClass(eLoopImprovementClass).maeResourceCityEffect[eResource];
                             if (eEffectCity != EffectCityType.NONE)
                             {
                                 buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), false, pActivePlayer);
@@ -3230,7 +3215,7 @@ namespace BetterAI
                 {
                     using (builder.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_FROM_LIST", buildSpecialistClassLinkVariable(eLoopSpecialistClass, pTile))))
                     {
-                        EffectCityType eEffectCity = infos().specialistClass(eLoopSpecialistClass).maeResourceCityEffect[(int)eResource];
+                        EffectCityType eEffectCity = infos().specialistClass(eLoopSpecialistClass).maeResourceCityEffect[eResource];
                         if (eEffectCity != EffectCityType.NONE)
                         {
                             buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), false, pActivePlayer);
@@ -4045,7 +4030,7 @@ namespace BetterAI
                         {
                             EffectCityType eLoopEffectCity = p.Key;
                             int iCount = p.Value;
-                            int iValue = (infos().effectCity(eLoopEffectCity).maiYieldModifier[(int)eYield] * iCount);
+                            int iValue = (infos().effectCity(eLoopEffectCity).maiYieldModifier[eYield] * iCount);
                             if (bReverseSign)
                             {
                                 iValue = -(iValue);
@@ -4082,7 +4067,7 @@ namespace BetterAI
                             if (pCurrentBuild.meBuild == infos().Globals.PROJECT_BUILD)
                             {
                                 ProjectType eProject = (ProjectType)(pCurrentBuild.miType);
-                                int iValue = infos().project(eProject).maiYieldModifier[(int)eYield];
+                                int iValue = infos().project(eProject).maiYieldModifier[eYield];
                                 if (bReverseSign)
                                 {
                                     iValue = -(iValue);

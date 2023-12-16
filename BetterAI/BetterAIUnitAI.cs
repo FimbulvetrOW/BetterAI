@@ -62,6 +62,24 @@ namespace BetterAI
                 return true;
             }
 
+            //lines 1828-2063
+            //there is a lot more to be done here
+            public override int attackValue(Tile pFromTile, Tile pTargetTile, bool bCheckOtherUnits, int iExtraModifier, out bool bCivilian, out int iPushTileID, out bool bStun, out int iSelfDamage)
+            {
+                int iValue = base.attackValue(pFromTile, pTargetTile, bCheckOtherUnits, iExtraModifier, out bCivilian, out iPushTileID, out bStun, out iSelfDamage);
+
+                Unit pTargetUnit = pTargetTile.defendingUnit();
+                if ((unit.hasPlayer()) && !(unit.canDamageCity(pTargetTile)) && (pTargetUnit != null) && (unit.canDamageUnit(pTargetUnit)))
+                {
+                    if (unit.player().isUnitObsolete(unit.getType()))
+                    {
+                        iValue *= 2; // do use it. Don't just decide to go upgrade instead
+                    }
+                }
+                return iValue;
+            }
+
+
 
         }
     }

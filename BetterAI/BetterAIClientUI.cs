@@ -461,7 +461,7 @@ namespace BetterAI
 
                                         for (VegetationType eLoopVegetation = 0; (eLoopVegetation < Infos.vegetationNum() && !(bAnyValid)); eLoopVegetation++)
                                         {
-                                            bAnyValid = bAnyValid || improvement.mabVegetationValid[(int)eLoopVegetation];
+                                            bAnyValid = bAnyValid || improvement.mabVegetationValid[eLoopVegetation];
                                         }
 
                                         if (!(bAnyValid))

@@ -82,6 +82,24 @@ namespace BetterAI
                 }
             }
 
+            for (UnitType eLoopUnit = 0; eLoopUnit < unitsNum(); eLoopUnit++)
+            {
+                if (unit(eLoopUnit).maeTribeUpgradeUnit.Count > 0)
+                {
+                    for (TribeType eLoopTribe = 0; eLoopTribe < tribesNum(); eLoopTribe++)
+                    {
+                        if (unit(eLoopUnit).maeTribeUpgradeUnit[eLoopTribe] != UnitType.NONE)
+                        {
+                            BetterAIInfoUnit pTribeUpgradeUnit = (BetterAIInfoUnit)unit(unit(eLoopUnit).maeTribeUpgradeUnit[eLoopTribe]);
+                            if (!pTribeUpgradeUnit.maeTribeUpgradesFromAccumulated.Contains(eLoopUnit))
+                            {
+                                pTribeUpgradeUnit.maeTribeUpgradesFromAccumulated.Add(eLoopUnit);
+                            }
+                        }
+                    }
+                }
+            }
+
         }
 
 
@@ -367,11 +385,11 @@ namespace BetterAI
     //InfoBase.cs, line 5518
     public class BetterAIInfoTerrain : InfoTerrain
     {
-        public List<int> maiBiomePoints = new List<int>();
+        public SparseList<CityBiomeType, int> maiBiomePoints = new SparseList<CityBiomeType, int>();
         public override void ReadData(XmlNode node, Infos infos)
         {
             base.ReadData(node, infos);
-            infos.readIntsByType(node, "aiBiomePoints", ref maiBiomePoints, ((BetterAIInfos)infos).cityBiomesNum());
+            infos.readIntsByType(node, "aiBiomePoints", ref maiBiomePoints);
         }
     }
 /*####### Better Old World AI - Base DLL #######
@@ -472,6 +490,7 @@ namespace BetterAI
   ##############################################*/
         public bool bHasIngoreZOCBlocker = false;
         public List<EffectUnitType> maeBlockZOCEffectUnits = new List<EffectUnitType>();
+        public List<UnitType> maeTribeUpgradesFromAccumulated = new List<UnitType>();
 /*####### Better Old World AI - Base DLL #######
   ### Fix ZOC display                    END ###
   ##############################################*/
@@ -518,6 +537,10 @@ namespace BetterAI
         public int BAI_ASSUMED_AVERAGE_REIGN_TURNS = 0;
         public int BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER = 0;
         public int BAI_RANGED_UNIT_ROUTING_REQUIRES_MELEE_RANGE = 0;
+        public int BAI_PRECISE_COLLATERAL_DAMAGE = 0;
+        public int BAI_MIN_UPGRADE_RATINGS_OPTIONS = 0;
+        public int BAI_USE_TRIANGLE_IN_COMPETITIVE = 0;
+        public int BAI_COMPETITIVE_COURT_YIELD_MODIFIER = 0;
         //override for more variables
         public override void ReadData(Infos infos)
         {
@@ -547,7 +570,10 @@ namespace BetterAI
             BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER = infos.getGlobalInt("BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER");
 
             BAI_RANGED_UNIT_ROUTING_REQUIRES_MELEE_RANGE = infos.getGlobalInt("BAI_RANGED_UNIT_ROUTING_REQUIRES_MELEE_RANGE");
-
+            BAI_PRECISE_COLLATERAL_DAMAGE = infos.getGlobalInt("BAI_PRECISE_COLLATERAL_DAMAGE");
+            BAI_MIN_UPGRADE_RATINGS_OPTIONS = infos.getGlobalInt("BAI_MIN_UPGRADE_RATINGS_OPTIONS");
+            BAI_USE_TRIANGLE_IN_COMPETITIVE = infos.getGlobalInt("BAI_USE_TRIANGLE_IN_COMPETITIVE");
+            BAI_COMPETITIVE_COURT_YIELD_MODIFIER = infos.getGlobalInt("BAI_COMPETITIVE_COURT_YIELD_MODIFIER");
         }
     }
 /*####### Better Old World AI - Base DLL #######

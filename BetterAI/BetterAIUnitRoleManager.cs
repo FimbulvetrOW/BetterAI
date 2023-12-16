@@ -83,7 +83,7 @@ namespace BetterAI
                 }
 
                 //lines 1016-1153
-                protected override void assignAttackUnits(AttackTactics eTactics, AttackThreat eMinThreat, bool bExpansionOnly, bool bNoFatigue, bool bPlayerOnly, int iMinPowerPercent, int iMaxPowerPercent = int.MaxValue)
+                protected override void assignAttackUnits(AttackTactics eTactics, AttackThreat eMinThreat, bool bExpansionOnly = false, bool bAllowFatigue = false, bool bPlayerOnly = false, bool bInPlaceOnly = false, int iMinPowerPercent = 0, int iMaxPowerPercent = int.MaxValue)
                 {
                     using var profileScope = new UnityProfileScope("UnitRoleManager.assignAttackUnits");
 
@@ -146,7 +146,7 @@ namespace BetterAI
                                 continue;
                             }
                         }
-                        if (val.IsFatigue && bNoFatigue)
+                        if (val.IsFatigue && !bAllowFatigue)
                         {
                             continue;
                         }
@@ -186,6 +186,14 @@ namespace BetterAI
                         if (BAI_AI.mpAICache.isNoAttackTarget(val.miTargetID))
                         {
                             continue;
+                        }
+
+                        if (bInPlaceOnly)
+                        {
+                            if (val.miMoveTileID != pUnit.getTileID())
+                            {
+                                continue;
+                            }
                         }
 
                         if (eTactics != AttackTactics.Approach)
@@ -271,7 +279,7 @@ namespace BetterAI
                             }
                         }
 
-                        if (assignUnitstoTarget(eTactics, pTargetTile, eMinThreat, bNoFatigue, iMinPowerPercent))
+                        if (assignUnitstoTarget(eTactics, pTargetTile, eMinThreat, !bAllowFatigue, iMinPowerPercent))
                         {
                             --iTargetIndex;
                         }

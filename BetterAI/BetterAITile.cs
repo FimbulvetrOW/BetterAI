@@ -58,10 +58,10 @@ namespace BetterAI
         public virtual bool canCityTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
-            BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
+            City pCityTerritory = cityTerritory();
 
 
-            if (!isImprovementValid(eImprovement, bTestEnabled))
+            if (!isImprovementValid(eImprovement, pCityTerritory, bTestEnabled))
             {
                 return false;
             }
