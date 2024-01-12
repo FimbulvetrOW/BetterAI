@@ -319,7 +319,7 @@ namespace BetterAI
 
                         if (eFoundUnit != UnitType.NONE)
                         {
-                            if (!(pCitySite.canBothUnitsOccupy(eFoundUnit, BAI_AI.getPlayer(), pUnit))) //to prevent blocking a site with a Scout
+                            if (!(pCitySite.canBothUnitsOccupy(eFoundUnit, BAI_AI.getPlayer(), TribeType.NONE, pUnit))) //to prevent blocking a site with a Scout
                             {
                                 continue; //probably break, right
                             }

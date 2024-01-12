@@ -50,17 +50,7 @@ namespace BetterAI
                         break;
                 }
 
-/*####### Better Old World AI - Base DLL #######
-  ### AI fix                           START ###
-  ##############################################*/
-                //fix discontent value
-                //no use calculating the effect of AI_YIELD_TURNS (100 turns) of discontent, when it only happens once
-
-                //iValue -= cityYieldValue(infos.Globals.DISCONTENT_YIELD, pCity) * pCity.getHurryDiscontent();
-                iValue -= discontentValue(pCity) * pCity.getHurryDiscontent() / (Constants.YIELDS_MULTIPLIER);
-/*####### Better Old World AI - Base DLL #######
-  ### AI fix                             END ###
-  ##############################################*/
+                iValue -= cityYieldValue(infos.Globals.DISCONTENT_YIELD, pCity) * pCity.getHurryDiscontent() / Constants.YIELDS_MULTIPLIER;
 
 /*####### Better Old World AI - Base DLL #######
   ### Alternative Hurry                START ###
@@ -75,80 +65,57 @@ namespace BetterAI
                 {
                     iValue -= (iStockpileYieldGained * yieldValue(eBuildYield)) / (Constants.YIELDS_MULTIPLIER);
                 }
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative Hurry                  END ###
+  ##############################################*/
 
                 return iValue;
-            }
-
-/*####### Better Old World AI - Base DLL #######
-  ### AI fix                           START ###
-  ##############################################*/
-            //calculateCityYieldValue: lines 4141-4240
-            public virtual long discontentValue(City pCity)
-            {
-                if (player == null) return 0;
-
-                YieldType eYield = infos.Globals.HAPPINESS_YIELD;
-
-                //copy-pasted from calculateCityValue START
-                //if (eYield == infos.Globals.DISCONTENT_YIELD)
-                {
-                    //int iModifier = 0;
-                    long iValue = yieldValue(eYield);
-                    int iNextThreshold = pCity.getYieldThreshold(eYield);
-
-                    if (pCity.hasFamily())
-                    {
-/*####### Better Old World AI - Base DLL #######
-  ### AI fix                           START ###
-  ##############################################*/
-                        //iValue += getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) * AI_YIELD_TURNS * 5 / (100 * iNextThreshold);
-                        iValue += getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) * 5 / 100; //without * 5 * AI_YIELD_TURNS, division by iNextThreshold moved down
-/*####### Better Old World AI - Base DLL #######
-  ### AI fix                             END ###
-  ##############################################*/
-                    }
-
-                    for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
-                    {
-                        if (eLoopYield != eYield && eLoopYield != infos.Globals.DISCONTENT_YIELD)
-                        {
-                            int iExtraYieldInNextLevel = 0;
-                            int iCityYield = cityYield(eLoopYield, pCity);
-                            //iExtraYieldInNextLevel += infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel() + 1, eLoopYield) * iCityYield / 100;
-                            //iExtraYieldInNextLevel -= infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel(), eLoopYield) * iCityYield / 100;
-                            //more interesting to look at one level below instead, just as the original method did
-
-                            iExtraYieldInNextLevel += infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel() - 1, eLoopYield) * iCityYield / 100;
-                            iExtraYieldInNextLevel -= infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel(), eLoopYield) * iCityYield / 100;
-
-                            if (iExtraYieldInNextLevel != 0)
-                            {
-/*####### Better Old World AI - Base DLL #######
-  ### AI fix                           START ###
-  ##############################################*/
-                                //iValue += iExtraYieldInNextLevel * cityYieldValue(eLoopYield, pCity) * AI_YIELD_TURNS / iNextThreshold;
-                                iValue += (long)iExtraYieldInNextLevel * cityYieldValue(eLoopYield, pCity); //without AI_YIELD_TURNS, division by iNextThreshold moved down
-/*####### Better Old World AI - Base DLL #######
-  ### AI fix                             END ###
-  ##############################################*/
-                            }
-                        }
-                    }
-
-                    //value derivate from base yield, unmodified
-                    //iValue = infos.utils().modify(iValue, pCity.calculateTotalYieldModifier(eYield));
-
-                    iValue /= iNextThreshold;
-                    //return infos.utils().modify(iValue, infos.yield(eYield).mbNegative ? -iModifier : iModifier);
-                    return iValue;
-                }
-                //copy-paste END
             }
 
             //lines 4141-4240
             public override long calculateCityYieldValue(YieldType eYield, City pCity)
             {
-                long iValue = base.calculateCityYieldValue(eYield, pCity);
+                long iValue = 0;
+
+                if (eYield == infos.Globals.HAPPINESS_YIELD)
+                {
+                    iValue += AI_MONEY_VALUE; //Happiness has inherent value, its value comes only from family opinion and city yield modifiers
+
+                    long iNextThreshold = pCity.getYieldThresholdWhole(infos.Globals.HAPPINESS_YIELD);
+
+                    //if (pCity.hasFamily())
+                    //{
+                    //    iValue -= getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION) / iNextThreshold;
+                    //}
+
+                    //for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
+                    //{
+                    //    if (eLoopYield != eYield)
+                    //    {
+                    //        long iExtraHappinessLevelModifier = infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel() + 1, eLoopYield);
+                    //        iExtraHappinessLevelModifier -= infos.Helpers.getHappinessLevelYieldModifier(pCity.getHappinessLevel(), eLoopYield);
+
+                    //        if (iExtraHappinessLevelModifier != 0)
+                    //        {
+                    //            iValue += iExtraHappinessLevelModifier * (long)cityYield(eLoopYield, pCity) * cityYieldValue(eLoopYield, pCity) * (long)AI_YIELD_TURNS / ((long)100 * (long)(Constants.YIELDS_MULTIPLIER) * iNextThreshold);
+                    //        }
+                    //    }
+                    //}
+
+                    if (pCity.getNetCityProductionYield(infos.Globals.HAPPINESS_YIELD, true) > 0)
+                    {
+                        iValue += getHappinessLevelValue(1, pCity) / iNextThreshold;
+                    }
+                    else
+                    {
+                        iValue -= getHappinessLevelValue(-1, pCity) / iNextThreshold;
+                    }
+
+                }
+                else
+                {
+                    iValue = base.calculateCityYieldValue(eYield, pCity);
+                }
 
 /*####### Better Old World AI - Base DLL #######
   ### AI fix                           START ###
@@ -337,6 +304,77 @@ namespace BetterAI
   ##############################################*/
                 return iValue;
             }
+
+            //lines 12981-13010
+            protected override long getHappinessLevelValue(int iChange, City pCity)
+            {
+                using var profileScope = new UnityProfileScope("PlayerAI.getHappinessLevelValue");
+
+                if (player == null)
+                {
+                    return 0;
+                }
+
+                int iCurrentHappiness = pCity.getHappinessLevel();
+                int iNewHappiness = iCurrentHappiness + iChange;
+/*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                START ###
+  ##############################################*/
+                if (((BetterAIInfoGlobals)infos.Globals).BAI_DISCONTENT_LEVEL_ZERO == 0) //no happiness level 0
+                {
+                    if (iCurrentHappiness < 0 != iNewHappiness < 0)
+                    {
+                        if (iChange > 0)
+                        {
+                            iNewHappiness++;
+                        }
+                        else
+                        {
+                            iNewHappiness--;
+                        }
+                    }
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                  END ###
+  ##############################################*/
+
+                long iValue = 0;
+                for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
+                {
+                    int iModifier = infos.Helpers.getHappinessLevelYieldModifier(iNewHappiness, eLoopYield) - infos.Helpers.getHappinessLevelYieldModifier(iCurrentHappiness, eLoopYield);
+                    if (iModifier != 0)
+                    {
+                        int iYield = cityModifiedYield(eLoopYield, pCity, iModifier) - cityModifiedYield(eLoopYield, pCity, 0);
+                        if (iYield != 0)
+                        {
+/*####### Better Old World AI - Base DLL #######
+  ### AI fix                           START ###
+  ##############################################*/
+                            //iValue += iYield * cityYieldValue(eLoopYield, pCity) / Constants.YIELDS_MULTIPLIER;
+                            iValue += iYield * cityYieldValue(eLoopYield, pCity) * AI_YIELD_TURNS / Constants.YIELDS_MULTIPLIER;
+/*####### Better Old World AI - Base DLL #######
+  ### AI fix                             END ###
+  ##############################################*/
+                        }
+                    }
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                START ###
+  ##############################################*/
+                //if (pCity.hasFamily())
+                if (pCity.hasFamily() && (iCurrentHappiness < 0 || iNewHappiness < 0))
+                {
+                    //iValue -= getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION * iChange, AI_YIELD_TURNS);
+                    iValue -= getFamilyOpinionValue(pCity.getFamily(), infos.Globals.DISLOYALTY_OPINION * (Math.Min(0, iNewHappiness) - Math.Min(0, iCurrentHappiness)), AI_YIELD_TURNS);
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Disconent Level 0                END ###
+  ##############################################*/
+
+                return iValue;
+            }
+
 
             //lines 11966-13545
             protected override long bonusValue(BonusType eBonus, ref BonusParameters zParameters)

@@ -1433,6 +1433,11 @@ namespace BetterAI
                             {
                                 if ((infos().effectCity(eLoopEffectCity).maaiImprovementYield.Count > 0) || (infos().effectCity(eLoopEffectCity).maaiImprovementClassYield.Count > 0))
                                 {
+                                    ImprovementType eSourceImprovement = infos().effectCity(eLoopEffectCity).meSourceImprovement;
+                                    if (eSourceImprovement != ImprovementType.NONE && !infos().modSettings().App.CheckContentOwnership(infos().improvement(eSourceImprovement).meGameContentRequired, infos(), null))
+                                    {
+                                        continue;
+                                    }
                                     CommaListVariableGenerator yieldsList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.NONE, TextManager);
 
                                     for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
@@ -1466,6 +1471,11 @@ namespace BetterAI
                                         (infos().effectCity(eLoopEffectCity).meSourceImprovement != ImprovementType.NONE) ||
                                         (infos().effectCity(eLoopEffectCity).meSourceImprovementClass != ImprovementClassType.NONE))
                                     {
+                                        ImprovementType eSourceImprovement = infos().effectCity(eLoopEffectCity).meSourceImprovement;
+                                        if (eSourceImprovement != ImprovementType.NONE && !infos().modSettings().App.CheckContentOwnership(infos().improvement(eSourceImprovement).meGameContentRequired, infos(), null))
+                                        {
+                                            continue;
+                                        }
                                         int iValue = infos().effectCity(eLoopEffectCity).maiImprovementModifier[eImprovement];
                                         if (eImprovementClass != ImprovementClassType.NONE)
                                         {
@@ -1675,15 +1685,6 @@ namespace BetterAI
                     ReligionType eReligionPrereq = eInfoImprovement.meReligionPrereq;
 
                     BetterAICity pCityTerritory = ((pTile != null) ? (BetterAICity)pTile.cityTerritory() : null);
-
-                    if (pTile != null)
-                    {
-                        if (pTile.isHarvested())
-                        {
-                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_WARN_HARVESTED")));
-                        }
-                    }
-
 
 
                     //if (eImprovementClass != ImprovementClassType.NONE)
