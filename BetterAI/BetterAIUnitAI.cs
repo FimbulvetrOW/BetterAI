@@ -79,7 +79,25 @@ namespace BetterAI
                 return iValue;
             }
 
+/*####### Better Old World AI - Base DLL #######
+  ### AI: City Yield Values            START ###
+  ##############################################*/
+            //lines 4011-4021
+            protected override long getHarvestValue(Tile pTile)
+            {
+                using var profileScope = new UnityProfileScope("UnitAI.getHarvestValue");
 
+                long iValue = 0;
+                for (YieldType eYield = 0; eYield < infos.yieldsNum(); ++eYield)
+                {
+                    //iValue += unit.player().getYieldHarvest(pTile, eYield, ClosestCity) * AI.cityYieldValue(eYield, ClosestCity);
+                    iValue += unit.player().getYieldHarvest(pTile, eYield, ClosestCity) * ((BetterAIPlayer.BetterAIPlayerAI)AI).cityYieldValueFlat(eYield, ClosestCity);
+                }
+                return iValue;
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### AI: City Yield Values              END ###
+  ##############################################*/
 
         }
     }

@@ -315,5 +315,54 @@ namespace BetterAI
   ### Additional fields for Courtiers    END ###
   ##############################################*/
 
+
+        public override bool addPing(PingData sPing)
+        {
+            removePing(sPing.miTileID);
+
+            if (sPing.meType == PingType.NONE)
+            {
+                return false;
+            }
+
+            if (game().isMultiplayer() && (infos().ping(sPing.meType).miMaxNumber != -1) && (getPingCount(sPing.meType) >= infos().ping(sPing.meType).miMaxNumber))
+            {
+                removePing(sPing.meType);
+            }
+
+            loadPing(sPing);
+            //AI.clearImprovementTotalValues();
+
+            return true;
+        }
+        protected override bool removePing(PingType ePing)
+        {
+            int iBestPingTurn = -1;
+            int iBestPingTile = -1;
+
+            foreach (PingData zPing in getPings().Values)
+            {
+                if (zPing.meType == ePing)
+                {
+                    if (iBestPingTile == -1 || zPing.miTurn < iBestPingTurn)
+                    {
+                        iBestPingTurn = zPing.miTurn;
+                        iBestPingTile = zPing.miTileID;
+                    }
+                }
+            }
+
+            if (iBestPingTile != -1)
+            {
+                if (removePing(iBestPingTile))
+                {
+                    //AI.clearImprovementTotalValues();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+
     }
 }

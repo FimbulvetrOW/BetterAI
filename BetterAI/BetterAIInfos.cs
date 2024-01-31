@@ -98,7 +98,29 @@ namespace BetterAI
                         }
                     }
                 }
+
+                if (unit(eLoopUnit).meEffectCityPrereq != EffectCityType.NONE)
+                {
+                    ResourceType ePrereqResource = effectCity(unit(eLoopUnit).meEffectCityPrereq).meSourceResource;
+                    if (ePrereqResource != ResourceType.NONE)
+                    {
+                        if (((BetterAIInfoGlobals)Globals).dUnitsWithResourceRequirement.ContainsKey(ePrereqResource))
+                        {
+                            ((BetterAIInfoGlobals)Globals).dUnitsWithResourceRequirement[ePrereqResource].Add(eLoopUnit);
+                        }
+                        else
+                        {
+                            ((BetterAIInfoGlobals)Globals).dUnitsWithResourceRequirement.Add(ePrereqResource, new List<UnitType>() { eLoopUnit });
+                        }
+                    }
+                }
+
+                //if (unit(eLoopUnit).mbBuild)
+                //{
+                //    ((BetterAIInfoGlobals)Globals).WorkerUnits.Add(eLoopUnit);
+                //}
             }
+
 
         }
 
@@ -403,7 +425,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-        public bool mbAmphibious = false;
+        public bool mbAmphibiousEmbark = false;
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
   ##############################################*/
@@ -434,7 +456,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-            infos.readBool(node, "bAmphibious", ref mbAmphibious);
+            infos.readBool(node, "bAmphibiousEmbark", ref mbAmphibiousEmbark);
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
   ##############################################*/
@@ -541,6 +563,9 @@ namespace BetterAI
         public int BAI_MIN_UPGRADE_RATINGS_OPTIONS = 0;
         public int BAI_USE_TRIANGLE_IN_COMPETITIVE = 0;
         public int BAI_COMPETITIVE_COURT_YIELD_MODIFIER = 0;
+
+        public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
+        //public List<UnitType> WorkerUnits = new List<UnitType>();
         //override for more variables
         public override void ReadData(Infos infos)
         {

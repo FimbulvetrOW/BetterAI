@@ -28,28 +28,28 @@ namespace BetterAI
   ##############################################*/
         //this whole DirtyType part is still opague to me, so I'm hoping this works without
 
-        public bool mbAmphibious = false;
-        public int miAmphibiousCount = 0;
+        public bool mbAmphibiousEmbark = false;
+        public int miAmphibiousEmbarkCount = 0;
 
         //lines 3989-4005
         protected override void changeEffectUnitDictionary(EffectUnitType eKey, int iChange)
         {
             base.changeEffectUnitDictionary(eKey, iChange);
-            if (((BetterAIInfoEffectUnit)infos().effectUnit(eKey)).mbAmphibious)
+            if (((BetterAIInfoEffectUnit)infos().effectUnit(eKey)).mbAmphibiousEmbark)
             {
-                miAmphibiousCount += iChange;
+                miAmphibiousEmbarkCount += iChange;
                 if (iChange > 0)
                 {
-                    mbAmphibious = true;
+                    mbAmphibiousEmbark = true;
                 }
                 else
                 {
-                    if (miAmphibiousCount <= 0)
+                    if (miAmphibiousEmbarkCount <= 0)
                     {
-                        mbAmphibious = false;
+                        mbAmphibiousEmbark = false;
                         //miAmphibiousCount = 0;
                     }
-                    else mbAmphibious = true;
+                    else mbAmphibiousEmbark = true;
                 }
             }
         }
@@ -100,7 +100,7 @@ namespace BetterAI
                     if (!pFromTile.isWater())
                     {
                         iCost += ((BetterAIInfoGlobals)infos().Globals).BAI_EMBARKING_COST_EXTRA;
-                        if (mbAmphibious)
+                        if (mbAmphibiousEmbark)
                         {
                             iCost -= ((BetterAIInfoGlobals)infos().Globals).BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT;
                         }
@@ -161,7 +161,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-                    if (mbAmphibious)
+                    if (mbAmphibiousEmbark)
                     {
                         iCost -= ((BetterAIInfoGlobals)infos().Globals).BAI_AMPHIBIOUS_RIVER_CROSSING_DISCOUNT;
                     }

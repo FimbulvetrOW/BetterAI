@@ -83,6 +83,7 @@
     <Compile Include="BetterAIInfos.cs" />
     <Compile Include="BetterAIPlayer.cs" />
     <Compile Include="BetterAIPlayerAI.cs" />
+    <Compile Include="BetterAIPlayerCache.cs" />
     <Compile Include="BetterAITile.cs" />
     <Compile Include="BetterAIUnit.cs" />
     <Compile Include="BetterAIUnitAI.cs" />

@@ -109,11 +109,11 @@ namespace BetterAI
                 return false;
             }
 
-            //moved to canCityTileHaveImprovement
-            //if (!isImprovementValid(eImprovement, false))
-            //{
-            //    return false;
-            //}
+            //we need this part after all
+            if (getCityTerritory() == -1 && !isImprovementValid(eImprovement, null, bTestEnabled))
+            {
+                return false;
+            }
 
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             if (isUrban() && !(eInfoImprovement.mbUrban))
@@ -265,6 +265,71 @@ namespace BetterAI
 
             return true;
         }
+
+        //fix from Test version 1.0.70456
+        public override bool canUnitOccupy(Unit pUnit, TeamType eVisibilityTeam, bool bTestTheirUnits, bool bTestOurUnits, bool bFinalMoveTile)
+        {
+            bool bTestUnits = bTestTheirUnits || bTestOurUnits;
+
+            if (!canUnitTypeOccupy(pUnit.getType(), pUnit.getPlayer(), pUnit.getTribe(), eVisibilityTeam, bTestHostileBlocking: bTestTheirUnits, bTestTerritory: true, bFinalTile: bFinalMoveTile))
+            {
+                return false;
+            }
+
+            if (bTestUnits && isVisible(eVisibilityTeam))
+            {
+                if (hasUnit())
+                {
+                    using (var unitListScoped = CollectionCache.GetListScoped<int>())
+                    {
+                        getAliveUnits(unitListScoped.Value);
+
+                        foreach (int iUnitID in unitListScoped.Value)
+                        {
+                            Unit pLoopUnit = game().unit(iUnitID);
+
+                            if ((pLoopUnit != pUnit) && !pLoopUnit.isHiddenFrom(eVisibilityTeam) && canUnitDefend(pUnit.getType()) == canUnitDefend(pLoopUnit.getType()))
+                            {
+                                if (bTestTheirUnits && game().isHostileUnitUnit(pUnit, pLoopUnit))
+                                {
+                                    return false;
+                                }
+
+                                if (bFinalMoveTile)
+                                {
+                                    bool bTestUnit = pUnit.isAlliedWith(pLoopUnit) ? bTestOurUnits : bTestTheirUnits;
+
+                                    if (bTestUnit && !canBothUnitsOccupy(pUnit, pLoopUnit))
+                                    {
+                                        if (pUnit.isAlliedWith(pLoopUnit))
+                                        {
+                                            if (!pUnit.canSwapUnits(this, pUnit.player(), false))
+                                            {
+                                                return false;
+                                            }
+                                        }
+                                        else if (game().isPeace(pUnit.getTeam(), pUnit.getTribe(), pLoopUnit.getTeam(), pLoopUnit.getTribe()))
+                                        {
+                                            if (!pUnit.isAlliedWith(this)) // can only bump at-peace units from your own territory
+                                            {
+                                                return false;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            return false; // can't enter - occupied tile
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
 
     }
 }
