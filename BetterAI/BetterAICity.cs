@@ -621,6 +621,26 @@ namespace BetterAI
         }
 
 
+        public override int getNewHappinessLevel(int iChange)
+        {
+            int iNewLevel = getHappinessLevel() + iChange;
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_DISCONTENT_LEVEL_ZERO == 0)
+            {
+                // no zero level
+                if (getHappinessLevel() > 0 && iNewLevel <= 0)
+                {
+                    --iNewLevel;
+                }
+                else if (getHappinessLevel() < 0 && iNewLevel >= 0)
+                {
+                    ++iNewLevel;
+                }
+            }
+
+            return iNewLevel;
+        }
+
+
         //lines 5531-5561
         public override void changeHappinessLevel(int iChange)
         {
@@ -790,7 +810,7 @@ namespace BetterAI
         //lines 6385-6427
         protected override CityProductionYield getNetCityProductionYieldHelper(YieldType eYield)
         {
-            using var profileScoped = new UnityProfileScope("City.getNetCityProductionYield");
+            //using var profileScoped = new UnityProfileScope("City.getNetCityProductionYield");
 
             CityProductionYield zYield = new CityProductionYield();
 
@@ -978,7 +998,7 @@ namespace BetterAI
         //lines 7447-7544
         public override bool doDistantRaid(bool bTest = false)
         {
-            using var profileScope = new UnityProfileScope("City.doDistantRaid");
+            //using var profileScope = new UnityProfileScope("City.doDistantRaid");
 
             if (!canGetRaided())
             {

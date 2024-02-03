@@ -88,7 +88,7 @@ namespace BetterAI
         public override int getMovementCost(Tile pFromTile, Tile pToTile, int iCostSoFar)
         {
             //using var profileScope = new UnityProfileScope("Unit.getMovementCost");
-            using (new UnityProfileScope("Unit.getMovementCost"))
+            //using (new UnityProfileScope("Unit.getMovementCost"))
             {
                 int iCost = 0;
 

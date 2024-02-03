@@ -127,7 +127,7 @@ namespace BetterAI
 
         protected override void ReadInfoListData(List<XmlDataListItemBase> items)
         {
-            using var profileScope = new UnityProfileScope("Infos.ReadInfoListData");
+            //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData");
 
             foreach (XmlDataListItemBase item in items)
             {
@@ -137,11 +137,14 @@ namespace BetterAI
                 mFieldTypeDictionary[mCurrentReadType] = new Dictionary<string, FieldTypeData>();
                 AddFieldType("zType", typeof(string), false);
 
+                List<XmlDocument> validationDocs = new List<XmlDocument>();
+
                 //base xml
                 foreach (XmlDocument xmlDoc in getModdableBaseXML(item.GetFileName()))
                 {
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
                     item.ReadData(nodes, this, false);
+                    validationDocs.Add(xmlDoc);
                 }
 
                 //added xml
@@ -149,6 +152,7 @@ namespace BetterAI
                 {
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
                     item.ReadData(nodes, this, true);
+                    validationDocs.Add(xmlDoc);
                 }
 
                 foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD_ALWAYS))
@@ -193,13 +197,14 @@ namespace BetterAI
                     mbAppendLists = appends.Contains(xmlDoc);
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
                     item.ReadData(nodes, this, true);
+                    validationDocs.Add(xmlDoc);
                 }
 /*####### Better Old World AI - Base DLL #######
   ### modmod fix                         END ###
   ##############################################*/
                 mbAppendLists = false;
 
-                EndReadValidation(item.GetFileName());
+                EndReadValidation(validationDocs, item.GetFileName());
                 mCurrentReadType = null; //clear active readtype
             }
         }

@@ -12,7 +12,6 @@ using Mohawk.UIInterfaces;
 using UnityEngine;
 using UnityEngine.UI;
 using System;
-using System.IO.Ports;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -30,7 +29,7 @@ namespace BetterAI
         //lines 9192-9436
         protected override void updateCitySelection(City pSelectedCity)
         {
-            using (new UnityProfileScope("ClientUI.updateCitySelection"))
+            //using (new UnityProfileScope("ClientUI.updateCitySelection"))
             {
                 if (pSelectedCity != null)
                 {
@@ -581,7 +580,7 @@ namespace BetterAI
             if (currentCityListSort == CityListSortType.CULTURE_LEVEL)
             {
                 //copy-paste start
-                using (new UnityProfileScope("ClientUI.updateCityListPanel"))
+                //using (new UnityProfileScope("ClientUI.updateCityListPanel"))
                 {
                     Player pActivePlayer = ClientMgr.activePlayer();
 
@@ -807,7 +806,7 @@ namespace BetterAI
 
                         cardTag.SetKey("Image", SpriteRepo.GetSpriteName(eLoopTech));
 
-                        if (Infos.tech(eLoopTech).meBonusDiscover != BonusType.NONE)
+                        if (pActivePlayer.getTechDiscoveryBonus(eLoopTech) != BonusType.NONE)
                         {
                             cardTag.SetKey("State", "Bonus");
                         }
@@ -837,7 +836,7 @@ namespace BetterAI
                     {
                         foreach (InfoTech tech in Infos.techs())
                         {
-                            if (ClientMgr.activePlayer().isTechTarget(tech.meType) && TechTree.Node(eLoopTech).IsAncestorOf(tech.meType))
+                            if (ClientMgr.activePlayer().isTechTarget(tech.meType) && TechTree.Node(eLoopTech, Game).IsAncestorOf(tech.meType))
                             {
                                 eTargetState = TechNodeTargetState.TARGETPREREQ;
                                 break;
@@ -861,7 +860,7 @@ namespace BetterAI
                             InfoTech tech = Infos.tech(eTechDiscovered);
                             mChooseResearchPanel.SetKey("Title", TEXT("TEXT_UI_TECH_PANEL_TECH_DISCOVERED", HelpText.buildTechLinkVariable(pActivePlayer.getPopupTechDiscovered())));
                             mChooseResearchPanel.SetKey("Title-Icon", tech.mzIconName);
-                            mChooseResearchPanel.SetKey("Title-Icon-State", tech.meBonusDiscover == BonusType.NONE ? "Normal" : "Bonus");
+                            mChooseResearchPanel.SetKey("Title-Icon-State", pActivePlayer.getTechDiscoveryBonus(eTechDiscovered) == BonusType.NONE ? "Normal" : "Bonus");
                             mChooseResearchPanel.SetBool("Title-Icon-IsActive", true);
                             using (var discoveredDataScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_TECH), eTechDiscovered.ToStringCached()))
                                 mChooseResearchPanel.SetKey("Title-Icon-Data", discoveredDataScope.DataList);
@@ -885,7 +884,7 @@ namespace BetterAI
                 {
                     foreach (TechType eLoopTech in maeAvailableTechs)
                     {
-                        BonusType eBonus = Infos.tech(eLoopTech).meBonusDiscover;
+                        BonusType eBonus = pActivePlayer.getTechDiscoveryBonus(eLoopTech);
                         if (eBonus != BonusType.NONE)
                         {
                             using (var territoryTilesScoped = CollectionCache.GetDictionaryScoped<int, CityTerritory>())

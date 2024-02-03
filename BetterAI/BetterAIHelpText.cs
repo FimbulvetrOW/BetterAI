@@ -29,7 +29,7 @@ namespace BetterAI
         //lines 2998-3012
         public override TextVariable buildHappinessLevelLinkVariable(City pCity, bool bShort = false)
         {
-            using (new UnityProfileScope("HelpText.buildHappinessLevelLinkVariable"))
+            //using (new UnityProfileScope("HelpText.buildHappinessLevelLinkVariable"))
             {
 /*####### Better Old World AI - Base DLL #######
   ### Disconent Level 0                START ###
@@ -117,31 +117,10 @@ namespace BetterAI
 
         }
 
-        public override TextBuilder buildYieldDebugText(TextBuilder builder, YieldType eYield, ClientManager pManager)
-        {
-            using (new UnityProfileScope("buildYieldDebugText"))
-            {
-                City pCity = pManager.Selection.getSelectedCity();
-                builder.Add(TEXT("TEXT_HELPTEXT_AI_VALUE") + ": ");
-                if (pCity == null)
-                {
-                    builder.Add(pManager.activePlayer().AI.yieldValue(eYield), true);
-                }
-                else
-                {
-                    //builder.Add(pManager.activePlayer().AI.calculateCityYieldValue(eYield, pCity), true);
-                    builder.Add(((BetterAIPlayer.BetterAIPlayerAI)(pManager.activePlayer().AI)).calculateCityYieldValue(eYield, pCity, out _), true);
-                }
-                builder.Add("*", true);
-                builder.Add(QUICKTEXTVAR(TEXT("TEXT_HELPTEXT_AI_STOCKPILE") + ": {0}*", pManager.activePlayer().AI.getModifiedYieldStockpileWhole(eYield)));
-                return builder;
-            }
-        }
-
         //lines 18273-19072
         public override void buildTileTooltip(Tile pTile, ClientManager pManager, UITileTooltipData outTileData, TextBuilder remainingText)
         {
-            using (new UnityProfileScope("HelpText.buildTileTooltip"))
+            //using (new UnityProfileScope("HelpText.buildTileTooltip"))
             {
                 Player pActivePlayer = pManager.activePlayer();
                 Game pGame = pManager.GameClient;
@@ -197,7 +176,7 @@ namespace BetterAI
                     outTileData.AddKeyValueTileData(TextManager, buildRoadLinkVariable(), TEXTVAR(""));
                 }
 
-                using (new UnityProfileScope("HelpText.buildTileTooltip.Water"))
+                //using (new UnityProfileScope("HelpText.buildTileTooltip.Water"))
                 {
                     if (pTile.isFreshWater())
                     {
@@ -209,7 +188,7 @@ namespace BetterAI
                     }
                 }
 
-                using (new UnityProfileScope("HelpText.buildTileTooltip.River"))
+                //using (new UnityProfileScope("HelpText.buildTileTooltip.River"))
                 {
                     if (pTile.isRiver())
                     {
@@ -230,7 +209,7 @@ namespace BetterAI
                                 for (int i = 0; i < pGame.getNumOccurrences(); ++i)
                                 {
                                     OccurrenceData pLoopData = pGame.getOccurrenceDataAt(i);
-                                    if (pLoopData.isActive())
+                                    if (pLoopData.isActive(pGame))
                                     {
                                         InfoOccurrence occurrence = infos().occurrence(pLoopData.meType);
                                         if (occurrence.miRiverMovementCostBonus != 0 && pTile.isRiver())
@@ -250,7 +229,7 @@ namespace BetterAI
                     }
                 }
 
-                using (new UnityProfileScope("HelpText.buildTileTooltip.Coast"))
+                //using (new UnityProfileScope("HelpText.buildTileTooltip.Coast"))
                 {
                     if (pTile.isSaltCoastLand() || pTile.isSaltCoastWater())
                     {
@@ -261,7 +240,7 @@ namespace BetterAI
                                 for (int i = 0; i < pGame.getNumOccurrences(); ++i)
                                 {
                                     OccurrenceData pLoopData = pGame.getOccurrenceDataAt(i);
-                                    if (pLoopData.isActive())
+                                    if (pLoopData.isActive(pGame))
                                     {
                                         InfoOccurrence occurrence = infos().occurrence(pLoopData.meType);
                                         if (occurrence.miBaseYieldCoastModifier != 0)
@@ -283,7 +262,7 @@ namespace BetterAI
                     }
                 }
 
-                using (new UnityProfileScope("HelpText.buildTileTooltip.Terrain"))
+                //using (new UnityProfileScope("HelpText.buildTileTooltip.Terrain"))
                 {
                     if (pTile.getTerrain() != TerrainType.NONE)
                     {
@@ -299,7 +278,7 @@ namespace BetterAI
                             for (int i = 0; i < pGame.getNumOccurrences(); ++i)
                             {
                                 OccurrenceData pLoopData = pGame.getOccurrenceDataAt(i);
-                                if (pLoopData.isActive())
+                                if (pLoopData.isActive(pGame))
                                 {
                                     InfoOccurrence occurrence = infos().occurrence(pLoopData.meType);
                                     using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
@@ -608,7 +587,7 @@ namespace BetterAI
                     outTileData.AddKeyValueTileData(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_TILE_TOOLTIP_OWNER"), buildCityLinkVariable(pCityTerritory, pActivePlayer));
                 }
 
-                using (new UnityProfileScope("HelpText.buildTileTooltip.Pings"))
+                //using (new UnityProfileScope("HelpText.buildTileTooltip.Pings"))
                 {
                     buildTileTooltipPingText(outTileData.PingTextColorList, pGame, pActivePlayer, pTile, pManager);
                 }
@@ -624,7 +603,7 @@ namespace BetterAI
                     }
                 }
 
-                using (new UnityProfileScope("HelpText.buildTileTooltip.Improvements"))
+                //using (new UnityProfileScope("HelpText.buildTileTooltip.Improvements"))
                 {
                     if (eImprovement != ImprovementType.NONE)
                     {
@@ -1026,7 +1005,7 @@ namespace BetterAI
         //lines 19118-19200
         public override TextBuilder buildTileDebugText(TextBuilder builder, Tile pTile, ClientManager pManager)
         {
-            using (new UnityProfileScope("buildTileDebugText"))
+            //using (new UnityProfileScope("buildTileDebugText"))
             {
                 TeamType eActiveTeam = pManager.getActiveTeam();
 
@@ -1187,7 +1166,7 @@ namespace BetterAI
                     for (int i = 0; i < pGame.getNumOccurrences(); ++i)
                     {
                         OccurrenceData pLoopData = pGame.getOccurrenceDataAt(i);
-                        if (pLoopData.isActive())
+                        if (pLoopData.isActive(pGame))
                         {
                             InfoOccurrence occurrence = infos().occurrence(pLoopData.meType);
                             int iValue = occurrence.miBaseYieldCoastModifier;
@@ -1632,7 +1611,7 @@ namespace BetterAI
         //lines 20296-21274
         public override TextBuilder buildImprovementHelp(TextBuilder builder, ImprovementType eImprovement, Tile pTile, ClientManager pManager, bool bName = true, bool bCosts = true, bool bDetails = true, bool bEncyclopedia = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.NONE)
         {
-            using (new UnityProfileScope("HelpText.buildImprovementHelp"))
+            //using (new UnityProfileScope("HelpText.buildImprovementHelp"))
             using (var effectListScoped = CollectionCache.GetListScoped<EffectCityType>())
             {
                 Game pGame = pManager.GameClient;
@@ -1902,7 +1881,7 @@ namespace BetterAI
 
                                 if (eBonusCities != BonusType.NONE)
                                 {
-                                    buildBonusHelp(builder, eBonusCities, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_BONUS_ALL_CITIES"));
+                                    buildBonusHelp(builder, eBonusCities, pGame, pPlayer, pActivePlayer, bShowCity: false, startLineVariable: TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_BONUS_ALL_CITIES"));
                                 }
                             }
 
@@ -2681,7 +2660,7 @@ namespace BetterAI
             BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             {
                 //here goes the copy-pasting
-                using (new UnityProfileScope("HelpText.buildImprovementRequiresHelp"))
+                //using (new UnityProfileScope("HelpText.buildImprovementRequiresHelp"))
                 {
                     ImprovementClassType eImprovementClass = eInfoImprovement.meClass;
 
@@ -3281,7 +3260,7 @@ namespace BetterAI
         //lines 21717-22072
         public override TextBuilder buildUnitTypeHelp(TextBuilder builder, UnitType eUnit, City pCity, Player pPlayer, TribeType eTribe, Game pGame, Player pActivePlayer, bool bName = true, bool bCosts = true, bool bStats = true, bool bDetails = true)
         {
-            using (new UnityProfileScope("HelpText.buildUnitTypeHelp"))
+            //using (new UnityProfileScope("HelpText.buildUnitTypeHelp"))
             {
                 if (bName)
                 {
@@ -3754,7 +3733,7 @@ namespace BetterAI
         //lines 22242-22506
         public override void buildUnitTooltip(Unit pUnit, ClientManager pManager, UIUnitTooltipData outUnitData)
         {
-            using (new UnityProfileScope("HelpText.buildUnitTooltip"))
+            //using (new UnityProfileScope("HelpText.buildUnitTooltip"))
             {
                 Player pActivePlayer = pManager.activePlayer();
                 Game pGame = pManager.GameClient;

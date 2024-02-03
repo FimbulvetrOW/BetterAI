@@ -86,7 +86,7 @@ namespace BetterAI
         //removed in 1.0.66355
         protected virtual int countFoundUnitsAndBuilds()
         {
-            using (new UnityProfileScope("Player.countFoundUnitsAndBuilds"))
+            //using (new UnityProfileScope("Player.countFoundUnitsAndBuilds"))
             {
                 int iCount = 0;
 
