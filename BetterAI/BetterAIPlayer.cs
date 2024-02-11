@@ -72,6 +72,69 @@ namespace BetterAI
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
+  ### Fix: Handling of Regents for           ###
+  ### legitimacy from former leaders   START ###
+  ##############################################*/
+        //lines 10388-10391
+        public virtual int findLeaderIndex(Character pCharacter, bool bIncludeRegents)
+        {
+            int iLeaderIndex = getLeaders().IndexOf(pCharacter.getID());
+            if (!bIncludeRegents || iLeaderIndex == -1)
+            {
+                return iLeaderIndex;
+            }
+
+            int iNumPriorRegents = 0;
+            if (!bIncludeRegents)
+            {
+                for (int i = 0; i < iLeaderIndex - 1; i++) //stop before iLeaderIndex because game().character(getLeaders()[iLeaderIndex] == pCharacter
+                                                        //and pCharacter is handled separately below
+                {
+                    if (game().character(getLeaders()[i]).isOrWasRegent())
+                    {
+                        ++iNumPriorRegents;
+                    }
+                }
+                if ((!pCharacter.isLeader() && pCharacter.isOrWasRegent()))
+                {
+                    iNumPriorRegents += ((BetterAIInfoGlobals)infos().Globals).BAI_PROPER_REGENT_LEGITIMACY_DECAY;
+                    // BAI_PROPER_REGENT_LEGITIMACY_DECAY == 1: when a Chosen Heir (or anyone else) takes over after a Regent,
+                    // legitimacy from the now-former Regent is 1/2, like the legitimacy from the leader before the Regent,
+                    // and will continue to have the same decay factor as that leader from before.
+                    // BAI_PROPER_REGENT_LEGITIMACY_DECAY == 0 (unmodded): when a Chosen Heir (or anyone else) takes over after a Regent,
+                    // legitimacy from the now-former Regent is full1/1, like the legitimacy from the current leader,
+                    // and will continue to have the same decay factor as that current leader.
+                }
+            }
+
+            return iLeaderIndex - iNumPriorRegents;
+        }
+
+        public override int getNumLeaders(bool bIncludeRegents = true)
+        {
+            if (bIncludeRegents)
+            {
+                return mpCurrentData.mliLeaders.Count;
+            }
+
+            int iNumLeaders = 1; //always count current leader
+            for (int i = 0; i < getLeaders().Count - 1 ; i++)  //don't check current leader
+            {
+                if (!game().character(getLeaders()[i]).isOrWasRegent())
+                {
+                    ++iNumLeaders;
+                }
+            }
+
+            return iNumLeaders;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Fix: Handling of Regents for           ###
+  ### legitimacy from former leaders   START ###
+  ##############################################*/
+
+
+/*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###
   ##############################################*/
         //lines 16282-16285

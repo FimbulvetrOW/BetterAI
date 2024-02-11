@@ -30,14 +30,14 @@ namespace BetterAI
             {
                 if (iIndex != -1)
                 {
-                    if (((BetterAIInfoGlobals)infos().Globals).BAI_ASSUMED_AVERAGE_REIGN_TURNS == 0 && ((BetterAIInfoGlobals)infos().Globals).BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER == 0)
-                    {
-                        return (cognomen().miLegitimacy / Math.Max(1, iNumLeaders - iIndex + ((!isLeader() && isOrWasRegent()) ? ((BetterAIInfoGlobals)infos().Globals).BAI_PROPER_REGENT_LEGITIMACY_DECAY : 0) ));
-                    }
-                    else
 /*####### Better Old World AI - Base DLL #######
   ### Time-based cognomen legitimacy decaySTART#
   ##############################################*/
+                    if (((BetterAIInfoGlobals)infos().Globals).BAI_ASSUMED_AVERAGE_REIGN_TURNS == 0 && ((BetterAIInfoGlobals)infos().Globals).BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER == 0)
+                    {
+                        return (cognomen().miLegitimacy / Math.Max(1, iNumLeaders - iIndex)); //normal legitimacy based on number of leaders since then
+                    }
+                    else
                     {
                         if (isLeader())
                         {
@@ -47,7 +47,7 @@ namespace BetterAI
                         {
                             int iAssumedAverageReignTurns = ((BetterAIInfoGlobals)infos().Globals).BAI_ASSUMED_AVERAGE_REIGN_TURNS;
                             int iExtraDecayTurnsPerLeader = ((BetterAIInfoGlobals)infos().Globals).BAI_EXTRA_LEGITIMACY_DECAY_TURNS_PER_LEADER;
-                            int iEndOfReignTurn = ((isAbdicated()) ? getAbdicateTurn() : getDeathTurn());
+                            int iEndOfReignTurn = (isAbdicated() ? getAbdicateTurn() : (isDead() ? getDeathTurn() : 0));
                             int iTurnsSinceEnd = game().getTurn() - iEndOfReignTurn;
                             int iExtraDecay = iExtraDecayTurnsPerLeader * Math.Max(1, iNumLeaders - iIndex + ((!isLeader() && isOrWasRegent()) ? ((BetterAIInfoGlobals)infos().Globals).BAI_PROPER_REGENT_LEGITIMACY_DECAY : 0));
                             int iTotalDecayTurns = Math.Max(iAssumedAverageReignTurns, iTurnsSinceEnd + iExtraDecay);
@@ -62,13 +62,27 @@ namespace BetterAI
             return 0;
         }
 
+/*####### Better Old World AI - Base DLL #######
+  ### Fix: Handling of Regents for           ###
+  ### legitimacy from former leaders   START ###
+  ##############################################*/
+public override int getLegitimacy()
+{
+    //return getLegitimacy(player().findLeaderIndex(this), player().getNumLeaders(false));
+    return getLegitimacy(((BetterAIPlayer)player()).findLeaderIndex(this, bIncludeRegents: false), player().getNumLeaders(bIncludeRegents: false));
+}
+/*####### Better Old World AI - Base DLL #######
+  ### Fix: Handling of Regents for           ###
+  ### legitimacy from former leaders     END ###
+  ##############################################*/
+
         //lines 7677-7701
         public override void generateRatingsCourtier(CourtierType eCourtier)
         {
             BetterAIInfoCourtier eInfoCourtier = ((BetterAIInfoCourtier)infos().courtier(eCourtier));
-            /*####### Better Old World AI - Base DLL #######
-              ### Additional fields for Courtiers  START ###
-              ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### Additional fields for Courtiers  START ###
+  ##############################################*/
             //forced Traits
             if (eInfoCourtier.maeAdjectives.Count > 0)
             {
