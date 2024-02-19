@@ -1831,13 +1831,21 @@ namespace BetterAI
                     long iCurrentlyAvailableOptionBuildValue;
                     using var buildListScoped = CollectionCache.GetListScoped<BuildValue>();
                     List<BuildValue> azBuildValues = buildListScoped.Value;
-                    int iNumBuildsDivisor = (2 + ((pCity.isHurryPopulation() || pCity.isHurryPopulation(infos.Globals.UNIT_BUILD)) ? 3 : 0) + ((pCity.isHurryPopulation() || pCity.isHurryPopulation(infos.Globals.SPECIALIST_BUILD)) ? 1 : 0) + ((pCity.isHurryPopulation() || pCity.isHurryPopulation(infos.Globals.PROJECT_BUILD)) ? 1 : 0)); //arbitrary
-                    int iNumBuilds = 1 + ((pCity.getCitizens() * 2 - 1) / iNumBuildsDivisor); //arbitrary
-                    getBestBuild(pCity, infos.Globals.SPECIALIST_BUILD, bBuyGoods: true, bTestEnabled: false, bTestGoods: false, iNumBuilds: iNumBuilds, azBuildValues, bIgnoreDanger: true);
-                    if (azBuildValues.Count == 0 && pCity.getCitizens() == 0)
+                    int iNumBuildsDivisor;
+                    if (pCity.isHurryPopulation() || pCity.isHurryPopulation(infos.Globals.UNIT_BUILD) && pCity.isHurryPopulation(infos.Globals.SPECIALIST_BUILD) && pCity.isHurryPopulation(infos.Globals.PROJECT_BUILD))
                     {
-                        getBestBuild(pCity, BuildType.NONE, bBuyGoods: true, bTestEnabled: true, bTestGoods: true, iNumBuilds: 1, azBuildValues, bIgnoreDanger: true);
+                        iNumBuildsDivisor = 6;  //arbitrary
                     }
+                    else
+                    {
+                        iNumBuildsDivisor = (2 + (pCity.isHurryPopulation(infos.Globals.UNIT_BUILD) ? 3 : 0) + (pCity.isHurryPopulation(infos.Globals.SPECIALIST_BUILD) ? 1 : 0) + (pCity.isHurryPopulation(infos.Globals.PROJECT_BUILD) ? 1 : 0));  //arbitrary
+                    }
+                    int iNumBuilds = 1 + ((pCity.getCitizens() * 2 - 1) / iNumBuildsDivisor);  //arbitrary
+                    getBestBuild(pCity, infos.Globals.SPECIALIST_BUILD, bBuyGoods: true, bTestEnabled: false, bTestGoods: false, iNumBuilds: iNumBuilds, azBuildValues, bIgnoreDanger: true);
+                    //if (azBuildValues.Count == 0 && pCity.getCitizens() == 0)
+                    //{
+                    //    getBestBuild(pCity, BuildType.NONE, bBuyGoods: true, bTestEnabled: true, bTestGoods: true, iNumBuilds: 1, azBuildValues, bIgnoreDanger: true);
+                    //}
 
                     long iSumBuildValue = 0;
                     int iModifier = 0;
@@ -1857,7 +1865,11 @@ namespace BetterAI
                         }
 
                     }
-                    iSubValue += Math.Max(0, iSpecialistBuildValue - (iSumBuildValue / Math.Max(1, azBuildValues.Count))) / 2; //arbitrary
+                    else
+                    {
+                        iSumBuildValue = ( iSpecialistBuildValue * (19 - Math.Min(9, (iNumBuilds - 1) * 2)) ) / 20;//the higher the number of citizens, the lower iSumBuildValue gets, which increases value (max 1/2)  //arbitrary
+                    }
+                    iSubValue += Math.Max(0, iSpecialistBuildValue - (iSumBuildValue / Math.Max(1, azBuildValues.Count))) / 2;  //arbitrary
 
                     iValue += infos.utils().modify(iSubValue, iModifier);
                 }
@@ -2026,11 +2038,11 @@ namespace BetterAI
 
                     using (new GameCoreObjectTracker(null))
                     {
-                        if (Multithreaded)
-                        {
-                            System.Threading.Tasks.Parallel.ForEach(apTiles, game.ParallelOptions, loopDelegate);
-                        }
-                        else
+                        //if (Multithreaded)
+                        //{
+                        //    System.Threading.Tasks.Parallel.ForEach(apTiles, game.ParallelOptions, loopDelegate);
+                        //}
+                        //else
                         {
                             foreach (var p in apTiles)
                             {
@@ -2368,7 +2380,6 @@ namespace BetterAI
                         for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
                         {
                             //int iOutput = (pTile.yieldOutput(pTile.getImprovement(), eSpecialist, eLoopYield, null, false) - pTile.yieldOutput(pTile.getImprovement(), SpecialistType.NONE, eLoopYield, null, false));
-                            //does not account for extra base yields from dEffectCityExtraCounts
                             //int iOutput = (pTile.yieldOutput(eImprovement, eSpecialist, eLoopYield, null, false) - pTile.yieldOutput(eImprovement, SpecialistType.NONE, eLoopYield, null, false));
                             int iOutput = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, eSpecialist, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), !bRemove ? dEffectCityExtraCounts : null);
                             iOutput -= ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), bRemove ? dEffectCityExtraCounts : dEffectCityImprovementOnlyExtraCounts); //output without the specialist and without the city effect from that specialist
@@ -3088,10 +3099,10 @@ namespace BetterAI
   ### ImprovementValue                 START ###
   ##############################################*/
                             //already part of ImprovementTotalValue
-                            if (pTile.hasSpecialist() && pCity != null)
-                            {
-                                iValue -= Math.Max(0, specialistValue(pTile.getSpecialist(), pCity, pTile, false, true));
-                            }
+                            //if (pTile.hasSpecialist() && pCity != null)
+                            //{
+                            //    iValue -= Math.Max(0, specialistValue(pTile.getSpecialist(), pCity, pTile, false, true));
+                            //}
 /*####### Better Old World AI - Base DLL #######
   ### ImprovementValue                   END ###
   ##############################################*/
