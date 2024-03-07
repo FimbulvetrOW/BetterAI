@@ -90,7 +90,6 @@
     <Compile Include="BetterAIUnitRoleManager.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RoundFractal.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig">

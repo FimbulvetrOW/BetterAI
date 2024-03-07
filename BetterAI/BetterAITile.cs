@@ -57,7 +57,7 @@ namespace BetterAI
         //canHaveImprovement: lines 4805-5098
         public virtual bool canCityTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
-            BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+            BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             City pCityTerritory = cityTerritory();
 
 
@@ -68,7 +68,7 @@ namespace BetterAI
 
             if (!bForceImprovement)
             {
-                ImprovementType eImprovementPrereq = eInfoImprovement.meImprovementPrereq;
+                ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
 
                 if (eImprovementPrereq != ImprovementType.NONE)
                 {
@@ -115,8 +115,8 @@ namespace BetterAI
                 return false;
             }
 
-            BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
-            if (isUrban() && !(eInfoImprovement.mbUrban))
+            BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+            if (isUrban() && !(pImprovementInfo.mbUrban))
             {
                 return false;
             }
@@ -140,7 +140,7 @@ namespace BetterAI
                 }
             }
 
-            ReligionType eReligionPrereq = eInfoImprovement.meReligionPrereq;
+            ReligionType eReligionPrereq = pImprovementInfo.meReligionPrereq;
             if (!bTestReligion && eReligionPrereq != ReligionType.NONE)
             {
 
@@ -160,7 +160,7 @@ namespace BetterAI
 
             if (bTestAdjacent)
             {
-                if (eInfoImprovement.mbRequiresUrban)
+                if (pImprovementInfo.mbRequiresUrban)
                 {
                     if (!urbanEligible())
                     {
@@ -176,12 +176,12 @@ namespace BetterAI
                     return false;
                 }
 
-                ImprovementClassType eImprovementClass = eInfoImprovement.meClass;
+                ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
                 if (bTestAdjacent)
                 {
                     if (bTestReligion && eReligionPrereq != ReligionType.NONE)
                     {
-                        if (eInfoImprovement.mbNoAdjacentReligion)
+                        if (pImprovementInfo.mbNoAdjacentReligion)
                         {
                             if (adjacentToOtherImprovementReligion(eReligionPrereq))
                             {
@@ -192,7 +192,7 @@ namespace BetterAI
 
                     if (!bUpgradeImprovement)
                     {
-                        ImprovementType eAdjacentImprovementPrereq = eInfoImprovement.meAdjacentImprovementPrereq;
+                        ImprovementType eAdjacentImprovementPrereq = pImprovementInfo.meAdjacentImprovementPrereq;
 
                         if (eAdjacentImprovementPrereq != ImprovementType.NONE)
                         {
@@ -205,7 +205,7 @@ namespace BetterAI
 
                     if (!bUpgradeImprovement)
                     {
-                        ImprovementClassType eAdjacentImprovementClassPrereq = eInfoImprovement.meAdjacentImprovementClassPrereq;
+                        ImprovementClassType eAdjacentImprovementClassPrereq = pImprovementInfo.meAdjacentImprovementClassPrereq;
 
                         if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
                         {
@@ -244,7 +244,7 @@ namespace BetterAI
                 return false;
             }
 
-            //BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+            //BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
             if (pCityTerritory != null)
             {

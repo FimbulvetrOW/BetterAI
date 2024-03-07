@@ -54,11 +54,11 @@ namespace BetterAI
                     continue;
                 }
 
-                BetterAIInfoTerrain eLoopTileInfoTerrain = (BetterAIInfoTerrain)game().tile(iTileID).terrain();
+                BetterAIInfoTerrain pLoopTileTerrainInfo = (BetterAIInfoTerrain)game().tile(iTileID).terrain();
                 for (CityBiomeType iBiome = 0; iBiome < ((BetterAIInfos)infos()).cityBiomesNum(); iBiome++)
                 {
-                    iaBiomeScore[(int)iBiome] += eLoopTileInfoTerrain.maiBiomePoints[iBiome];
-                    iBiomeScoreTotal += eLoopTileInfoTerrain.maiBiomePoints[iBiome];
+                    iaBiomeScore[(int)iBiome] += pLoopTileTerrainInfo.maiBiomePoints[iBiome];
+                    iBiomeScoreTotal += pLoopTileTerrainInfo.maiBiomePoints[iBiome];
                 }
             }
             int iBestBiome = 1; //Default to Temperate
@@ -1342,9 +1342,9 @@ namespace BetterAI
         public virtual bool ImprovementUnlocked(ImprovementType eImprovement, ref bool bPrimaryUnlock, bool bTestEnabled = true, bool bTestTech = true)
         {
             BetterAIPlayer pOwner = (BetterAIPlayer)player();
-            BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
-            if (pOwner == null || eInfoImprovement == null) return false;
-            ImprovementClassType eImprovementClass = eInfoImprovement.meClass;
+            BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+            if (pOwner == null || pImprovementInfo == null) return false;
+            ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
             bPrimaryUnlock = true;
 
             {
@@ -1365,7 +1365,7 @@ namespace BetterAI
                     }
                 }
 
-                CultureType eCulturePrereq = eInfoImprovement.meCulturePrereq;
+                CultureType eCulturePrereq = pImprovementInfo.meCulturePrereq;
                 if (eCulturePrereq != CultureType.NONE)
                 {
                     if (( (bTestEnabled) ? (getCulture() < eCulturePrereq) : ((getCulture() + 1) < eCulturePrereq)))
@@ -1385,7 +1385,7 @@ namespace BetterAI
                 bool bSecondaryUnlock = true;
                 //secondary unlock: only if at least 1 item not empty
                 // tech + culture + pop + effectCity
-                TechType eSecondaryUnlockTechPrereq = eInfoImprovement.meSecondaryUnlockTechPrereq;
+                TechType eSecondaryUnlockTechPrereq = pImprovementInfo.meSecondaryUnlockTechPrereq;
                 if (eSecondaryUnlockTechPrereq != TechType.NONE)
                 {
                     bAnySecondaryPrereqs = true;
@@ -1394,7 +1394,7 @@ namespace BetterAI
                         bSecondaryUnlock = false;
                     }
                 }
-                CultureType eSecondaryUnlockCulturePrereq = eInfoImprovement.meSecondaryUnlockCulturePrereq;
+                CultureType eSecondaryUnlockCulturePrereq = pImprovementInfo.meSecondaryUnlockCulturePrereq;
                 if (eSecondaryUnlockCulturePrereq != CultureType.NONE)
                 {
                     bAnySecondaryPrereqs = true;
@@ -1403,7 +1403,7 @@ namespace BetterAI
                         bSecondaryUnlock = false;
                     }
                 }
-                int iSecondaryUnlockPopulationPrereq = eInfoImprovement.miSecondaryUnlockPopulationPrereq;
+                int iSecondaryUnlockPopulationPrereq = pImprovementInfo.miSecondaryUnlockPopulationPrereq;
                 if (iSecondaryUnlockPopulationPrereq > 0)
                 {
                     bAnySecondaryPrereqs = true;
@@ -1413,7 +1413,7 @@ namespace BetterAI
                     }
 
                 }
-                EffectCityType eSecondaryUnlockEffectCityPrereq = eInfoImprovement.meSecondaryUnlockEffectCityPrereq;
+                EffectCityType eSecondaryUnlockEffectCityPrereq = pImprovementInfo.meSecondaryUnlockEffectCityPrereq;
                 if (eSecondaryUnlockEffectCityPrereq != EffectCityType.NONE)
                 {
                     bAnySecondaryPrereqs = true;
@@ -1432,8 +1432,8 @@ namespace BetterAI
                     bool bTertiaryUnlock = true;
                     //tertiary unlock: only if at least 1 item not empty
                     // family (+ seatOnly) + tech + culture + effectCity
-                    FamilyClassType eTertiaryUnlockFamilyClassPrereq = eInfoImprovement.meTertiaryUnlockFamilyClassPrereq;
-                    bool bTertiaryUnlockSeatOnly = eInfoImprovement.mbTertiaryUnlockSeatOnly;
+                    FamilyClassType eTertiaryUnlockFamilyClassPrereq = pImprovementInfo.meTertiaryUnlockFamilyClassPrereq;
+                    bool bTertiaryUnlockSeatOnly = pImprovementInfo.mbTertiaryUnlockSeatOnly;
                     if (eTertiaryUnlockFamilyClassPrereq != FamilyClassType.NONE)
                     {
                         bAnyTertiaryPrereqs = true;
@@ -1460,7 +1460,7 @@ namespace BetterAI
                             bTertiaryUnlock = false;
                         }
                     }
-                    TechType eTertiaryUnlockTechPrereq = eInfoImprovement.meTertiaryUnlockTechPrereq;
+                    TechType eTertiaryUnlockTechPrereq = pImprovementInfo.meTertiaryUnlockTechPrereq;
                     if (eTertiaryUnlockTechPrereq != TechType.NONE)
                     {
                         bAnyTertiaryPrereqs = true;
@@ -1469,7 +1469,7 @@ namespace BetterAI
                             bTertiaryUnlock = false;
                         }
                     }
-                    CultureType eTertiaryUnlockCulturePrereq = eInfoImprovement.meTertiaryUnlockCulturePrereq;
+                    CultureType eTertiaryUnlockCulturePrereq = pImprovementInfo.meTertiaryUnlockCulturePrereq;
                     if (eTertiaryUnlockCulturePrereq != CultureType.NONE)
                     {
                         bAnyTertiaryPrereqs = true;
@@ -1478,7 +1478,7 @@ namespace BetterAI
                             bTertiaryUnlock = false;
                         }
                     }
-                    EffectCityType eTertiaryUnlockEffectCityPrereq = eInfoImprovement.meTertiaryUnlockEffectCityPrereq;
+                    EffectCityType eTertiaryUnlockEffectCityPrereq = pImprovementInfo.meTertiaryUnlockEffectCityPrereq;
                     if (eTertiaryUnlockEffectCityPrereq != EffectCityType.NONE)
                     {
                         bAnyTertiaryPrereqs = true;
@@ -1507,10 +1507,10 @@ namespace BetterAI
             }
             else
             {
-                BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+                BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
 
                 //check new Biome prereq
-                CityBiomeType eCityBiomePrereq = eInfoImprovement.meCityBiomePrereq;
+                CityBiomeType eCityBiomePrereq = pImprovementInfo.meCityBiomePrereq;
                 if (eCityBiomePrereq != CityBiomeType.NONE)
                 {
                     if (eCityBiomePrereq != getCityBiome())
@@ -1519,7 +1519,7 @@ namespace BetterAI
                     }
                 }
                 //check new class maxcity
-                ImprovementClassType eImprovementClass = eInfoImprovement.meClass;
+                ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
                 if (eImprovementClass != ImprovementClassType.NONE)
                 {
                     int iMaxCityCount = ((BetterAIInfoImprovementClass)infos().improvementClass(eImprovementClass)).miMaxCityCount;
@@ -1541,7 +1541,7 @@ namespace BetterAI
                 //city-specific only
 
                 {
-                    ReligionType eReligionSpread = eInfoImprovement.meReligionSpread;
+                    ReligionType eReligionSpread = pImprovementInfo.meReligionSpread;
 
                     if (eReligionSpread != ReligionType.NONE)
                     {
@@ -1552,7 +1552,7 @@ namespace BetterAI
                     }
                 }
 
-                ReligionType eReligionPrereq = eInfoImprovement.meReligionPrereq;
+                ReligionType eReligionPrereq = pImprovementInfo.meReligionPrereq;
 
                 //as of v1.0.69678, Improvement religion checks are changed and mostly also run with bTestReligion = false.
                 //This makes sense since bTestReligion is only false when called by PlayerAI.calculateImprovementValueForTile
@@ -1565,7 +1565,7 @@ namespace BetterAI
                             return false;
                         }
 
-                        if (eInfoImprovement.mbHolyCity)
+                        if (pImprovementInfo.mbHolyCity)
                         {
                             if (!(isReligionHolyCity(eReligionPrereq)))
                             {
@@ -1581,7 +1581,7 @@ namespace BetterAI
                         return false;
                     }
 
-                    if (eInfoImprovement.mbHolyCity)
+                    if (pImprovementInfo.mbHolyCity)
                     {
                         if (!(isReligionHolyCity(eReligionPrereq)))
                         {
@@ -1590,13 +1590,13 @@ namespace BetterAI
                     }
                 }
 
-                if (eInfoImprovement.mbHolyCity && eReligionPrereq == ReligionType.NONE) //invalid Improvement Info
+                if (pImprovementInfo.mbHolyCity && eReligionPrereq == ReligionType.NONE) //invalid Improvement Info
                 {
                     return false;
                 }
 
                 {
-                    int iMaxCount = eInfoImprovement.miMaxCityCount;
+                    int iMaxCount = pImprovementInfo.miMaxCityCount;
                     if (iMaxCount > 0)
                     {
                         if ((getImprovementCount(eImprovement) >= iMaxCount))
@@ -1638,7 +1638,7 @@ namespace BetterAI
                     }
 
                     {
-                        ImprovementType eImprovementPrereq = eInfoImprovement.meImprovementPrereq;
+                        ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
 
                         if (eImprovementPrereq != ImprovementType.NONE)
                         {
@@ -1666,7 +1666,7 @@ namespace BetterAI
                     }
 
                     {
-                        EffectCityType eEffectCityPrereq = eInfoImprovement.meEffectCityPrereq;
+                        EffectCityType eEffectCityPrereq = pImprovementInfo.meEffectCityPrereq;
 
                         if (eEffectCityPrereq != EffectCityType.NONE)
                         {
@@ -1805,7 +1805,7 @@ namespace BetterAI
                     {
                         if (!bForceImprovement)
                         {
-                            int iRequiresLaws = eInfoImprovement.miPrereqLaws;
+                            int iRequiresLaws = pImprovementInfo.miPrereqLaws;
                             if (iRequiresLaws > 0)
                             {
                                 if (!(hasPlayer()))
@@ -1822,7 +1822,7 @@ namespace BetterAI
 
                         if (hasFamily())
                         {
-                            int iMaxFamilyCount = eInfoImprovement.miMaxFamilyCount;
+                            int iMaxFamilyCount = pImprovementInfo.miMaxFamilyCount;
                             if (iMaxFamilyCount > 0)
                             {
                                 if (game().countFamilyImprovements(getFamily(), eImprovement) >= iMaxFamilyCount)

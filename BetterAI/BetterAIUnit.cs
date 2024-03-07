@@ -362,64 +362,63 @@ namespace BetterAI
         }
 
         //For debugging these null refs. Not in use.
-        private Func<string> PushText()
-        {
-            if (this == null)
-            {
-                UnityEngine.Debug.Log("Push Text: Unit == null");
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-            }
-            else if (infos() == null)
-            {
-                UnityEngine.Debug.Log("Push Text: Unit.infos() == null");
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-            }
-            else if (getPushEffectUnit() == EffectUnitType.NONE)
-            {
-                UnityEngine.Debug.Log("Push Text: getPushEffectUnit() == EffectUnitType.NONE");
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-            }
-            else if (infos().effectUnit(getPushEffectUnit()) == null)
-            {
-                UnityEngine.Debug.Log("Push Text: infos().effectUnit(getPushEffectUnit()) == null");
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-            }
-            else
-            {
-                //return () => TextManager.TEXT(infos().effectUnit(getPushEffectUnit()).mName);
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-            }
+        //private Func<string> PushText()
+        //{
+        //    if (this == null)
+        //    {
+        //        UnityEngine.Debug.Log("Push Text: Unit == null");
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
+        //    }
+        //    else if (infos() == null)
+        //    {
+        //        UnityEngine.Debug.Log("Push Text: Unit.infos() == null");
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
+        //    }
+        //    else if (getPushEffectUnit() == EffectUnitType.NONE)
+        //    {
+        //        UnityEngine.Debug.Log("Push Text: getPushEffectUnit() == EffectUnitType.NONE");
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
+        //    }
+        //    else if (infos().effectUnit(getPushEffectUnit()) == null)
+        //    {
+        //        UnityEngine.Debug.Log("Push Text: infos().effectUnit(getPushEffectUnit()) == null");
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
+        //    }
+        //    else
+        //    {
+        //        //return () => TextManager.TEXT(infos().effectUnit(getPushEffectUnit()).mName);
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
+        //    }
+        //}
 
-        }
-
-        private Func<string> RoutText()
-        {
-            if (this == null)
-            {
-                UnityEngine.Debug.Log("Rout Text: Unit == null");
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-            }
-            else if (infos() == null)
-            {
-                UnityEngine.Debug.Log("Rout Text: Unit.infos() == null");
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-            }
-            else if (getRoutEffectUnit() == EffectUnitType.NONE)
-            {
-                UnityEngine.Debug.Log("Rout Text: getRoutEffectUnit() == EffectUnitType.NONE");
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-            }
-            else if (infos().effectUnit(getRoutEffectUnit()) == null)
-            {
-                UnityEngine.Debug.Log("Rout Text: infos().effectUnit(getRoutEffectUnit()) == null");
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-            }
-            else
-            {
-                //return () => TextManager.TEXT(infos().effectUnit(getRoutEffectUnit()).mName);
-                return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-            }
-        }
+        //private Func<string> RoutText()
+        //{
+        //    if (this == null)
+        //    {
+        //        UnityEngine.Debug.Log("Rout Text: Unit == null");
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
+        //    }
+        //    else if (infos() == null)
+        //    {
+        //        UnityEngine.Debug.Log("Rout Text: Unit.infos() == null");
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
+        //    }
+        //    else if (getRoutEffectUnit() == EffectUnitType.NONE)
+        //    {
+        //        UnityEngine.Debug.Log("Rout Text: getRoutEffectUnit() == EffectUnitType.NONE");
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
+        //    }
+        //    else if (infos().effectUnit(getRoutEffectUnit()) == null)
+        //    {
+        //        UnityEngine.Debug.Log("Rout Text: infos().effectUnit(getRoutEffectUnit()) == null");
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
+        //    }
+        //    else
+        //    {
+        //        //return () => TextManager.TEXT(infos().effectUnit(getRoutEffectUnit()).mName);
+        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
+        //    }
+        //}
 
 
         public override void attackUnitOrCity(Tile pToTile, Player pActingPlayer)
@@ -829,13 +828,51 @@ namespace BetterAI
             {
                 return false;
             }
-            else
+
+            //if (iTimeout > 100)
+            //{
+            //    MohawkAssert.Assert(false, "unit upgrade circular reference");
+            //    return false;
+            //}
+
+
+            //if (infos().unit(eFromUnit).maeUpgradeUnit.Contains(eToUnit))
+            //{
+            //    return true;
+            //}
+            
+            //if (infos().unit(eFromUnit).maeDirectUpgradeUnit.Contains(eToUnit))
+            //{
+            //    return true;
+            //}
+
+            ////tribe upgrade moved to the end
+
+            //foreach (UnitType eLoopUnit in infos().unit(eFromUnit).maeUpgradeUnit)
+            //{
+            //    if (canUpgradeFromToUnit(eLoopUnit, eToUnit, (iTimeout + 1)))
+            //    {
+            //        return true;
+            //    }
+            //}
+
+            if (((BetterAIInfoUnit)infos().unit(eFromUnit)).mseUpgradeUnitAccumulated.Contains(eToUnit))
+            {
+                return true;
+            }
 /*####### Better Old World AI - Base DLL #######
   ### Circular Upgrades                  END ###
   ##############################################*/
+
+            if (hasOriginalTribe())
             {
-                return base.canUpgradeFromToUnit(eFromUnit, eToUnit, iTimeout);
+                if (infos().unit(eFromUnit).maeTribeUpgradeUnit[getOriginalTribe()] == eToUnit)
+                {
+                    return true;
+                }
             }
+
+            return false;
         }
 
 

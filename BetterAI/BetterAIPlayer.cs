@@ -252,10 +252,10 @@ namespace BetterAI
   ##############################################*/
             else
             {
-                BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
-                if (eInfoImprovement.isAnySecondaryPrereq())
+                BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+                if (pImprovementInfo.isAnySecondaryPrereq())
                 {
-                    TechType eTechSecondaryPrereq = eInfoImprovement.meSecondaryUnlockTechPrereq;
+                    TechType eTechSecondaryPrereq = pImprovementInfo.meSecondaryUnlockTechPrereq;
                     if (eTechSecondaryPrereq != TechType.NONE)
                     {
                         if (isTechAcquired(eTechSecondaryPrereq))
@@ -268,9 +268,9 @@ namespace BetterAI
                         return true; //secondary unlock without tech
                     }
                 }
-                if (eInfoImprovement.isAnyTertiaryPrereq())
+                if (pImprovementInfo.isAnyTertiaryPrereq())
                 {
-                    TechType eTechTertiaryPrereq = eInfoImprovement.meTertiaryUnlockTechPrereq;
+                    TechType eTechTertiaryPrereq = pImprovementInfo.meTertiaryUnlockTechPrereq;
                     bool bHasTech = true;
                     bool bHasFamily = true;
                     if (eTechTertiaryPrereq != TechType.NONE)
@@ -282,7 +282,7 @@ namespace BetterAI
                     }
 
                     //check if player has the family
-                    FamilyClassType eTertiaryUnlockFamilyClassPrereq = eInfoImprovement.meTertiaryUnlockFamilyClassPrereq;
+                    FamilyClassType eTertiaryUnlockFamilyClassPrereq = pImprovementInfo.meTertiaryUnlockFamilyClassPrereq;
                     if (eTertiaryUnlockFamilyClassPrereq != FamilyClassType.NONE)
                     {
                         bHasFamily = isFamilyClassStarted(eTertiaryUnlockFamilyClassPrereq);

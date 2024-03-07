@@ -79,20 +79,20 @@ public override int getLegitimacy()
         //lines 7677-7701
         public override void generateRatingsCourtier(CourtierType eCourtier)
         {
-            BetterAIInfoCourtier eInfoCourtier = ((BetterAIInfoCourtier)infos().courtier(eCourtier));
+            BetterAIInfoCourtier pCourtierInfo = ((BetterAIInfoCourtier)infos().courtier(eCourtier));
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/
             //forced Traits
-            if (eInfoCourtier.maeAdjectives.Count > 0)
+            if (pCourtierInfo.maeAdjectives.Count > 0)
             {
-                foreach (TraitType eLoopTrait in eInfoCourtier.maeAdjectives)
+                foreach (TraitType eLoopTrait in pCourtierInfo.maeAdjectives)
                 {
                     addTrait(eLoopTrait);
                 }
             }
             //Regligion: State Religion
-            if (eInfoCourtier.mbStateReligion)
+            if (pCourtierInfo.mbStateReligion)
             {
                 Player pPlayer = player();
                 if (pPlayer != null)

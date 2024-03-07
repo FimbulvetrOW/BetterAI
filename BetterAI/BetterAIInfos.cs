@@ -34,6 +34,24 @@ namespace BetterAI
             calculateDerivativeInfo();
         }
 
+        public virtual void addAllUpgrades(UnitType eUnit)
+        {
+            BetterAIInfoUnit pUnitInfo = (BetterAIInfoUnit)unit(eUnit);
+
+            foreach (UnitType eUpgradeUnit in (pUnitInfo.maeUpgradeUnit))
+            {
+                if (pUnitInfo.mseUpgradeUnitAccumulated.Add(eUpgradeUnit))
+                {
+                    //recursion
+                    addAllUpgrades(eUpgradeUnit);
+
+                    pUnitInfo.mseUpgradeUnitAccumulated.UnionWith(((BetterAIInfoUnit)unit(eUpgradeUnit)).mseUpgradeUnitAccumulated);
+                }
+            }
+
+            return;
+        }
+
         protected virtual void calculateDerivativeInfo()
         {
 /*####### Better Old World AI - Base DLL #######
@@ -72,36 +90,42 @@ namespace BetterAI
 
             for (ImprovementClassType eLoopImprovementClass = 0; eLoopImprovementClass < improvementClassesNum(); eLoopImprovementClass++)
             {
-                BetterAIInfoImprovementClass pLoopImprovementClass = ((BetterAIInfoImprovementClass)improvementClass(eLoopImprovementClass));
+                BetterAIInfoImprovementClass pLoopImprovementClassInfo = ((BetterAIInfoImprovementClass)improvementClass(eLoopImprovementClass));
                 for (ImprovementType eLoopImprovement = 0; eLoopImprovement < improvementsNum(); eLoopImprovement++)
                 {
                     if (eLoopImprovementClass == improvement(eLoopImprovement).meClass)
                     {
-                        pLoopImprovementClass.maeImprovementTypes.Add(eLoopImprovement);
+                        pLoopImprovementClassInfo.maeImprovementTypes.Add(eLoopImprovement);
                     }
                 }
             }
 
             for (UnitType eLoopUnit = 0; eLoopUnit < unitsNum(); eLoopUnit++)
             {
-                if (unit(eLoopUnit).maeTribeUpgradeUnit.Count > 0)
+                BetterAIInfoUnit pLoopUnitInfo = (BetterAIInfoUnit)unit(eLoopUnit);
+                if (pLoopUnitInfo.maeTribeUpgradeUnit.Count > 0)
                 {
                     for (TribeType eLoopTribe = 0; eLoopTribe < tribesNum(); eLoopTribe++)
                     {
-                        if (unit(eLoopUnit).maeTribeUpgradeUnit[eLoopTribe] != UnitType.NONE)
+                        if (pLoopUnitInfo.maeTribeUpgradeUnit[eLoopTribe] != UnitType.NONE)
                         {
-                            BetterAIInfoUnit pTribeUpgradeUnit = (BetterAIInfoUnit)unit(unit(eLoopUnit).maeTribeUpgradeUnit[eLoopTribe]);
-                            if (!pTribeUpgradeUnit.maeTribeUpgradesFromAccumulated.Contains(eLoopUnit))
+                            BetterAIInfoUnit pTribeUpgradeUnitInfo = (BetterAIInfoUnit)unit(pLoopUnitInfo.maeTribeUpgradeUnit[eLoopTribe]);
+                            if (!pTribeUpgradeUnitInfo.maeTribeUpgradesFromAccumulated.Contains(eLoopUnit))
                             {
-                                pTribeUpgradeUnit.maeTribeUpgradesFromAccumulated.Add(eLoopUnit);
+                                pTribeUpgradeUnitInfo.maeTribeUpgradesFromAccumulated.Add(eLoopUnit);
                             }
                         }
                     }
                 }
 
-                if (unit(eLoopUnit).meEffectCityPrereq != EffectCityType.NONE)
+                if (pLoopUnitInfo.maeUpgradeUnit.Count > 0 && pLoopUnitInfo.mseUpgradeUnitAccumulated.Count == 0) //no need to do this with units that have no upgrades, and we only need to look at eatch unit once
                 {
-                    ResourceType ePrereqResource = effectCity(unit(eLoopUnit).meEffectCityPrereq).meSourceResource;
+                    addAllUpgrades(eLoopUnit); //recursive
+                }
+
+                if (pLoopUnitInfo.meEffectCityPrereq != EffectCityType.NONE)
+                {
+                    ResourceType ePrereqResource = effectCity(pLoopUnitInfo.meEffectCityPrereq).meSourceResource;
                     if (ePrereqResource != ResourceType.NONE)
                     {
                         if (((BetterAIInfoGlobals)Globals).dUnitsWithResourceRequirement.ContainsKey(ePrereqResource))
@@ -114,13 +138,19 @@ namespace BetterAI
                         }
                     }
                 }
-
-                //if (unit(eLoopUnit).mbBuild)
-                //{
-                //    ((BetterAIInfoGlobals)Globals).WorkerUnits.Add(eLoopUnit);
-                //}
             }
 
+            for (UnitType eLoopUnit = 0; eLoopUnit < unitsNum(); eLoopUnit++)
+            {
+                //add direct upgrades too, no recursion here
+                foreach (UnitType eDirectUpgradeUnit in ((BetterAIInfoUnit)unit(eLoopUnit)).maeDirectUpgradeUnit)
+                {
+                    ((BetterAIInfoUnit)unit(eLoopUnit)).mseUpgradeUnitAccumulated.Add(eDirectUpgradeUnit);
+                }
+
+                //cleanup in case of circular unit upgrade references
+                ((BetterAIInfoUnit)unit(eLoopUnit)).mseUpgradeUnitAccumulated.Remove(eLoopUnit);
+            }
 
         }
 
@@ -518,6 +548,7 @@ namespace BetterAI
         public bool bHasIngoreZOCBlocker = false;
         public List<EffectUnitType> maeBlockZOCEffectUnits = new List<EffectUnitType>();
         public List<UnitType> maeTribeUpgradesFromAccumulated = new List<UnitType>();
+        public HashSet<UnitType> mseUpgradeUnitAccumulated = new HashSet<UnitType>();  //ToDo: make the AI use this too
 /*####### Better Old World AI - Base DLL #######
   ### Fix ZOC display                    END ###
   ##############################################*/

@@ -63,8 +63,8 @@ namespace BetterAI
         public virtual TextVariable buildIgnoreZOCWithExceptionsLinkVariable(UnitType eUnit)
         {
             CommaListVariableGenerator blockerList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.AND, TextManager);
-            BetterAIInfoUnit UnitInfo = (BetterAIInfoUnit)infos().unit(eUnit);
-            foreach (EffectUnitType ZOCBlockerEffect in UnitInfo.maeBlockZOCEffectUnits)
+            BetterAIInfoUnit pUnitInfo = (BetterAIInfoUnit)infos().unit(eUnit);
+            foreach (EffectUnitType ZOCBlockerEffect in pUnitInfo.maeBlockZOCEffectUnits)
             {
                 blockerList.AddItem(buildEffectUnitLinkVariable(ZOCBlockerEffect));
             }
@@ -2657,14 +2657,14 @@ namespace BetterAI
         //lines 21309-21715
         public override void buildImprovementRequiresHelp(List<TextVariable> lRequirements, ImprovementType eImprovement, Game pGame, Player pActivePlayer, Tile pTile, bool bUpgradeImprovement = false)
         {
-            BetterAIInfoImprovement eInfoImprovement = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+            BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             {
                 //here goes the copy-pasting
                 //using (new UnityProfileScope("HelpText.buildImprovementRequiresHelp"))
                 {
-                    ImprovementClassType eImprovementClass = eInfoImprovement.meClass;
+                    ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
 
-                    ReligionType eReligionPrereq = eInfoImprovement.meReligionPrereq;
+                    ReligionType eReligionPrereq = pImprovementInfo.meReligionPrereq;
 
                     BetterAICity pCityTerritory = ((pTile != null) ? (BetterAICity)pTile.cityTerritory() : null);
 
@@ -2699,7 +2699,7 @@ namespace BetterAI
                             }
                         }
 
-                        CultureType eCulturePrereq = eInfoImprovement.meCulturePrereq;
+                        CultureType eCulturePrereq = pImprovementInfo.meCulturePrereq;
 
                         if (eCulturePrereq != CultureType.NONE)
                         {
@@ -2709,32 +2709,32 @@ namespace BetterAI
                         }
                         if (bHasPrimaryUnlock)
                         {
-                            if (eInfoImprovement.isAnySecondaryPrereq() || eInfoImprovement.isAnyTertiaryPrereq())
+                            if (pImprovementInfo.isAnySecondaryPrereq() || pImprovementInfo.isAnyTertiaryPrereq())
                             {
                                 CommaListVariableGenerator orLineBreakList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.OR_LINEBREAK, CommaListVariableGenerator.EncloseType.PARENTHESIS, TextManager);
                                 orLineBreakList.AddItem(andList.Finalize());
-                                if (eInfoImprovement.isAnySecondaryPrereq())
+                                if (pImprovementInfo.isAnySecondaryPrereq())
                                 {
                                     CommaListVariableGenerator andList2 = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.AND, TextManager);
                                     
-                                    if (eInfoImprovement.meSecondaryUnlockTechPrereq != TechType.NONE)
+                                    if (pImprovementInfo.meSecondaryUnlockTechPrereq != TechType.NONE)
                                     {
-                                        //andList2.AddItem(buildWarningTextVariable(buildTechLinkVariable(eInfoImprovement.meSecondaryUnlockTechPrereq), pActivePlayer != null));
-                                        andList2.AddItem(buildTechLinkVariable(eInfoImprovement.meSecondaryUnlockTechPrereq));
+                                        //andList2.AddItem(buildWarningTextVariable(buildTechLinkVariable(pImprovementInfo.meSecondaryUnlockTechPrereq), pActivePlayer != null));
+                                        andList2.AddItem(buildTechLinkVariable(pImprovementInfo.meSecondaryUnlockTechPrereq));
                                     }
-                                    if (eInfoImprovement.meSecondaryUnlockCulturePrereq != CultureType.NONE)
+                                    if (pImprovementInfo.meSecondaryUnlockCulturePrereq != CultureType.NONE)
                                     {
-                                        //andList2.AddItem(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ALSO_REQUIRES_CULTURE", buildCultureLinkVariable(eInfoImprovement.meSecondaryUnlockCulturePrereq, pCityTerritory)), ((pCityTerritory != null) ? (pCityTerritory.getCulture() < eInfoImprovement.meSecondaryUnlockCulturePrereq) : false)));
-                                        andList2.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ALSO_REQUIRES_CULTURE", buildCultureLinkVariable(eInfoImprovement.meSecondaryUnlockCulturePrereq, pCityTerritory)));
+                                        //andList2.AddItem(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ALSO_REQUIRES_CULTURE", buildCultureLinkVariable(pImprovementInfo.meSecondaryUnlockCulturePrereq, pCityTerritory)), ((pCityTerritory != null) ? (pCityTerritory.getCulture() < pImprovementInfo.meSecondaryUnlockCulturePrereq) : false)));
+                                        andList2.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ALSO_REQUIRES_CULTURE", buildCultureLinkVariable(pImprovementInfo.meSecondaryUnlockCulturePrereq, pCityTerritory)));
                                     }
-                                    if (eInfoImprovement.miSecondaryUnlockPopulationPrereq > 0)
+                                    if (pImprovementInfo.miSecondaryUnlockPopulationPrereq > 0)
                                     {
-                                        TextVariable reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_ENTRY_COLON_SPACE_ONE", buildConceptLinkVariable("CONCEPT_POPULATION"), TEXTVAR_TYPE("TEXT_HELPTEXT_MIN", eInfoImprovement.miSecondaryUnlockPopulationPrereq));
+                                        TextVariable reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_ENTRY_COLON_SPACE_ONE", buildConceptLinkVariable("CONCEPT_POPULATION"), TEXTVAR_TYPE("TEXT_HELPTEXT_MIN", pImprovementInfo.miSecondaryUnlockPopulationPrereq));
                                         if (pCityTerritory != null)
                                         {
-                                            //reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS_FRACTION", reqItem, TEXTVAR(pCityTerritory.getPopulation()) , TEXTVAR(eInfoImprovement.miSecondaryUnlockPopulationPrereq));
-                                            //andList2.AddItem(buildWarningTextVariable(reqItem, (pCityTerritory.getPopulation() < eInfoImprovement.miSecondaryUnlockPopulationPrereq)));
-                                            andList2.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS_FRACTION", reqItem, TEXTVAR(pCityTerritory.getPopulation()), TEXTVAR(eInfoImprovement.miSecondaryUnlockPopulationPrereq)));
+                                            //reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS_FRACTION", reqItem, TEXTVAR(pCityTerritory.getPopulation()) , TEXTVAR(pImprovementInfo.miSecondaryUnlockPopulationPrereq));
+                                            //andList2.AddItem(buildWarningTextVariable(reqItem, (pCityTerritory.getPopulation() < pImprovementInfo.miSecondaryUnlockPopulationPrereq)));
+                                            andList2.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS_FRACTION", reqItem, TEXTVAR(pCityTerritory.getPopulation()), TEXTVAR(pImprovementInfo.miSecondaryUnlockPopulationPrereq)));
                                         }
                                         else
                                         {
@@ -2742,23 +2742,23 @@ namespace BetterAI
                                             andList2.AddItem(reqItem);
                                         }
                                     }
-                                    if (eInfoImprovement.meSecondaryUnlockEffectCityPrereq != EffectCityType.NONE)
+                                    if (pImprovementInfo.meSecondaryUnlockEffectCityPrereq != EffectCityType.NONE)
                                     {
-                                        //andList2.AddItem(buildWarningTextVariable(buildEffectCitySourceLinkVariable(eInfoImprovement.meSecondaryUnlockEffectCityPrereq, pCityTerritory, pGame, pActivePlayer), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(eInfoImprovement.meSecondaryUnlockEffectCityPrereq) == 0) : false)));
-                                        andList2.AddItem(buildEffectCitySourceLinkVariable(eInfoImprovement.meSecondaryUnlockEffectCityPrereq, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer));
+                                        //andList2.AddItem(buildWarningTextVariable(buildEffectCitySourceLinkVariable(pImprovementInfo.meSecondaryUnlockEffectCityPrereq, pCityTerritory, pGame, pActivePlayer), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(pImprovementInfo.meSecondaryUnlockEffectCityPrereq) == 0) : false)));
+                                        andList2.AddItem(buildEffectCitySourceLinkVariable(pImprovementInfo.meSecondaryUnlockEffectCityPrereq, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer));
                                     }
                                     orLineBreakList.AddItem(andList2.Finalize());
                                 }
 
-                                if (eInfoImprovement.isAnyTertiaryPrereq())
+                                if (pImprovementInfo.isAnyTertiaryPrereq())
                                 {
                                     CommaListVariableGenerator andList3 = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.AND, TextManager);
 
-                                    if (eInfoImprovement.meTertiaryUnlockFamilyClassPrereq != FamilyClassType.NONE)
+                                    if (pImprovementInfo.meTertiaryUnlockFamilyClassPrereq != FamilyClassType.NONE)
                                     {
-                                        TextVariable reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_ENTRY_COLON_SPACE_ONE", buildConceptLinkVariable("CONCEPT_FAMILY_CLASS"), TEXTVAR(infos().familyClass(eInfoImprovement.meTertiaryUnlockFamilyClassPrereq).meName, TextManager));
-                                        //reqItem = buildWarningTextVariable(reqItem, ((pCityTerritory != null) ? (pCityTerritory.getFamilyClass() != eInfoImprovement.meTertiaryUnlockFamilyClassPrereq) : false));
-                                        if (eInfoImprovement.mbTertiaryUnlockSeatOnly)
+                                        TextVariable reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_ENTRY_COLON_SPACE_ONE", buildConceptLinkVariable("CONCEPT_FAMILY_CLASS"), TEXTVAR(infos().familyClass(pImprovementInfo.meTertiaryUnlockFamilyClassPrereq).meName, TextManager));
+                                        //reqItem = buildWarningTextVariable(reqItem, ((pCityTerritory != null) ? (pCityTerritory.getFamilyClass() != pImprovementInfo.meTertiaryUnlockFamilyClassPrereq) : false));
+                                        if (pImprovementInfo.mbTertiaryUnlockSeatOnly)
                                         {
                                             //reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS", reqItem, buildWarningTextVariable(buildConceptLinkVariable("CONCEPT_FAMILY_SEAT"), ((pCityTerritory != null) ? pCityTerritory.isFamilySeat() : false)));
                                             reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS", reqItem, buildConceptLinkVariable("CONCEPT_FAMILY_SEAT"));
@@ -2766,22 +2766,22 @@ namespace BetterAI
                                         andList3.AddItem(reqItem);
                                     }
 
-                                    if (eInfoImprovement.meTertiaryUnlockTechPrereq != TechType.NONE)
+                                    if (pImprovementInfo.meTertiaryUnlockTechPrereq != TechType.NONE)
                                     {
-                                        //andList3.AddItem(buildWarningTextVariable(buildTechLinkVariable(eInfoImprovement.meTertiaryUnlockTechPrereq), pActivePlayer != null));
-                                        andList3.AddItem(buildTechLinkVariable(eInfoImprovement.meTertiaryUnlockTechPrereq));
+                                        //andList3.AddItem(buildWarningTextVariable(buildTechLinkVariable(pImprovementInfo.meTertiaryUnlockTechPrereq), pActivePlayer != null));
+                                        andList3.AddItem(buildTechLinkVariable(pImprovementInfo.meTertiaryUnlockTechPrereq));
                                     }
 
-                                    if (eInfoImprovement.meTertiaryUnlockCulturePrereq != CultureType.NONE)
+                                    if (pImprovementInfo.meTertiaryUnlockCulturePrereq != CultureType.NONE)
                                     {
-                                        //andList3.AddItem(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ALSO_REQUIRES_CULTURE", buildCultureLinkVariable(eInfoImprovement.meTertiaryUnlockCulturePrereq, pCityTerritory)), ((pCityTerritory != null) ? (pCityTerritory.getCulture() < eInfoImprovement.meTertiaryUnlockCulturePrereq) : false)));
-                                        andList3.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ALSO_REQUIRES_CULTURE", buildCultureLinkVariable(eInfoImprovement.meTertiaryUnlockCulturePrereq, pCityTerritory)));
+                                        //andList3.AddItem(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ALSO_REQUIRES_CULTURE", buildCultureLinkVariable(pImprovementInfo.meTertiaryUnlockCulturePrereq, pCityTerritory)), ((pCityTerritory != null) ? (pCityTerritory.getCulture() < pImprovementInfo.meTertiaryUnlockCulturePrereq) : false)));
+                                        andList3.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ALSO_REQUIRES_CULTURE", buildCultureLinkVariable(pImprovementInfo.meTertiaryUnlockCulturePrereq, pCityTerritory)));
                                     }
 
-                                    if (eInfoImprovement.meTertiaryUnlockEffectCityPrereq != EffectCityType.NONE)
+                                    if (pImprovementInfo.meTertiaryUnlockEffectCityPrereq != EffectCityType.NONE)
                                     {
-                                        //andList3.AddItem(buildWarningTextVariable(buildEffectCitySourceLinkVariable(eInfoImprovement.meTertiaryUnlockEffectCityPrereq, pCityTerritory, pGame, pActivePlayer), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(eInfoImprovement.meTertiaryUnlockEffectCityPrereq) == 0) : false)));
-                                        andList3.AddItem(buildEffectCitySourceLinkVariable(eInfoImprovement.meTertiaryUnlockEffectCityPrereq, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer));
+                                        //andList3.AddItem(buildWarningTextVariable(buildEffectCitySourceLinkVariable(pImprovementInfo.meTertiaryUnlockEffectCityPrereq, pCityTerritory, pGame, pActivePlayer), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(pImprovementInfo.meTertiaryUnlockEffectCityPrereq) == 0) : false)));
+                                        andList3.AddItem(buildEffectCitySourceLinkVariable(pImprovementInfo.meTertiaryUnlockEffectCityPrereq, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer));
                                     }
 
                                     orLineBreakList.AddItem(andList3.Finalize());
@@ -2833,7 +2833,7 @@ namespace BetterAI
 
                     //mbHolyCity is for specific religions, so it was moved down to religion check in version 1.0.62422
                     //for any Holy City: mbHolyCityValid
-                    //if (eInfoImprovement.mbHolyCity)
+                    //if (pImprovementInfo.mbHolyCity)
                     //{
                     //    if (eReligionPrereq != ReligionType.NONE)
                     //    {
@@ -2851,39 +2851,39 @@ namespace BetterAI
                     {
                         CommaListVariableGenerator orList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.OR, TextManager);
 
-                        if (eInfoImprovement.mbFreshWaterValid)
+                        if (pImprovementInfo.mbFreshWaterValid)
                         {
                             orList.AddItem(buildFreshWaterLinkVariable(pTile));
                         }
 
-                        if (eInfoImprovement.mbRiverValid)
+                        if (pImprovementInfo.mbRiverValid)
                         {
                             orList.AddItem(buildRiverLinkVariable(pTile));
                         }
 
-                        if (eInfoImprovement.mbCoastLandValid)
+                        if (pImprovementInfo.mbCoastLandValid)
                         {
                             orList.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_COAST_LAND"));
                         }
 
-                        if (eInfoImprovement.mbCoastWaterValid)
+                        if (pImprovementInfo.mbCoastWaterValid)
                         {
                             orList.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_COAST_WATER"));
                         }
 
-                        if (eInfoImprovement.mbCityValid)
+                        if (pImprovementInfo.mbCityValid)
                         {
                             orList.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_ADJACENT_CITY"));
                         }
 
-                        if (eInfoImprovement.mbHolyCityValid)
+                        if (pImprovementInfo.mbHolyCityValid)
                         {
                             orList.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_HOLY_CITY_ANY"));
                         }
 
                         for (TerrainType eLoopTerrain = 0; eLoopTerrain < infos().terrainsNum(); eLoopTerrain++)
                         {
-                            if (eInfoImprovement.mabTerrainValid[(int)eLoopTerrain])
+                            if (pImprovementInfo.mabTerrainValid[(int)eLoopTerrain])
                             {
                                 orList.AddItem(buildTerrainLinkVariable(eLoopTerrain));
                             }
@@ -2891,7 +2891,7 @@ namespace BetterAI
 
                         for (HeightType eLoopHeight = 0; eLoopHeight < infos().heightsNum(); eLoopHeight++)
                         {
-                            if (eInfoImprovement.mabHeightValid[(int)eLoopHeight])
+                            if (pImprovementInfo.mabHeightValid[(int)eLoopHeight])
                             {
                                 orList.AddItem(buildHeightLinkVariable(eLoopHeight));
                             }
@@ -2899,7 +2899,7 @@ namespace BetterAI
 
                         for (HeightType eLoopHeight = 0; eLoopHeight < infos().heightsNum(); eLoopHeight++)
                         {
-                            if (eInfoImprovement.mabHeightAdjacentValid[(int)eLoopHeight])
+                            if (pImprovementInfo.mabHeightAdjacentValid[(int)eLoopHeight])
                             {
                                 orList.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_ADJACENT_HEIGHT", buildHeightLinkVariable(eLoopHeight)));
                             }
@@ -2907,7 +2907,7 @@ namespace BetterAI
 
                         for (VegetationType eLoopVegetation = 0; eLoopVegetation < infos().vegetationNum(); eLoopVegetation++)
                         {
-                            if (eInfoImprovement.mabVegetationValid[eLoopVegetation])
+                            if (pImprovementInfo.mabVegetationValid[eLoopVegetation])
                             {
                                 orList.AddItem(buildVegetationLinkVariable(eLoopVegetation));
                             }
@@ -2942,7 +2942,7 @@ namespace BetterAI
                     }
 
                     {
-                        int iRequiresLaws = eInfoImprovement.miPrereqLaws;
+                        int iRequiresLaws = pImprovementInfo.miPrereqLaws;
 
                         if (iRequiresLaws > 0)
                         {
@@ -2964,7 +2964,7 @@ namespace BetterAI
 
                     //culture is now part of new code, with tech
                     //{
-                    //    CultureType eCulturePrereq = eInfoImprovement.meCulturePrereq;
+                    //    CultureType eCulturePrereq = pImprovementInfo.meCulturePrereq;
 
                     //    if (eCulturePrereq != CultureType.NONE)
                     //    {
@@ -2992,7 +2992,7 @@ namespace BetterAI
                     }
 
                     {
-                        ImprovementType eImprovementPrereq = eInfoImprovement.meImprovementPrereq;
+                        ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
 
                         if (eImprovementPrereq != ImprovementType.NONE)
                         {
@@ -3002,7 +3002,7 @@ namespace BetterAI
 
                     if (!bUpgradeImprovement)
                     {
-                        ImprovementType eAdjacentImprovementPrereq = eInfoImprovement.meAdjacentImprovementPrereq;
+                        ImprovementType eAdjacentImprovementPrereq = pImprovementInfo.meAdjacentImprovementPrereq;
 
                         if (eAdjacentImprovementPrereq != ImprovementType.NONE)
                         {
@@ -3012,7 +3012,7 @@ namespace BetterAI
 
                     if (!bUpgradeImprovement)
                     {
-                        ImprovementClassType eAdjacentImprovementClassPrereq = eInfoImprovement.meAdjacentImprovementClassPrereq;
+                        ImprovementClassType eAdjacentImprovementClassPrereq = pImprovementInfo.meAdjacentImprovementClassPrereq;
 
                         if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
                         {
@@ -3022,7 +3022,7 @@ namespace BetterAI
                     }
 
                     {
-                        EffectCityType eEffectCityPrereq = eInfoImprovement.meEffectCityPrereq;
+                        EffectCityType eEffectCityPrereq = pImprovementInfo.meEffectCityPrereq;
 
                         if (eEffectCityPrereq != EffectCityType.NONE)
                         {
@@ -3033,7 +3033,7 @@ namespace BetterAI
   ### City Biome                       START ###
   ##############################################*/
                     {
-                        CityBiomeType eCityBiomeType = eInfoImprovement.meCityBiomePrereq;
+                        CityBiomeType eCityBiomeType = pImprovementInfo.meCityBiomePrereq;
                         if (eCityBiomeType != CityBiomeType.NONE)
                         {
                             TextVariable reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_ENTRY_COLON_SPACE_ONE", buildConceptLinkVariable("CONCEPT_CITY_BIOME"), TEXTVAR(((BetterAIInfos)infos()).cityBiome(eCityBiomeType).mName, TextManager));
@@ -3054,7 +3054,7 @@ namespace BetterAI
                     {
                         if (!infos().terrain(eLoopTerrain).mbWater) // don't clutter the help text with obvious requirements
                         {
-                            if (eInfoImprovement.mabTerrainInvalid[(int)eLoopTerrain] && (pTile == null || pTile.getTerrain() == eLoopTerrain))
+                            if (pImprovementInfo.mabTerrainInvalid[(int)eLoopTerrain] && (pTile == null || pTile.getTerrain() == eLoopTerrain))
                             {
                                 lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_TERRAIN", buildTerrainLinkVariable(eLoopTerrain))));
                             }
@@ -3063,7 +3063,7 @@ namespace BetterAI
 
                     for (HeightType eLoopHeight = 0; eLoopHeight < infos().heightsNum(); eLoopHeight++)
                     {
-                        if (eInfoImprovement.mabHeightInvalid[(int)eLoopHeight] && (pTile == null || pTile.getHeight() == eLoopHeight))
+                        if (pImprovementInfo.mabHeightInvalid[(int)eLoopHeight] && (pTile == null || pTile.getHeight() == eLoopHeight))
                         {
                             lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_TERRAIN", buildHeightLinkVariable(eLoopHeight))));
                         }
@@ -3071,7 +3071,7 @@ namespace BetterAI
 
                     if (pTile != null)
                     {
-                        if (eInfoImprovement.mbTerritoryOnly)
+                        if (pImprovementInfo.mbTerritoryOnly)
                         {
                             if (pActivePlayer != null)
                             {
@@ -3092,7 +3092,7 @@ namespace BetterAI
 
                         if (eReligionPrereq != ReligionType.NONE)
                         {
-                            if (eInfoImprovement.mbNoAdjacentReligion)
+                            if (pImprovementInfo.mbNoAdjacentReligion)
                             {
                                 if (pTile.adjacentToOtherImprovementReligion(eReligionPrereq))
                                 {
@@ -3120,7 +3120,7 @@ namespace BetterAI
 
                         {
                             int iCount = ((pCityTerritory != null) ? pCityTerritory.getImprovementCount(eImprovement) : 0);
-                            int iValue = eInfoImprovement.miMaxCityCount;
+                            int iValue = pImprovementInfo.miMaxCityCount;
 
                             if (iValue > ((iCount > 0) ? 0 : 1))
                             {
@@ -3165,7 +3165,7 @@ namespace BetterAI
                         }
 
                         {
-                            int iValue = eInfoImprovement.miMaxFamilyCount;
+                            int iValue = pImprovementInfo.miMaxFamilyCount;
                             if (iValue > 0)
                             {
                                 TextVariable reqItem = buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_FAMILY_IMPROVEMENT_COUNT", TEXTVAR(iValue)), ((pCityTerritory != null) && (iValue <= pGame.countFamilyImprovements(pCityTerritory.getFamily(), eImprovement))));
@@ -3183,7 +3183,7 @@ namespace BetterAI
                         }
 
                         {
-                            int iValue = eInfoImprovement.miMaxPlayerCount;
+                            int iValue = pImprovementInfo.miMaxPlayerCount;
                             if (iValue > 0)
                             {
                                 if ((eImprovementClass != ImprovementClassType.NONE) ? ((pCityTerritory == null) || !(pCityTerritory.isNoImprovementClassMaxUnlock(eImprovementClass))) : true)
@@ -4035,8 +4035,8 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-            BetterAIInfoEffectUnit eInfoEffectUnit = (BetterAIInfoEffectUnit)infos().effectUnit(eEffectUnit);
-            if (eInfoEffectUnit.mbAmphibiousEmbark)
+            BetterAIInfoEffectUnit pEffectUnitInfo = (BetterAIInfoEffectUnit)infos().effectUnit(eEffectUnit);
+            if (pEffectUnitInfo.mbAmphibiousEmbark)
             {
                 if (((BetterAIInfoGlobals)infos().Globals).BAI_AMPHIBIOUS_RIVER_CROSSING_DISCOUNT > 0 && ((BetterAIInfoGlobals)infos().Globals).RIVER_CROSSING_COST_EXTRA > 0)
                 {
