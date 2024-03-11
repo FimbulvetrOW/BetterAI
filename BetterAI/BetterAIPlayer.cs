@@ -76,7 +76,7 @@ namespace BetterAI
   ### legitimacy from former leaders   START ###
   ##############################################*/
         //lines 10388-10391
-        public virtual int findLeaderIndex(Character pCharacter, bool bIncludeRegents)
+        public override int findLeaderIndex(Character pCharacter, bool bIncludeRegents)
         {
             int iLeaderIndex = getLeaders().IndexOf(pCharacter.getID());
             if (!bIncludeRegents || iLeaderIndex == -1)
@@ -85,7 +85,7 @@ namespace BetterAI
             }
 
             int iNumPriorRegents = 0;
-            if (!bIncludeRegents)
+            //if (!bIncludeRegents)
             {
                 for (int i = 0; i < iLeaderIndex - 1; i++) //stop before iLeaderIndex because game().character(getLeaders()[iLeaderIndex] == pCharacter
                                                         //and pCharacter is handled separately below
@@ -102,7 +102,7 @@ namespace BetterAI
                     // legitimacy from the now-former Regent is 1/2, like the legitimacy from the leader before the Regent,
                     // and will continue to have the same decay factor as that leader from before.
                     // BAI_PROPER_REGENT_LEGITIMACY_DECAY == 0 (unmodded): when a Chosen Heir (or anyone else) takes over after a Regent,
-                    // legitimacy from the now-former Regent is full1/1, like the legitimacy from the current leader,
+                    // legitimacy from the now-former Regent is full 1/1, like the legitimacy from the current leader,
                     // and will continue to have the same decay factor as that current leader.
                 }
             }
@@ -300,14 +300,14 @@ namespace BetterAI
         }
 
         //lines 17339-17393
-        public override bool canStartImprovement(ImprovementType eImprovement, Tile pTile, bool bTestTech = true, bool bForceImprovement = false)
+        public override bool canStartImprovement(ImprovementType eImprovement, City pCity, bool bTestTech = true, bool bForceImprovement = false)
         {
-            if (base.canStartImprovement(eImprovement, pTile, bTestTech, bForceImprovement))
+            if (base.canStartImprovement(eImprovement, pCity, bTestTech, bForceImprovement))
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
   ##############################################*/
             {
-                if (bTestTech && pTile != null && !bForceImprovement)
+                if (bTestTech && pCity != null && !bForceImprovement)
                 {
                     if (base.isImprovementUnlocked(eImprovement))
                     {
@@ -317,13 +317,11 @@ namespace BetterAI
                     {
                         //when testing tech on a specific tile and unlock is not primary, check city for unlock conditions
                         //check secondary unlock on pTile
-                        BetterAICity pTerritoryCity = (BetterAICity)pTile.cityTerritory();
-                        if (pTerritoryCity != null)
+                        if (pCity != null)
                         {
                             //does city fulfill secondary prereqs?
                             //tertiary?
-                            bool bPrimaryUnlock = true;
-                            if (!(pTerritoryCity.ImprovementUnlocked(eImprovement, ref bPrimaryUnlock, true, bTestTech)))
+                            if (!(((BetterAICity)pCity).isImprovementUnlockedInCity(eImprovement, true, bTestTech)))
                             {
                                 return false;
                             }

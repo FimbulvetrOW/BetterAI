@@ -439,6 +439,90 @@ namespace BetterAI
                 //copy-paste END
 
 
+
+                protected virtual Unit assignUnitToBuyTile(Tile pTile, YieldType eYield, City pCity, bool bAllowCivilian)
+                {
+                    int iBestValue = 0;
+                    Unit pBestUnit = null;
+                    foreach (int iUnitID in msiAvailableUnits)
+                    {
+                        Unit pUnit = Game.unit(iUnitID);
+                        if (pUnit != null)
+                        {
+/*####### Better Old World AI - Base DLL #######
+  ### Let Civilian units buy tiles too START ###
+  ##############################################*/
+                            //if (pUnit.canBuyTile(pTile, pCity, eYield, BAI_AI.player) && pUnit.canDamage()) // save civilian units - military units have already done their critical tasks
+                            if (pUnit.canBuyTile(pTile, pCity, eYield, BAI_AI.player) && pUnit.canDamage() || bAllowCivilian) // use civilian units if no military units available for the task
+/*####### Better Old World AI - Base DLL #######
+  ### Let Civilian units buy tiles too   END ###
+  ##############################################*/
+                            {
+                                if (AI.isTileReachable(pTile, pUnit.tile()))
+                                {
+                                    if (!pUnit.AI.isInGraveDanger(pTile, false))
+                                    {
+                                        using var pathfinderScoped = Game.GetAreaPathFinderScoped();
+
+                                        if (Game.findPathDistance(pathfinderScoped.Value, pUnit.tile(), pTile, true, out int iPathLength))
+                                        {
+                                            int iValue = 10 / (iPathLength + 1);
+
+                                            if (AI.isPeaceful() && !pUnit.isWorker())
+                                            {
+                                                iValue *= 2;
+                                            }
+                                            if (iValue > iBestValue)
+                                            {
+                                                iBestValue = iPathLength;
+                                                pBestUnit = pUnit;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (pBestUnit != null)
+                    {
+                        pBestUnit.AI.Target = pTile.getID();
+                        pBestUnit.AI.TargetData = (int)eYield + (int)Infos.yieldsNum() * pCity.getID();
+                        pBestUnit.AI.TargetValue = iBestValue;
+                        pBestUnit.AI.setMoveTile(pTile.getID());
+                        pBestUnit.AI.Role = Unit.RoleType.BUY_TILE;
+                        return pBestUnit;
+                    }
+                    return null;
+                }
+
+                public override bool buyTile(Player player, Tile pTile, YieldType eYield, City pCity)
+                {
+                    //using var profileScope = new UnityProfileScope("UnitRoleManager.buyTile");
+
+                    Unit pUnit = assignUnitToBuyTile(pTile, eYield, pCity, bAllowCivilian: false); //same result as original method
+                    if (pUnit != null)
+                    {
+                        AI.moveUnits(Unit.MovePriority.YieldExpenses, 0, pUnit);
+                        return true;
+                    }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Let Civilian units buy tiles too START ###
+  ##############################################*/
+                    pUnit = assignUnitToBuyTile(pTile, eYield, pCity, bAllowCivilian: true);
+                    if (pUnit != null)
+                    {
+                        AI.moveUnits(Unit.MovePriority.YieldExpenses, 0, pUnit);
+                        return true;
+                    }
+/*####### Better Old World AI - Base DLL #######
+  ### Let Civilian units buy tiles too START ###
+  ##############################################*/
+                    return false;
+                }
+
+
+
             }
         }
     }

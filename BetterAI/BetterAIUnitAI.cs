@@ -13,97 +13,6 @@ namespace BetterAI
         {
             static public int LAST_STAND_EXTRA_HP = 3;
 
-            protected override bool foundCity()
-            {
-                //using var profileScope = new UnityProfileScope("UnitAI.foundCity");
-
-                FamilyType eBestFamily = FamilyType.NONE;
-                NationType eBestNation = NationType.NONE;
-
-                if (unit.getNation() == NationType.NONE)
-                {
-                    int iBestValue = 0;
-
-                    for (NationType eLoopNation = 0; eLoopNation < infos.nationsNum(); eLoopNation++)
-                    {
-                        FamilyType eLoopFamily = game.isCharacters() ? AI.getBestFoundFamily(unit.tile(), eLoopNation) : FamilyType.NONE;
-
-                        if (ActingPlayer != null && ActingPlayer.canFoundCity(eLoopFamily, eLoopNation))
-                        {
-                            int iValue = game.randomNext(1000) + 1;
-                            if (iValue > iBestValue)
-                            {
-                                eBestNation = eLoopNation;
-                                eBestFamily = eLoopFamily;
-                                iBestValue = iValue;
-                            }
-                        }
-                    }
-
-                    if (eBestNation == NationType.NONE)
-                    {
-                        MohawkAssert.Assert(false, "more players than unique nations");
-                        return false;
-                    }
-                }
-                else
-                {
-                    eBestNation = unit.getNation();
-                    if (game.isCharacters())
-                    {
-                        eBestFamily = AI.getBestFoundFamily(unit.tile(), eBestNation);
-                    }
-                }
-
-                if (unit.canFoundCity(unit.tile(), ActingPlayer, eBestFamily, eBestNation))
-                {
-                    using (var unitsScoped = CollectionCache.GetHashSetScoped<int>())
-                    {
-                        if (unit.hasPlayer())
-                        {
-                            for (int i = 0; i < unit.player().getNumUnits(); ++i)
-                            {
-                                Unit pUnit = unit.player().unitAt(i);
-                                if (pUnit != null)
-                                {
-                                    unitsScoped.Value.Add(pUnit.getID());
-                                }
-                            }
-                        }
-                        City pNewCity = unit.foundCity(eBestFamily, eBestNation, ActingPlayer);
-                        AI.updateCityDistances();
-                        AI.cacheCityYieldValues(pNewCity);
-/*####### Better Old World AI - Base DLL #######
-  ### AI: cache improvement values     START ###
-  ##############################################*/
-                        ((BetterAIPlayer.BetterAIPlayerAI)AI).cacheCityImprovementValues(pNewCity);
-/*####### Better Old World AI - Base DLL #######
-  ### AI: cache improvement values       END ###
-  ##############################################*/
-                        AI.cacheCityBestImprovements(pNewCity);
-                        AI.cacheTechValues();
-                        AI.assignBestGovernor(pNewCity);
-                        AI.doCityTurn(pNewCity);
-                        AI.checkNewCitySites(true);
-                        if (unit.hasPlayer())
-                        {
-                            for (int i = 0; i < unit.player().getNumUnits(); ++i)
-                            {
-                                Unit pNewUnit = unit.player().unitAt(i);
-                                if (pNewUnit != null && !unitsScoped.Value.Contains(pNewUnit.getID()))
-                                {
-                                    AI.addTileProtection(pNewUnit.getID());
-                                }
-                            }
-                        }
-                    }
-
-                    return true;
-                }
-
-                return false;
-            }
-
 
             //re-enabling pillaging on water by tribal land units if delay turns are set
             //lines 1019-1064
@@ -111,7 +20,7 @@ namespace BetterAI
             {
                 //using var profileScope = new UnityProfileScope("UnitAI.shouldPillage");
 
-                if (!pTile.canUnitOccupy(unit, TeamType.NONE, bTestTheirUnits: false, bTestOurUnits: false, bFinalMoveTile: true, bBumped: false))
+                if (!pTile.canUnitOccupy(unit, TeamType.NONE, bTestTheirUnits: false, bTestOurUnits: false, bFinalMoveTile: true, bBump: false))
                 {
                     return false;
                 }

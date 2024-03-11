@@ -55,20 +55,21 @@ namespace BetterAI
 
 
         //canHaveImprovement: lines 4805-5098
-        public virtual bool canCityTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public override bool canCityHaveImprovement(City pCityTerritory, ImprovementType eImprovement, bool bForceImprovement)
         {
-            BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
-            City pCityTerritory = cityTerritory();
-
-
-            if (!isImprovementValid(eImprovement, pCityTerritory, bTestEnabled))
+            if (pCityTerritory == null) return false;
+            return ((BetterAICity)pCityTerritory).canCityHaveImprovement(eImprovement, bUpgradeImprovement: true, bForceImprovement: bForceImprovement);
+        }
+        public virtual bool canCityTileHaveImprovement(BetterAICity pCity, ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        {
+            if (!isImprovementValid(eImprovement, pCity, bTestEnabled))
             {
                 return false;
             }
 
             if (!bForceImprovement)
             {
-                ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
+                ImprovementType eImprovementPrereq = infos().improvement(eImprovement).meImprovementPrereq;
 
                 if (eImprovementPrereq != ImprovementType.NONE)
                 {
@@ -77,7 +78,7 @@ namespace BetterAI
                     //    return false;
                     //}
 
-                    int iCount = pCityTerritory.getFinishedImprovementCount(eImprovementPrereq);
+                    int iCount = pCity.getFinishedImprovementCount(eImprovementPrereq);
 
                     //if (iCount == 0)
                     //{
@@ -123,7 +124,7 @@ namespace BetterAI
 
             if (bTestTerritory)
             {
-                if (infos().improvement(eImprovement).mbTerritoryOnly)
+                if (pImprovementInfo.mbTerritoryOnly)
                 {
                     if (!hasCityTerritory())
                     {
@@ -229,7 +230,7 @@ namespace BetterAI
         }
 
         //lines 4805-5098
-        public override bool canHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public override bool canHaveImprovement(ImprovementType eImprovement, City pCity = null, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             //split into 3:
             //tile.canGeneralTileHaveImprovement (not tied to city)
@@ -245,16 +246,15 @@ namespace BetterAI
             }
 
             //BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
-            BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
+            BetterAICity pCityTerritory = (BetterAICity)pCity ?? (BetterAICity)cityTerritory();
             if (pCityTerritory != null)
             {
-                bool bPrimaryUnlock = true;
-                if (!(pCityTerritory.canCityHaveImprovement(eImprovement, ref bPrimaryUnlock, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement, bForceImprovement)))
+                if (!(pCityTerritory.canCityHaveImprovement(eImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement, bForceImprovement)))
                 {
                     return false;
                 }
 
-                if (!(canCityTileHaveImprovement(eImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestAdjacent, bTestReligion, bUpgradeImprovement, bForceImprovement)))
+                if (!(canCityTileHaveImprovement(pCityTerritory, eImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestAdjacent, bTestReligion, bUpgradeImprovement, bForceImprovement)))
                 {
                     return false;
                 }
@@ -274,11 +274,10 @@ namespace BetterAI
         {
             //using var profileScope = new UnityProfileScope("Game.tileYieldOutput");
 
-            //for the next update: 
-            //if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count = 0)
-            //{
-            //    return base.yieldOutputForGovernor(eImprovement, eSpecialist, eYield, pCity, bCityEffects, bBaseOnly, pGovernor);
-            //}
+            if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
+            {
+                return base.yieldOutputForGovernor(eImprovement, eSpecialist, eYield, pCity, bCityEffects, bBaseOnly, pGovernor);
+            }
 
             int iOutput = yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor, dEffectCityExtraCounts);
 
@@ -380,11 +379,10 @@ namespace BetterAI
         {
             //using var profileScope = new UnityProfileScope("Game.tileYieldBaseOutputNoSpecialist");
 
-            //for the next update: 
-            //if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count = 0)
-            //{
-            //    return base.yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor);
-            //}
+            if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
+            {
+                return base.yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor);
+            }
 
             ResourceType eResource = getResource();
 
@@ -502,11 +500,10 @@ namespace BetterAI
         {
             //using var profileScope = new UnityProfileScope("Game.tileYieldModifierNoSpecialist");
 
-            //for the next update: 
-            //if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count = 0)
-            //{
-            //    return base.yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor);
-            //}
+            if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
+            {
+                return base.yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor);
+            }
 
             int iModifier = 0;
 

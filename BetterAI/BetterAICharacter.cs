@@ -62,20 +62,6 @@ namespace BetterAI
             return 0;
         }
 
-/*####### Better Old World AI - Base DLL #######
-  ### Fix: Handling of Regents for           ###
-  ### legitimacy from former leaders   START ###
-  ##############################################*/
-public override int getLegitimacy()
-{
-    //return getLegitimacy(player().findLeaderIndex(this), player().getNumLeaders(false));
-    return getLegitimacy(((BetterAIPlayer)player()).findLeaderIndex(this, bIncludeRegents: false), player().getNumLeaders(bIncludeRegents: false));
-}
-/*####### Better Old World AI - Base DLL #######
-  ### Fix: Handling of Regents for           ###
-  ### legitimacy from former leaders     END ###
-  ##############################################*/
-
         //lines 7677-7701
         public override void generateRatingsCourtier(CourtierType eCourtier)
         {

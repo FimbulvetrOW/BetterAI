@@ -336,10 +336,10 @@ namespace BetterAI
         //copy-paste END
 
         //lines 11725-11756
-        public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, WorkerActionFilter eFilter = WorkerActionFilter.GENERAL)
+        public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, WorkerActionFilter eFilter = WorkerActionFilter.CURRENT_TILE)
         {
             bool bRunOriginal = true;
-            if (pUnit != null && pTile != null && eFilter == WorkerActionFilter.GENERAL && ((BetterAIInfoGlobals)Infos.Globals).BAI_WORKERLIST_EXTRA > 0)
+            if (pUnit != null && pTile != null && eFilter == WorkerActionFilter.CURRENT_TILE && ((BetterAIInfoGlobals)Infos.Globals).BAI_WORKERLIST_EXTRA > 0)
             {
                 bool bWorker = pUnit.isWorker();
                 Player pActivePlayer = ClientMgr.activePlayer();
@@ -353,6 +353,22 @@ namespace BetterAI
                 if (bShowExtraImprovements && (pCityTerritory != null))
                 {
                     bRunOriginal = false;
+
+                    {
+                        ImprovementType eBestImprovement = ImprovementType.NONE;
+                        Task.Run(() =>
+                        {
+                            lock (ClientMgr.TaskLock)
+                            {
+                                if (!pActivePlayer.AI.isBestTileImprovementsCached(pTile.cityTerritory()))
+                                {
+                                    pActivePlayer.AI.cacheCityImprovementValues(pTile.cityTerritory());
+                                }
+                                pActivePlayer.AI.getBestImprovement(pTile, pTile.cityTerritory(), ref eBestImprovement);
+                            }
+                            selectedWorkerRecommendedImprovementCallback(eBestImprovement);
+                        });
+                    }
 
                     List<ResourceType> cityResources = new List<ResourceType>(); //only those without improvement
                     {
@@ -409,11 +425,11 @@ namespace BetterAI
                     for (ImprovementType eLoopImprovement = 0; eLoopImprovement < Infos.improvementsNum(); eLoopImprovement++)
                     {
                         bool bShowButton = false;
-                        InfoImprovement improvement = Infos.improvement(eLoopImprovement);
-                        if (improvement == null) continue;
+                        InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
+                        if (pImprovementInfo == null) continue;
                         if (!(pUnit.canBuildImprovementType(eLoopImprovement))) continue;
 
-                        if (improvement.mbShowAlways && (improvement.mbUrban == pTile.isUrban()))
+                        if (pImprovementInfo.mbShowAlways && (pImprovementInfo.mbUrban == pTile.isUrban()))
                         {
                             bShowButton = true;
                         }
@@ -425,8 +441,7 @@ namespace BetterAI
                         {
                             if (pActivePlayer.canStartImprovement(eLoopImprovement, null))
                             {
-                                bool bPrimaryUnlock = true;
-                                if (!(pCityTerritory.canCityHaveImprovement(eLoopImprovement, ref bPrimaryUnlock)))
+                                if (!(pCityTerritory.canCityHaveImprovement(eLoopImprovement)))
                                 {
                                     continue;
                                 }
@@ -434,33 +449,33 @@ namespace BetterAI
                                 //check valids, including resources (resources have to be in the list)
                                 {
 
-                                    if (!(improvement.mbFreshWaterValid
-                                        || improvement.mbRiverValid
-                                        || improvement.mbCoastLandValid
-                                        || improvement.mbCoastWaterValid
-                                        || improvement.mbCityValid
-                                        || improvement.mbHolyCityValid))
+                                    if (!(pImprovementInfo.mbFreshWaterValid
+                                        || pImprovementInfo.mbRiverValid
+                                        || pImprovementInfo.mbCoastLandValid
+                                        || pImprovementInfo.mbCoastWaterValid
+                                        || pImprovementInfo.mbCityValid
+                                        || pImprovementInfo.mbHolyCityValid))
                                     {
                                         bool bAnyValid = false;
                                         for (TerrainType eLoopTerrain = 0; (eLoopTerrain < Infos.terrainsNum() && !(bAnyValid)); eLoopTerrain++)
                                         {
-                                            bAnyValid = bAnyValid || improvement.mabTerrainValid[(int)eLoopTerrain];
+                                            bAnyValid = bAnyValid || pImprovementInfo.mabTerrainValid[(int)eLoopTerrain];
                                         }
 
                                         //height, heightadjacent, vegetation
                                         for (HeightType eLoopHeight = 0; (eLoopHeight < Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
                                         {
-                                            bAnyValid = bAnyValid || improvement.mabHeightValid[(int)eLoopHeight];
+                                            bAnyValid = bAnyValid || pImprovementInfo.mabHeightValid[(int)eLoopHeight];
                                         }
 
                                         for (HeightType eLoopHeight = 0; (eLoopHeight < Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
                                         {
-                                            bAnyValid = bAnyValid || improvement.mabHeightAdjacentValid[(int)eLoopHeight];
+                                            bAnyValid = bAnyValid || pImprovementInfo.mabHeightAdjacentValid[(int)eLoopHeight];
                                         }
 
                                         for (VegetationType eLoopVegetation = 0; (eLoopVegetation < Infos.vegetationNum() && !(bAnyValid)); eLoopVegetation++)
                                         {
-                                            bAnyValid = bAnyValid || improvement.mabVegetationValid[eLoopVegetation];
+                                            bAnyValid = bAnyValid || pImprovementInfo.mabVegetationValid[eLoopVegetation];
                                         }
 
                                         if (!(bAnyValid))

@@ -251,7 +251,7 @@ namespace BetterAI
                 }
             }
 
-            if (!canOccupyTile(pTile, getTeam(), bTestTheirUnits: true, bTestOurUnits: false))
+            if (!canOccupyTile(pTile, getTeam(), bTestTheirUnits: true, bTestOurUnits: false, bBump: true))
             {
                 return false;
             }
@@ -752,9 +752,9 @@ namespace BetterAI
             game().sendPendingClientMessages();
         }
 
-        /*####### Better Old World AI - Base DLL #######
-          ### Agent Network Cost Scaling       START ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### Agent Network Cost Scaling       START ###
+  ##############################################*/
         //lines 10543-10553
         public virtual int getAgentNetworkCost(City pCity)
         {

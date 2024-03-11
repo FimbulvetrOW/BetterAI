@@ -768,8 +768,8 @@ namespace BetterAI
   ### No BestImprovement               START ###
   ### because no cached values (no idea why) ###
   ##############################################*/
-                            //ImprovementType eBestImprovement = ImprovementType.NONE;
-                            //    pActivePlayer.AI.getBestImprovement(pTile, pCityTerritory, ref eBestImprovement);
+                            //no cached values because human player doesn't evaluate
+                            //ImprovementType eBestImprovement = pActivePlayer.AI.getBestImprovementCached(pTile, pCityTerritory);
 
                             //removing BestImprovement
 
@@ -798,7 +798,7 @@ namespace BetterAI
                                             }
 
                                         }
-                                        else if (pActivePlayer.canStartImprovement(eLoopImprovement, pTile, bTestTech: false))
+                                        else if (pActivePlayer.canStartImprovement(eLoopImprovement, pTile.cityTerritory(), bTestTech: false))
                                         {
                                             buildTileEffectsLink(improvementBuilder, pManager, pTile, eLoopImprovement, SpecialistType.NONE, false);
                                         }
@@ -1061,15 +1061,17 @@ namespace BetterAI
   ### No BestImprovement               START ###
   ### because no cached values (no idea why) ###
   ##############################################*/
-                //ImprovementType eBestImprovement = ImprovementType.NONE;
-                ////if (!((BetterAIPlayer.BetterAIPlayerAI)pManager.activePlayer().AI).BhumanCachingDone)
+                //same here, probably because there is no eval called for human players
+
+                ////if (!((BetterAIPlayer.BetterAIPlayerAI)pManager.activePlayer().AI).bHumanCachingDone)
                 ////{
                 ////    ((BetterAIPlayer.BetterAIPlayerAI)pManager.activePlayer().AI).cacheImprovementValuesHuman();
                 ////}
-                //pManager.activePlayer().AI.getBestImprovement(pTile, pTile.cityTerritory(), ref eBestImprovement);
+                //
+                //ImprovementType eBestImprovement = pManager.activePlayer().AI.getBestImprovementCached(pTile, pTile.cityTerritory());;
                 //if (eBestImprovement != ImprovementType.NONE)
                 //{
-                //    long iAIValue = pManager.activePlayer().AI.improvementValueTile(eBestImprovement, pTile, pTile.cityTerritory(), true, true);
+                //    long iAIValue = pManager.activePlayer().AI.improvementValueTile(eBestImprovement, pTile, pTile.cityTerritory(), true, true, true);
                 //    builder.Add(QUICKTEXTVAR(TEXT("TEXT_HELPTEXT_AI_VALUE") + ": {0} ({1})*", iAIValue, TEXTVAR_TYPE(mInfos.improvement(eBestImprovement).mName)));
                 //}
 /*####### Better Old World AI - Base DLL #######
@@ -1116,7 +1118,7 @@ namespace BetterAI
 
             for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
             {
-                int iTotalOutput = pTile.yieldOutputModified(eImprovement, eSpecialist, eLoopYield, pTile.cityTerritory());
+                int iTotalOutput = pTile.yieldOutputModified(eImprovement, eSpecialist, eLoopYield, bCityEffects: true);
                 if (iTotalOutput != 0)
                 {
                     builder.AddTEXT("TEXT_HELPTEXT_YIELD_PER_YEAR", buildYieldValueIconLinkVariable(eLoopYield, iTotalOutput, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
@@ -1753,12 +1755,24 @@ namespace BetterAI
 
                         foreach (EffectCityType eEffectCity in effectListScoped.Value)
                         {
-                            buildEffectCityHelpYields(builder, eEffectCity, pGame, null, pActivePlayer, 1);
+                            buildEffectCityHelpYields(builder, eEffectCity, pGame, null, pActivePlayer);
                         }
 
                         foreach (EffectCityType eEffectCity in effectListScoped.Value)
                         {
                             buildEffectCityHelpNoYields(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), pActivePlayer);
+                        }
+
+                        {
+                            ImprovementType eAdjacentImprovement = infos().improvement(eImprovement).meAdjacentImprovementSpecialist;
+                            if (eAdjacentImprovement != ImprovementType.NONE)
+                            {
+                                SpecialistType eSpecialist = infos().improvement(eAdjacentImprovement).meSpecialist;
+                                if (eSpecialist != SpecialistType.NONE)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_BONUS_FREE_IMPROVEMENT_SPECIALIST_ADJACENT", buildSpecialistLinkVariable(eSpecialist, pGame), buildImprovementLinkVariable(eAdjacentImprovement, pGame));
+                                }
+                            }
                         }
 
                         if (pGame?.isCharacters() ?? true)
@@ -1888,7 +1902,7 @@ namespace BetterAI
                             if (bDetails)
                             {
                                 {
-                                    ReligionType eReligionSpread = infos().improvement(eImprovement).meReligionSpread;
+                                    ReligionType eReligionSpread = pGame?.getImprovementReligionSpread(eImprovement) ?? infos().improvement(eImprovement).meReligionSpread;
 
                                     if (eReligionSpread != ReligionType.NONE)
                                     {
@@ -1922,7 +1936,7 @@ namespace BetterAI
                                     {
                                         if (pGame?.isCharacters() ?? true)
                                         {
-                                            ReligionType eReligionSpread = infos().improvement(eImprovement).meReligionSpread;
+                                            ReligionType eReligionSpread = pGame?.getImprovementReligionSpread(eImprovement) ?? infos().improvement(eImprovement).meReligionSpread;
 
                                             if ((eReligionSpread != ReligionType.NONE) || (eReligionPrereq != ReligionType.NONE))
                                             {
@@ -2408,7 +2422,7 @@ namespace BetterAI
                         {
                             foreach (EffectCityType eEffectCity in effectListScoped.Value)
                             {
-                                buildEffectCityHelpYieldsPotential(subText, eEffectCity, pGame, null, pActivePlayer, 1);
+                                buildEffectCityHelpYieldsPotential(subText, eEffectCity, pGame, null, pActivePlayer);
                             }
 
                             for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < mInfos.effectCitiesNum(); eLoopEffectCity++)
@@ -2787,15 +2801,13 @@ namespace BetterAI
                                     orLineBreakList.AddItem(andList3.Finalize());
                                 }
                                 //lRequirements.Add(orLineBreakList.Finalize());
-                                bool bPrimaryUnlock = true;
-                                lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", orLineBreakList.Finalize()), ((pCityTerritory != null) ? !(pCityTerritory.ImprovementUnlocked(eImprovement, ref bPrimaryUnlock)) : false)));
+                                lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", orLineBreakList.Finalize()), ((pCityTerritory != null) ? !(pCityTerritory.isImprovementUnlockedInCity(eImprovement)) : false)));
 
                             }
                             else
                             {
                                 //lRequirements.Add(andList.Finalize());
-                                bool bPrimaryUnlock = true;
-                                lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", andList.Finalize()), ((pCityTerritory != null) ? !(pCityTerritory.ImprovementUnlocked(eImprovement, ref bPrimaryUnlock)) : false)));
+                                lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", andList.Finalize()), ((pCityTerritory != null) ? !(pCityTerritory.isImprovementUnlockedInCity(eImprovement)) : false)));
                             }
                             //DEBUG HERE
                             //CommaListVariableGenerator debugList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.NONE, TextManager);
@@ -2807,7 +2819,7 @@ namespace BetterAI
                             //    //debugList.AddItem(TEXTVAR(""));
                             //    debugList.AddItem(TEXTVAR("City != NULL"));
                             //    bool bPrimaryUnlock = true;
-                            //    if (pCityTerritory.ImprovementUnlocked(eImprovement, ref bPrimaryUnlock))
+                            //    if (pCityTerritory.isImprovementUnlockedInCity(eImprovement, ref bPrimaryUnlock))
                             //    {
                             //        debugList.AddItem(TEXTVAR("Improvement unlocked: " + ((bPrimaryUnlock) ? "Primary" : "not Primary") ));
 
@@ -3029,9 +3041,28 @@ namespace BetterAI
                             lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES", buildEffectCitySourceLinkVariable(eEffectCityPrereq, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer)), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(eEffectCityPrereq) == 0) : false)));
                         }
                     }
-/*####### Better Old World AI - Base DLL #######
-  ### City Biome                       START ###
-  ##############################################*/
+
+                    {
+                        if (pImprovementInfo.maeEffectCityAnyPrereq.Count > 0)
+                        {
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA_OR, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_REQUIRES")))
+                                {
+                                    foreach (EffectCityType eLoopEffectCity in pImprovementInfo.maeEffectCityAnyPrereq)
+                                    {
+                                        subText.Add(buildWarningTextVariable(buildEffectCitySourceLinkVariable(eLoopEffectCity, pCityTerritory, pCityTerritory?.governor(), pGame, pActivePlayer)), ((pCityTerritory != null) ? (pCityTerritory.getEffectCityCount(eLoopEffectCity) == 0) : false));
+                                    }
+                                }
+
+                                lRequirements.Add(subText.ToTextVariable());
+                            }
+                        }
+                    }
+
+                    /*####### Better Old World AI - Base DLL #######
+                      ### City Biome                       START ###
+                      ##############################################*/
                     {
                         CityBiomeType eCityBiomeType = pImprovementInfo.meCityBiomePrereq;
                         if (eCityBiomeType != CityBiomeType.NONE)
@@ -4794,7 +4825,7 @@ namespace BetterAI
                                 {
                                     ResourceType eResource = pTile.getResource();
 
-                                    int iValue = pTile.yieldOutputModified(ImprovementType.NONE, SpecialistType.NONE, eYield);
+                                    int iValue = pTile.yieldOutputModified(ImprovementType.NONE, SpecialistType.NONE, eYield, bCityEffects: true);
                                     if (iValue != 0)
                                     {
                                         if (!dResourceYields.ContainsKey(eResource))

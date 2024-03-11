@@ -1,22 +1,25 @@
 ﻿using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
+using Enum = System.Enum;
+using UnityEngine;
+using UnityEngine.UI;
+using Debug = UnityEngine.Debug;
+using Mohawk.SystemCore;
+using Mohawk.UIInterfaces;
 using TenCrowns.AppCore;
 using TenCrowns.GameCore;
 using TenCrowns.GameCore.Text;
 using static TenCrowns.GameCore.Text.TextExtensions;
 using Constants = TenCrowns.GameCore.Constants;
-using Enum = System.Enum;
 using TenCrowns.ClientCore;
-using Mohawk.SystemCore;
-using Mohawk.UIInterfaces;
-using UnityEngine;
-using UnityEngine.UI;
 using static TenCrowns.ClientCore.ClientUI;
-using System.Xml;
 
 namespace BetterAI
 {
@@ -155,63 +158,69 @@ namespace BetterAI
         }
 
 
-        protected override void ReadInfoListData(List<XmlDataListItemBase> items)
+
+        private List<string> strictModeDeferredItems = new List<string> { "Infos/achievement", "Infos/bonus", "Infos/eventStory", "Infos/eventOption",
+            "Infos/subject", "Infos/assetVariation", "Infos/subjectRelation",
+            "Infos/audio", "Infos/subjectTextVar", "Infos/borderPattern",
+            "Infos/goal", "Infos/characterPortrait", "Infos/effectCity", "Infos/effectPlayer",
+            "Infos/characterPortraitAgeInterpolation", "Infos/characterPortraitFeaturePoints", "Infos/characterPortraitOpinion"};
+
+        protected override void ReadInfoListData(List<XmlDataListItemBase> items, bool deferredPass)
         {
             //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData");
 
-            foreach (XmlDataListItemBase item in items)
+            bool isThreadSafe(XmlDataListItemBase item)
             {
-                MohawkAssert.IsNull(mCurrentReadType);
+                if (deferredPass) return false;
+                return !(item.GetFileName() == "Infos/preload-text" || item.GetFileName() == "Infos/preload-concept" || item.GetFileName() == "Infos/language");
+            }
 
-                mCurrentReadType = item.GetType().GenericTypeArguments[1];
-                mFieldTypeDictionary[mCurrentReadType] = new Dictionary<string, FieldTypeData>();
-                AddFieldType("zType", typeof(string), false);
+            bool thisPass(XmlDataListItemBase item)
+            {
+                if (!mModSettings.ModPath.IsStrictMode()) return !deferredPass;
+                return strictModeDeferredItems.Contains(item.GetFileName()) ? deferredPass : !deferredPass;
+            }
 
-                List<XmlDocument> validationDocs = new List<XmlDocument>();
+
+            void read(XmlDataListItemBase item)
+            {
+                //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData.Thread." + item.GetFileName());
+                Type currentType = item.GetType().GenericTypeArguments[1];
+
+                List<XmlNodeList> validationNodes = new List<XmlNodeList>();
+                ReadContext ctx = new ReadContext(currentType, null);
 
                 //base xml
                 foreach (XmlDocument xmlDoc in getModdableBaseXML(item.GetFileName()))
                 {
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, false);
-                    validationDocs.Add(xmlDoc);
+                    item.ReadData(nodes, this, ctx);
+                    validationNodes.Add(nodes);
                 }
+
+                ctx.IsAddedData = true;
 
                 //added xml
                 foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD))
                 {
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, true);
-                    validationDocs.Add(xmlDoc);
+                    item.ReadData(nodes, this, ctx);
+                    validationNodes.Add(nodes);
                 }
+                
 
                 foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD_ALWAYS))
                 {
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, true);
+                    item.ReadData(nodes, this, ctx);
                 }
 
                 //change xml
                 foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetChangedXML(item.GetFileName()))
                 {
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, true);
+                    item.ReadData(nodes, this, ctx);
                 }
-
-                ////change xml
-                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.CHANGE))
-                //{
-                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                //    item.ReadData(nodes, this, true);
-                //}
-
-                ////append xml
-                //mbAppendLists = true;
-                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND))
-                //{
-                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                //    item.ReadData(nodes, this, true);
-                //}
 
 /*####### Better Old World AI - Base DLL #######
   ### modmod fix                       START ###
@@ -219,24 +228,60 @@ namespace BetterAI
                 //make mod load order the only significant factor for change and append
                 //with this, you can -change, then a modmod can -append to that same item
 
-                //change and append xml
-                List<XmlDocument> appends = mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND);
+                ////append xml
+                //ctx.AppendLists = true;
+                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND))
+                //{
+                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                //    item.ReadData(nodes, this, ctx);
+                //    validationNodes.Add(nodes);
+                //}
 
-                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.CHANGE | ModdedXMLType.APPEND))
+                //ctx.AppendLists = false;
+
+                ////change xml
+                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.CHANGE))
+                //{
+                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                //    item.ReadData(nodes, this, ctx);
+                //}
+
+                //append+change xml
+                List<XmlDocument> appends = mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND);
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND | ModdedXMLType.CHANGE))
                 {
-                    mbAppendLists = appends.Contains(xmlDoc);
+                    ctx.AppendLists = appends.Contains(xmlDoc);
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, true);
-                    validationDocs.Add(xmlDoc);
+                    item.ReadData(nodes, this, ctx);
+                    validationNodes.Add(nodes);
                 }
+
+                ctx.AppendLists = false;
 /*####### Better Old World AI - Base DLL #######
   ### modmod fix                         END ###
   ##############################################*/
-                mbAppendLists = false;
 
-                EndReadValidation(validationDocs, item.GetFileName());
-                mCurrentReadType = null; //clear active readtype
+                mModSettings.XMLLoader.GetValidator().EndReadValidation(validationNodes, item.GetFileName(), currentType, mTypeDictionary, mRemovedXMLTypes.Keys);
             }
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            foreach (var item in items)
+            {
+                if (!isThreadSafe(item) && thisPass(item))
+                {
+                    read(item);
+                }
+            }
+            Parallel.ForEach(items, item =>
+            {
+                if (isThreadSafe(item) && thisPass(item))
+                {
+                    read(item);
+                }
+            });
+            stopwatch.Stop();
+            Debug.Log($"Infos.ReadInfoListData complete in {stopwatch.ElapsedMilliseconds} ms");
         }
 
 /*####### Better Old World AI - Base DLL #######
@@ -402,20 +447,20 @@ namespace BetterAI
         }
 
 
-        public override void ReadData(XmlNode node, Infos infos)
+        public override void Read(Infos infos, Infos.ReadContext ctx)
         {
-            base.ReadData(node, infos);
+            base.Read(infos, ctx);
 
-            infos.readType(node, "CityBiomePrereq", ref meCityBiomePrereq);
-            infos.readType(node, "SecondaryUnlockTechPrereq", ref meSecondaryUnlockTechPrereq);
-            infos.readType(node, "SecondaryUnlockCulturePrereq", ref meSecondaryUnlockCulturePrereq);
-            infos.readInt(node, "iSecondaryUnlockPopulationPrereq", ref miSecondaryUnlockPopulationPrereq);
-            infos.readType(node, "SecondaryUnlockEffectCityPrereq", ref meSecondaryUnlockEffectCityPrereq);
-            infos.readType(node, "TertiaryUnlockFamilyClassPrereq", ref meTertiaryUnlockFamilyClassPrereq);
-            infos.readBool(node, "bTertiaryUnlockSeatOnly", ref mbTertiaryUnlockSeatOnly);
-            infos.readType(node, "TertiaryUnlockTechPrereq", ref meTertiaryUnlockTechPrereq);
-            infos.readType(node, "TertiaryUnlockCulturePrereq", ref meTertiaryUnlockCulturePrereq);
-            infos.readType(node, "TertiaryUnlockEffectCityPrereq", ref meTertiaryUnlockEffectCityPrereq);
+            infos.readType(ctx, "CityBiomePrereq", ref meCityBiomePrereq);
+            infos.readType(ctx, "SecondaryUnlockTechPrereq", ref meSecondaryUnlockTechPrereq);
+            infos.readType(ctx, "SecondaryUnlockCulturePrereq", ref meSecondaryUnlockCulturePrereq);
+            infos.readInt(ctx, "iSecondaryUnlockPopulationPrereq", ref miSecondaryUnlockPopulationPrereq);
+            infos.readType(ctx, "SecondaryUnlockEffectCityPrereq", ref meSecondaryUnlockEffectCityPrereq);
+            infos.readType(ctx, "TertiaryUnlockFamilyClassPrereq", ref meTertiaryUnlockFamilyClassPrereq);
+            infos.readBool(ctx, "bTertiaryUnlockSeatOnly", ref mbTertiaryUnlockSeatOnly);
+            infos.readType(ctx, "TertiaryUnlockTechPrereq", ref meTertiaryUnlockTechPrereq);
+            infos.readType(ctx, "TertiaryUnlockCulturePrereq", ref meTertiaryUnlockCulturePrereq);
+            infos.readType(ctx, "TertiaryUnlockEffectCityPrereq", ref meTertiaryUnlockEffectCityPrereq);
         }
     }
 
@@ -425,10 +470,10 @@ namespace BetterAI
         //new stuff here
         public int miMaxCityCount = 0;
         public List<ImprovementType> maeImprovementTypes = new List<ImprovementType>();
-        public override void ReadData(XmlNode node, Infos infos)
+        public override void Read(Infos infos, Infos.ReadContext ctx)
         {
-            base.ReadData(node, infos);
-            infos.readInt(node, "iMaxCityCount", ref miMaxCityCount);
+            base.Read(infos, ctx);
+            infos.readInt(ctx, "iMaxCityCount", ref miMaxCityCount);
 
         }
     }
@@ -443,10 +488,10 @@ namespace BetterAI
     public class BetterAIInfoTerrain : InfoTerrain
     {
         public SparseList<CityBiomeType, int> maiBiomePoints = new SparseList<CityBiomeType, int>();
-        public override void ReadData(XmlNode node, Infos infos)
+        public override void Read(Infos infos, Infos.ReadContext ctx)
         {
-            base.ReadData(node, infos);
-            infos.readIntsByType(node, "aiBiomePoints", ref maiBiomePoints);
+            base.Read(infos, ctx);
+            infos.readIntsByType(ctx, "aiBiomePoints", ref maiBiomePoints);
         }
     }
 /*####### Better Old World AI - Base DLL #######
@@ -485,13 +530,13 @@ namespace BetterAI
   ### Tile-based Combat Modifiers        END ###
   ##############################################*/
 
-        public override void ReadData(XmlNode node, Infos infos)
+        public override void Read(Infos infos, Infos.ReadContext ctx)
         {
-            base.ReadData(node, infos);
+            base.Read(infos, ctx);
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-            infos.readBool(node, "bAmphibiousEmbark", ref mbAmphibiousEmbark);
+            infos.readBool(ctx, "bAmphibiousEmbark", ref mbAmphibiousEmbark);
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
   ##############################################*/
@@ -500,16 +545,16 @@ namespace BetterAI
   ### Tile-based Combat Modifiers      START ###
   ##############################################*/
 
-                //infos.readIntsByType(node, "aiTerrainFromDefenseModifier", ref maiTerrainFromDefenseModifier, ((BetterAIInfos)infos).terrainsNum());
-                //infos.readIntsByType(node, "aiTerrainToAttackModifier", ref maiTerrainToAttackModifier, ((BetterAIInfos)infos).terrainsNum());
-                //infos.readIntsByType(node, "aiClearTerrainToAttackModifier", ref maiClearTerrainToAttackModifier, ((BetterAIInfos)infos).terrainsNum());
-                //infos.readIntsByType(node, "aiHeightFromDefenseModifier", ref maiHeightFromDefenseModifier, ((BetterAIInfos)infos).heightsNum());
-                //infos.readIntsByType(node, "aiHeightToAttackModifier", ref maiHeightToAttackModifier, ((BetterAIInfos)infos).heightsNum());
-                //infos.readIntsByType(node, "aiClearHeightToAttackModifier", ref maiClearHeightToAttackModifier, ((BetterAIInfos)infos).heightsNum());
-                //infos.readIntsByType(node, "aiVegetationFromDefenseModifier", ref maiVegetationFromDefenseModifier, ((BetterAIInfos)infos).vegetationNum());
-                //infos.readIntsByType(node, "aiVegetationToAttackModifier", ref maiVegetationToAttackModifier, ((BetterAIInfos)infos).vegetationNum());
-                //infos.readIntsByType(node, "aiImprovementFromModifier", ref maiImprovementFromModifier, ((BetterAIInfos)infos).improvementsNum());
-                //infos.readIntsByType(node, "aiImprovementFromDefenseModifier", ref maiImprovementFromDefenseModifier, ((BetterAIInfos)infos).improvementsNum());
+                //infos.readIntsByType(ctx, "aiTerrainFromDefenseModifier", ref maiTerrainFromDefenseModifier, ((BetterAIInfos)infos).terrainsNum());
+                //infos.readIntsByType(ctx, "aiTerrainToAttackModifier", ref maiTerrainToAttackModifier, ((BetterAIInfos)infos).terrainsNum());
+                //infos.readIntsByType(ctx, "aiClearTerrainToAttackModifier", ref maiClearTerrainToAttackModifier, ((BetterAIInfos)infos).terrainsNum());
+                //infos.readIntsByType(ctx, "aiHeightFromDefenseModifier", ref maiHeightFromDefenseModifier, ((BetterAIInfos)infos).heightsNum());
+                //infos.readIntsByType(ctx, "aiHeightToAttackModifier", ref maiHeightToAttackModifier, ((BetterAIInfos)infos).heightsNum());
+                //infos.readIntsByType(ctx, "aiClearHeightToAttackModifier", ref maiClearHeightToAttackModifier, ((BetterAIInfos)infos).heightsNum());
+                //infos.readIntsByType(ctx, "aiVegetationFromDefenseModifier", ref maiVegetationFromDefenseModifier, ((BetterAIInfos)infos).vegetationNum());
+                //infos.readIntsByType(ctx, "aiVegetationToAttackModifier", ref maiVegetationToAttackModifier, ((BetterAIInfos)infos).vegetationNum());
+                //infos.readIntsByType(ctx, "aiImprovementFromModifier", ref maiImprovementFromModifier, ((BetterAIInfos)infos).improvementsNum());
+                //infos.readIntsByType(ctx, "aiImprovementFromDefenseModifier", ref maiImprovementFromDefenseModifier, ((BetterAIInfos)infos).improvementsNum());
 
 /*####### Better Old World AI - Base DLL #######
   ### Tile-based Combat Modifiers        END ###
@@ -527,12 +572,12 @@ namespace BetterAI
         public List<TraitType> maeAdjectives = new List<TraitType>();
         public bool mbStateReligion = false; //will automatically get a Religion
         public bool mbNotRandomCourtier = false; //when true, a Courtier will never randonly get this type
-        public override void ReadData(XmlNode node, Infos infos)
+        public override void Read(Infos infos, Infos.ReadContext ctx)
         {
-            base.ReadData(node, infos);
-            infos.readTypes(node, "aeAdjectives", ref maeAdjectives);
-            infos.readBool(node, "bStateReligion", ref mbStateReligion);
-            infos.readBool(node, "bNotRandomCourtier", ref mbNotRandomCourtier);
+            base.Read(infos, ctx);
+            infos.readTypes(ctx, "aeAdjectives", ref maeAdjectives);
+            infos.readBool(ctx, "bStateReligion", ref mbStateReligion);
+            infos.readBool(ctx, "bNotRandomCourtier", ref mbNotRandomCourtier);
         }
     }
 /*####### Better Old World AI - Base DLL #######
@@ -558,13 +603,12 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
-    public class InfoCityBiome : InfoBase
+    public class InfoCityBiome : InfoBase<CityBiomeType>
     {
-        public CityBiomeType meType { get { return (CityBiomeType)miType; } }
         public TextType mName = TextType.NONE;
-        public override void ReadData(XmlNode node, Infos infos)
+        public override void Read(Infos infos, Infos.ReadContext ctx)
         {
-            infos.readType(node, "Name", ref mName);
+            infos.readType(ctx, "Name", ref mName);
         }
     }
 /*####### Better Old World AI - Base DLL #######

@@ -195,6 +195,10 @@ namespace BetterAI
             {
                 pWriter.WriteElementString("Capital", "");
             }
+            if (isAutomated())
+            {
+                pWriter.WriteElementString("Automated", "");
+            }
             pWriter.WriteElementString("FirstPlayer", ((int)(getFirstPlayer())).ToStringCached());
             pWriter.WriteElementString("LastPlayer", ((int)(getLastPlayer())).ToStringCached());
             if (hasCapturePlayer())
@@ -1339,13 +1343,13 @@ namespace BetterAI
   ### Early Unlock                     START ###
   ##############################################*/
         //Player.isImprovementUnlocked: lines 17320-17338
-        public virtual bool ImprovementUnlocked(ImprovementType eImprovement, ref bool bPrimaryUnlock, bool bTestEnabled = true, bool bTestTech = true)
+        public virtual bool isImprovementUnlockedInCity(ImprovementType eImprovement, bool bTestEnabled = true, bool bTestTech = true)
         {
             BetterAIPlayer pOwner = (BetterAIPlayer)player();
             BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             if (pOwner == null || pImprovementInfo == null) return false;
             ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
-            bPrimaryUnlock = true;
+            bool bPrimaryUnlock = true;
 
             {
                 //primary unlock: class tech + culture
@@ -1499,9 +1503,9 @@ namespace BetterAI
         }
 
         //Tile.canHaveImprovement: lines 4805-5098
-        public virtual bool canCityHaveImprovement(ImprovementType eImprovement, ref bool bPrimaryUnlock, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public virtual bool canCityHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
-            if (!bForceImprovement && !ImprovementUnlocked(eImprovement, ref bPrimaryUnlock, bTestEnabled, false)) //testing without tech
+            if (!bForceImprovement && !isImprovementUnlockedInCity(eImprovement, bTestEnabled, false)) //testing without tech
             {
                 return false;
             }
@@ -1536,12 +1540,12 @@ namespace BetterAI
   ### Early Unlock                       END ###
   ##############################################*/
 
-                //now, a lot of base game code (from Tile > canHaveImprovement)
+                //following: a lot of base game code (from Tile.canHaveImprovement)
                 //basically canHaveImprovement without the culture check. Tech is checked elsewhere
                 //city-specific only
 
                 {
-                    ReligionType eReligionSpread = pImprovementInfo.meReligionSpread;
+                    ReligionType eReligionSpread = game().getImprovementReligionSpread(eImprovement);
 
                     if (eReligionSpread != ReligionType.NONE)
                     {
@@ -1626,7 +1630,7 @@ namespace BetterAI
                     //}
 
                     {
-                        FamilyType eFamilyPrereq = infos().improvement(eImprovement).meFamilyPrereq;
+                        FamilyType eFamilyPrereq = pImprovementInfo.meFamilyPrereq;
 
                         if (eFamilyPrereq != FamilyType.NONE && game().isCharacters())
                         {
@@ -1681,6 +1685,28 @@ namespace BetterAI
                             }
                         }
                     }
+
+                    {
+                        if (pImprovementInfo.maeEffectCityAnyPrereq.Count > 0)
+                        {
+                            bool bFound = false;
+                            foreach (EffectCityType eLoopEffectCity in pImprovementInfo.maeEffectCityAnyPrereq)
+                            {
+                                //if (pCityTerritory != null && pCityTerritory.getEffectCityCount(eLoopEffectCity) > 0)
+                                if (getEffectCityCount(eLoopEffectCity) > 0)
+                                {
+                                    bFound = true;
+                                    break;
+                                }
+                            }
+
+                            if (!bFound)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+
                 }
 
                 //tile-specific
