@@ -326,25 +326,192 @@ namespace BetterAI
         }
         //copy-paste END
 
-        //lines 9063-9089
-        public override bool canPillage(Tile pTile, Player pActingPlayer, bool bTestEnabled = true)
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search        START ###
+  ##############################################*/
+        public virtual bool isHiddenTileFrom(TeamType eTeam, Tile pTile, bool bSameArea)
         {
-            if (base.canPillage(pTile, pActingPlayer, bTestEnabled))
+
+            if (bSameArea && pTile.getArea() != tile().getArea())
             {
-                TribeType eTribe = getTribe();
-                if (eTribe != TribeType.NONE && pTile.isWater() && !(info().mbWater) && infos().tribe(eTribe).mbWaterMove
-                    && ((BetterAIInfoGlobals)infos().Globals).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS > 0)
+                return false;
+            }
+
+            return base.isHiddenTileFrom(eTeam, pTile);
+        }
+        public virtual bool isHiddenTileFromAndCloser(TeamType eTeam, Tile pTestTile, HashSet<Tile> otherTiles, bool bSameArea = false)
+        {
+            if (pTestTile.impassable())
+            {
+                return false;
+            }
+
+            if (bSameArea && pTestTile.getArea() != tile().getArea())
+            {
+                return false;
+            }
+
+            if (!(isHiddenTileFrom(eTeam, pTestTile)))
+            {
+                return false;
+            }
+
+            if (!(isTileCloserOrTeamTerritory(eTeam, pTestTile, otherTiles)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public virtual bool isTileCloserOrTeamTerritory(TeamType eTeam, Tile pTestTile, HashSet<Tile> otherTiles, bool bSameArea = false)
+        {
+            if (pTestTile.impassable())
+            {
+                return false;
+            }
+
+            if (otherTiles == null || otherTiles.Count() == 0)
+            {
+                return true;
+            }
+
+            if (bSameArea)
+            {
+                if (pTestTile.getArea() != tile().getArea())
                 {
-                    //stolen from City.doDistantRaidTurn
-                    if (game().getTurn() < (game().tribeLevel().miRaidStartTurn + ((BetterAIInfoGlobals)infos().Globals).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS))
+                    return false;
+                }
+
+                if (tile().getTeam() != TeamType.NONE && tile().getTeam() == getTeam())
+                {
+                    return true;
+                }
+
+                if (tile().isWater() || otherTiles.Last().getLandSection() == tile().getLandSection())
+                {
+                    if (!(((BetterAITile)pTestTile).isPathShorterToOtherTiles(tile(), otherTiles)))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            if (tile().getTeam() != TeamType.NONE && tile().getTeam() == getTeam())
+            {
+                return true;
+            }
+
+            //if (!tile().isLand() || otherTiles.First().getLandSection() != tile().getLandSection())
+            {
+                if (!(((BetterAITile)pTestTile).isDistanceCloserToOtherTiles(tile(), otherTiles)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search          END ###
+  ##############################################*/
+
+        //lines 6929-6939
+        public override Tile bounceTile(TeamType eTeamTerritoryAvoid = TeamType.NONE)
+        {
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_BETTER_BOUNCE == 0 || player() == null || player().getCities() == null || player().getCities().Count() == 0)
+            {
+                return base.bounceTile(eTeamTerritoryAvoid);
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search        START ###
+  ##############################################*/
+            //collect tile IDs of cities on the same land section / water area
+            using (var citytileListScoped = CollectionCache.GetHashSetScoped<Tile>())
+            {
+                HashSet<Tile> aiCityTiles = citytileListScoped.Value;
+                bool bSameArea = true;
+                int iRequiresArea = tile().getArea();
+                Tile pTile;
+
+                bool switchOffAreaLimit()
+                {
+                    if (bSameArea)
+                    {
+                        bSameArea = false;
+                        iRequiresArea = -1;
+
+                        aiCityTiles.Clear();
+
+                        //if we couldn't place it on the same continent, add all other remaining cities too
+                        foreach (int iCityID in player().getCities())
+                        {
+                            Tile pLoopCityTile = game().city(iCityID).tile();
+                            aiCityTiles.Add(pLoopCityTile);
+                        }
+
+                        return true;
+                    }
+                    else
                     {
                         return false;
                     }
                 }
 
-                return true;
+                if (tile().isLand())
+                {
+                    foreach (int iCityID in player().getCities())
+                    {
+                        Tile pLoopCityTile = game().city(iCityID).tile();
+                        if (tile().getLandSection() == pLoopCityTile.getLandSection())
+                        {
+                            aiCityTiles.Add(pLoopCityTile);
+                        }
+                    }
+                }
+                else //isWater
+                {
+                    foreach (int iCityID in player().getCities())
+                    {
+                        foreach (int iLoopTileID in game().city(iCityID).getTerritoryTiles())
+                        {
+                            Tile pLoopTile = game().tile(iLoopTileID);
+                            if (pLoopTile.isWater() && tile().getArea() == pLoopTile.getArea())
+                            {
+                                aiCityTiles.Add(pLoopTile);
+                            }
+                        }
+                    }
+                }
+                if (aiCityTiles.Count() == 0)
+                {
+                    switchOffAreaLimit();
+                }
+
+                //Tile pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, -1, null, x => isHiddenTileFrom(TeamType.NONE, x));
+
+                //first, try to stay in the same area
+                do
+                {
+                    pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFromAndCloser(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea));
+                    if (pTile != null) return pTile;
+
+                    pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFrom(TeamType.NONE, x, bSameArea: bSameArea));
+                    if (pTile != null) return pTile;
+
+                    pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isTileCloserOrTeamTerritory(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea));
+                    if (pTile != null) return pTile;
+
+                } while (switchOffAreaLimit());
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search          END ###
+  ##############################################*/
+
+                pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, -1, null, null);
+
+                return pTile;
             }
-            else return false;
         }
 
         //lines 6933-7061
@@ -421,6 +588,7 @@ namespace BetterAI
         //}
 
 
+        //lines 8008-8324
         public override void attackUnitOrCity(Tile pToTile, Player pActingPlayer)
         {
             MohawkAssert.Assert(canAttackUnitOrCity(pToTile, pActingPlayer));
@@ -750,6 +918,127 @@ namespace BetterAI
             game().sendUnitBattleAction(this, pDefendingUnit, pFromTile, pToTile, pDefendingUnit?.tile(), eOutcome, azTileTexts, pActingPlayer?.getPlayer() ?? PlayerType.NONE, bSettlementAttack, cityHpBeforeAttacked, aiAdditionalDefendingUnits, aeAdditionalDefendingUnitOutcomes);    // send asap, since unit may have been removed
             game().doNetwork(); // to update health bars
             game().sendPendingClientMessages();
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Attack Heal                      START ###
+  ##############################################*/
+        public virtual int getAttackHeal()
+        {
+            int iValue = 0;
+            foreach (EffectUnitType eLoopEffectUnit in getEffectUnits())
+            {
+                iValue += ((BetterAIInfoEffectUnit)infos().effectUnit(eLoopEffectUnit)).miHealAttack;
+            }
+
+            return iValue;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Attack Heal                        END ###
+  ##############################################*/
+
+        //lines 8844-8898
+        public override int getCounterAttackDamage(Tile pFromTile, Unit pToUnit, Tile pToTile)
+        {
+            //slightly rearranged to fit in Attack Heal
+            if (pToUnit != null)
+            {
+                if (pToUnit.info().mbWater != info().mbWater)
+                {
+                    return 0;
+                }
+
+                if (!(pToUnit.canDamage()))
+                {
+                    return 0;
+                }
+            }
+
+            if (getHP() == 0)
+            {
+                return 0;
+            }
+
+            int iValue = 0;
+
+            if (pToUnit == null)
+            {
+                if (!(info().mbMelee))
+                {
+                    return 0;
+                }
+
+                iValue += infos().Globals.COUNTER_CITY_DAMAGE;
+            }
+            else if (info().mbMelee)
+            {
+                if ((pToUnit.info().mbUnlimber) ? pToUnit.isUnlimbered() : true)
+                {
+                    if (pToUnit.hasMeleeCounter() ||
+                        pToUnit.isFortifyMax() ||
+                        pToUnit.isTestudoMax())
+                    {
+                        iValue += pToUnit.attackUnitDamage(pFromTile, pToTile, this, false);
+                    }
+                    else
+                    {
+                        iValue += pToUnit.counterAttackMelee();
+                    }
+                }
+            }
+
+            if (getCooldown() == infos().Globals.ROUT_COOLDOWN)
+            {
+                iValue += infos().Globals.COUNTER_ROUT_DAMAGE;
+            }
+            
+
+/*####### Better Old World AI - Base DLL #######
+  ### Attack Heal                      START ###
+  ##############################################*/
+            if (pFromTile.isTileAdjacent(pToTile) && pFromTile.isWater() == pToTile.isWater())
+            {
+                int iAttackHeal = getAttackHeal();
+                if (iAttackHeal != 0)
+                {
+                    iValue -= iAttackHeal;
+                    iValue = Math.Max(iValue, getHP() - getHPMax());
+                }
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Attack Heal                        END ###
+  ##############################################*/
+
+            return Math.Min(iValue, (getHP() - 1));
+        }
+
+
+        //lines 9063-9089
+        public override bool canPillage(Tile pTile, Player pActingPlayer, bool bTestEnabled = true)
+        {
+            if (base.canPillage(pTile, pActingPlayer, bTestEnabled))
+            {
+/*####### Better Old World AI - Base DLL #######
+  ### No Raider Ships                  START ###
+  ##############################################*/
+                TribeType eTribe = getTribe();
+                if (eTribe != TribeType.NONE && pTile.isWater() && !(info().mbWater) && infos().tribe(eTribe).mbWaterMove
+                    && ((BetterAIInfoGlobals)infos().Globals).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS > 0)
+                {
+                    //stolen from City.doDistantRaidTurn
+                    if (game().getTurn() < (game().tribeLevel().miRaidStartTurn + ((BetterAIInfoGlobals)infos().Globals).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS))
+                    {
+                        return false;
+                    }
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### No Raider Ships                    END ###
+  ##############################################*/
+
+                return true;
+            }
+            else return false;
         }
 
 /*####### Better Old World AI - Base DLL #######

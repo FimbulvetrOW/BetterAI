@@ -266,7 +266,7 @@ namespace BetterAI
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            foreach (var item in items)
+            foreach (XmlDataListItemBase item in items)
             {
                 if (!isThreadSafe(item) && thisPass(item))
                 {
@@ -410,6 +410,8 @@ namespace BetterAI
 
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
+  ### Improvement Freshwaster Invalid        ###
+  ### Bonus adjacent Improvement             ###
   ##############################################*/
     //corresponding classes are in InfoBase.cs
     //InfoBase.cs, line 2724
@@ -441,11 +443,9 @@ namespace BetterAI
                 meTertiaryUnlockCulturePrereq != CultureType.NONE ||
                 meTertiaryUnlockEffectCityPrereq != EffectCityType.NONE);
         }
-        public virtual bool isAnythingNew()
-        {
-            return ((meCityBiomePrereq != CityBiomeType.NONE) || isAnySecondaryPrereq() || isAnyTertiaryPrereq());
-        }
-
+        public ImprovementType meBonusAdjacentImprovement = ImprovementType.NONE;
+        public ImprovementClassType meBonusAdjacentImprovementClass = ImprovementClassType.NONE;
+        public bool mbMakesAdjacentPassableLandTileValidForBonusImprovement = false;
 
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
@@ -461,6 +461,9 @@ namespace BetterAI
             infos.readType(ctx, "TertiaryUnlockTechPrereq", ref meTertiaryUnlockTechPrereq);
             infos.readType(ctx, "TertiaryUnlockCulturePrereq", ref meTertiaryUnlockCulturePrereq);
             infos.readType(ctx, "TertiaryUnlockEffectCityPrereq", ref meTertiaryUnlockEffectCityPrereq);
+            infos.readType(ctx, "BonusAdjacentImprovement", ref meBonusAdjacentImprovement);
+            infos.readType(ctx, "BonusAdjacentImprovementClass", ref meBonusAdjacentImprovementClass);
+            infos.readBool(ctx, "bMakesAdjacentPassableLandTileValidForBonusImprovement", ref mbMakesAdjacentPassableLandTileValidForBonusImprovement);
         }
     }
 
@@ -479,6 +482,8 @@ namespace BetterAI
     }
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                       END ###
+  ### Improvement Freshwaster Invalid        ###
+  ### Bonus adjacent Improvement             ###
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
@@ -511,6 +516,15 @@ namespace BetterAI
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal   START ###
+  ##############################################*/
+        public int miHealAttack = 0;
+        //public int miHealKill = 0;
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal     END ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
   ### Tile-based Combat Modifiers      START ###
   ##############################################*/
 
@@ -539,6 +553,16 @@ namespace BetterAI
             infos.readBool(ctx, "bAmphibiousEmbark", ref mbAmphibiousEmbark);
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal   START ###
+  ##############################################*/
+            infos.readInt(ctx, "iHealAttack", ref miHealAttack);
+            //heal on kill would require A LOT more changes for AI, so I'm scrapping this idea
+            //infos.readInt(ctx, "iHealKill", ref miHealKill);
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal     END ###
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
@@ -643,6 +667,7 @@ namespace BetterAI
         public int BAI_MIN_UPGRADE_RATINGS_OPTIONS = 0;
         public int BAI_USE_TRIANGLE_IN_COMPETITIVE = 0;
         public int BAI_COMPETITIVE_COURT_YIELD_MODIFIER = 0;
+        public int BAI_BETTER_BOUNCE = 0;
 
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
@@ -679,6 +704,8 @@ namespace BetterAI
             BAI_MIN_UPGRADE_RATINGS_OPTIONS = infos.getGlobalInt("BAI_MIN_UPGRADE_RATINGS_OPTIONS");
             BAI_USE_TRIANGLE_IN_COMPETITIVE = infos.getGlobalInt("BAI_USE_TRIANGLE_IN_COMPETITIVE");
             BAI_COMPETITIVE_COURT_YIELD_MODIFIER = infos.getGlobalInt("BAI_COMPETITIVE_COURT_YIELD_MODIFIER");
+
+            BAI_BETTER_BOUNCE = infos.getGlobalInt("BAI_BETTER_BOUNCE");
         }
     }
 /*####### Better Old World AI - Base DLL #######

@@ -19,11 +19,79 @@ using static TenCrowns.ClientCore.ClientUI;
 using static BetterAI.BetterAIInfos;
 using BetterAI;
 using Random = Mohawk.SystemCore.Random;
+using System.IO.Ports;
 
 namespace BetterAI
 {
     public class BetterAITile : Tile
     {
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search        START ###
+  ##############################################*/
+        public virtual bool isDistanceCloserToOtherTiles(Tile pStartTile, HashSet<Tile> otherTiles)
+        {
+            if (otherTiles == null || otherTiles.Count == 0)
+            {
+                return true;
+            }
+
+            int iMinStartTileDistance = int.MaxValue;
+            int iMinThisTileDistance = int.MaxValue;
+            int iDistance = distanceTile(pStartTile);
+
+            foreach (Tile pOtherTile in otherTiles)
+            {
+                iMinStartTileDistance = Math.Min(iMinStartTileDistance, pStartTile.distanceTile(pOtherTile));
+                iMinThisTileDistance = Math.Min(iMinThisTileDistance, this.distanceTile(pOtherTile));
+            }
+
+            return iMinThisTileDistance <= iMinStartTileDistance - (iDistance / 2);
+        }
+
+
+        public virtual bool isPathShorterToOtherTiles(Tile pStartTile, HashSet<Tile> otherTiles)
+        {
+            if (otherTiles == null || otherTiles.Count == 0)
+            {
+                return true;
+            }
+
+            int iMinStartTileDistance = int.MaxValue;
+            Tile pNearestCityTile = null;
+
+            using (var pathfinderScoped = game().GetAreaPathFinderScoped())
+            {
+                foreach (Tile pOtherTile in otherTiles)
+                {
+                    if (game().findPathDistance(pathfinderScoped.Value, pStartTile, pOtherTile, true, out int iValue))
+                    {
+                        if (iValue <= iMinStartTileDistance ||
+                            (iValue == iMinStartTileDistance && pStartTile.distanceTile(pOtherTile) < pStartTile.distanceTile(pNearestCityTile)))
+                        {
+                            pNearestCityTile = pOtherTile;
+                            iMinStartTileDistance = iValue;
+                        }
+                    }
+                }
+
+                if (pNearestCityTile != null)
+                {
+                    game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iDistance);
+                    if (game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iValue) && iValue - (iDistance / 2) <= iMinStartTileDistance)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search          END ###
+  ##############################################*/
+
+
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
@@ -53,12 +121,74 @@ namespace BetterAI
   ### City Biome                         END ###
   ##############################################*/
 
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
+        public virtual bool canCityTileAddImprovementAdjacent(BetterAICity pCityTerritory, ImprovementType eImprovement, bool bSourceSpreadsBorders)
+        {
+            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+            {
+                Tile pAdjacentTile = tileAdjacent(eLoopDirection);
+
+                if ((pAdjacentTile.cityTerritory() == pCityTerritory || (bSourceSpreadsBorders && pAdjacentTile.cityTerritory() == null)) && pCityTerritory.canAddImprovementTileNoTerritoryCheck(eImprovement, pAdjacentTile))
+                {
+                    return true;
+                }
+
+            }
+
+            return false;
+        }
+
+        public virtual bool canCityTileAddImprovementClassAdjacent(BetterAICity pCityTerritory, ImprovementClassType eImprovementClass, bool bSourceSpreadsBorders, out ImprovementType eAddImprovement)
+        {
+            for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+            {
+                if (infos().improvement(eLoopImprovement).meClass == eImprovementClass)
+                {
+                    if (canCityTileAddImprovementAdjacent(pCityTerritory, eLoopImprovement, bSourceSpreadsBorders))
+                    {
+                        eAddImprovement = eLoopImprovement;
+                        return true;
+                    }
+                }
+            }
+            eAddImprovement = ImprovementType.NONE;
+            return false;
+        }
+
+        //adjacentToPassableLand: lines 3028-3044
+        public virtual bool adjacentToPassableLandSameCityWithoutImprovement(bool bSpreadsBorders, ImprovementType eTestImprovement)
+        {
+            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+            {
+                Tile pAdjacentTile = tileAdjacent(eLoopDirection);
+
+                if (pAdjacentTile != null)
+                {
+                    if (pAdjacentTile.isLand() && !(pAdjacentTile.impassable())
+                        && pAdjacentTile.getImprovement() == ImprovementType.NONE
+                        && (!pAdjacentTile.hasResource() || infos().Helpers.isImprovementResourceValid(eTestImprovement, pAdjacentTile.getResource()))
+                        && pAdjacentTile.cityTerritory() == cityTerritory() || (bSpreadsBorders && pAdjacentTile.cityTerritory() == null))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
+  ##############################################*/
+
 
         //canHaveImprovement: lines 4805-5098
         public override bool canCityHaveImprovement(City pCityTerritory, ImprovementType eImprovement, bool bForceImprovement)
         {
             if (pCityTerritory == null) return false;
-            return ((BetterAICity)pCityTerritory).canCityHaveImprovement(eImprovement, bUpgradeImprovement: true, bForceImprovement: bForceImprovement);
+            return ((BetterAICity)pCityTerritory).canCityHaveImprovement(eImprovement, bForceImprovement: bForceImprovement);
         }
         public virtual bool canCityTileHaveImprovement(BetterAICity pCity, ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
@@ -66,10 +196,11 @@ namespace BetterAI
             {
                 return false;
             }
+            BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
 
             if (!bForceImprovement)
             {
-                ImprovementType eImprovementPrereq = infos().improvement(eImprovement).meImprovementPrereq;
+                ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
 
                 if (eImprovementPrereq != ImprovementType.NONE)
                 {
@@ -94,6 +225,72 @@ namespace BetterAI
                     }
                 }
             }
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
+            if (!(pImprovementInfo.mbMakesAdjacentPassableLandTileValidForBonusImprovement))
+            {
+                if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
+                {
+                    if (!canCityTileAddImprovementAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovement, pImprovementInfo.mbSpreadsBorders))
+                    {
+                        return false;
+                    }
+                }
+                else if (pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    if (!canCityTileAddImprovementClassAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovementClass, pImprovementInfo.mbSpreadsBorders, out _))
+                    {
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                ImprovementType eTestImprovement = ImprovementType.NONE;
+                if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
+                {
+                    if (pCity.player() == null || pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true) || !pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement: false, bForceImprovement: true))
+                    {
+                        return false;
+                    }
+                    eTestImprovement = pImprovementInfo.meBonusAdjacentImprovement;
+                }
+                else if (eTestImprovement == ImprovementType.NONE && pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    bool bFound = false;
+
+                    for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+                    {
+                        if (infos().improvement(eLoopImprovement).meClass == pImprovementInfo.meBonusAdjacentImprovementClass)
+                        {
+                            if (pCity.player() != null && pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true) && pCity.canCityHaveImprovement(eLoopImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement: false, bForceImprovement: true))
+                            {
+                                bFound = true;
+                                eTestImprovement = eLoopImprovement;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!bFound)
+                    {
+                        return false;
+                    }
+                }
+
+                if (!adjacentToPassableLandSameCityWithoutImprovement(infos().improvement(eImprovement).mbSpreadsBorders, eTestImprovement))
+                {
+                    return false;
+                }
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
+  ##############################################*/
+
+
             return true;
         }
 
@@ -265,6 +462,177 @@ namespace BetterAI
 
             return true;
         }
+
+        //lines 4991-
+        public override bool isImprovementValid(ImprovementType eImprovement, City pCityTerritory, bool bTestEnabled = true, bool bTestVegetationGrow = false, bool bFutureCity = false)
+        {
+            BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+
+            if (!(base.isImprovementValid(eImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity)))
+            {
+                return false;
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
+            {
+                //check if the BonusAdjacentImprovements are also valid
+                if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
+                {
+                    bool bFound = false;
+
+                    for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+                    {
+                        Tile pAdjacentTile = tileAdjacent(eLoopDirection);
+                        if (pAdjacentTile != null && pAdjacentTile.cityTerritory() == pCityTerritory || pAdjacentTile.cityTerritory() == null)
+                        {
+                            if (pAdjacentTile.isImprovementValid(eImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity))
+                            {
+                                bFound = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!bFound)
+                    {
+                        return false;
+                    }
+                }
+
+                if (pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    bool bFound = false;
+                    for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+                    {
+                        if (infos().improvement(eLoopImprovement).meClass == pImprovementInfo.meBonusAdjacentImprovementClass)
+                        {
+                            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+                            {
+                                Tile pAdjacentTile = tileAdjacent(eLoopDirection);
+                                if (pAdjacentTile != null && pAdjacentTile.cityTerritory() == pCityTerritory || pAdjacentTile.cityTerritory() == null)
+                                {
+                                    if (pAdjacentTile.isImprovementValid(eImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity))
+                                    {
+                                        bFound = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (bFound) break;
+                        }
+                    }
+
+                    if (!bFound)
+                    {
+                        return false;
+                    }
+                }
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
+  ##############################################*/
+
+            return true;
+        }
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
+        public virtual bool placeUnownedAdjacentImprovement(ImprovementType eImprovement)
+        {
+            City pCityTerritory = cityTerritory();
+            int iOffset = game().randomNext((int)DirectionType.NUM_TYPES); //0-5
+            int iStep = iOffset / ((int)DirectionType.NUM_TYPES / 2);  //0 or 1
+            iStep = (2 * iStep) - 1;  //1 or -1
+
+            for (int eLoopDirection = 0; eLoopDirection < (int)DirectionType.NUM_TYPES / 2; eLoopDirection += iStep)
+            {
+                for (int eFlipDirection = 0; eFlipDirection <= (int)DirectionType.NUM_TYPES / 2; eFlipDirection += (int)DirectionType.NUM_TYPES / 2)
+                {
+                    Tile pAdjacentTile = tileAdjacent((DirectionType)((eLoopDirection + (iOffset / 2) + eFlipDirection) % (int)DirectionType.NUM_TYPES));
+
+                    if (pAdjacentTile.cityTerritory() == pCityTerritory && pAdjacentTile.canHaveImprovement(eImprovement))
+                    {
+                        pAdjacentTile.setImprovementFinished(eImprovement);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        //lines 5588-5784
+        public override void doImprovementFinished()
+        {
+            base.doImprovementFinished();
+            City pCityTerritory = cityTerritory();
+
+            if (pCityTerritory == null || pCityTerritory.player() == null)
+            {
+                //just choose randomly
+                if (((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovement != ImprovementType.NONE)
+                {
+                    if (placeUnownedAdjacentImprovement(((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovement))
+                    {
+                        return;
+                    }
+                }
+
+                if (((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+                    {
+                        if (infos().improvement(eLoopImprovement).meClass == ((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovementClass)
+                        {
+                            if (placeUnownedAdjacentImprovement(eLoopImprovement))
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovement != ImprovementType.NONE)
+                {
+                    if (((BetterAICity)pCityTerritory).canAddImprovementTileAdjacent(this, ((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovement))
+                    {
+                        ((BetterAICity)pCityTerritory).addImprovementTileAdjacent(this, ((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovement);
+                        return;
+                    }
+                }
+
+                if (((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+                    {
+                        if (infos().improvement(eLoopImprovement).meClass == ((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovementClass)
+                        {
+                            if (((BetterAICity)pCityTerritory).canAddImprovementTileAdjacent(this, ((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovement))
+                            {
+                                ((BetterAICity)pCityTerritory).addImprovementTileAdjacent(this, ((BetterAIInfoImprovement)improvement()).meBonusAdjacentImprovement);
+                                return;
+                            }
+                        }
+                    }
+                }
+
+            }
+            return;
+
+
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
+  ##############################################*/
+
+
 
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###

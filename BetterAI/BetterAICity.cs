@@ -472,7 +472,7 @@ namespace BetterAI
                 int iRate = 0;
                 getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
 
-                foreach (var p in effectCityCountsScoped.Value)
+                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
                 {
                     iRate += infos().effectCity(p.Key).maiImprovementModifier[eIndex] * p.Value;
                 }
@@ -480,7 +480,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
   ##############################################*/
-                foreach (var p in dEffectCityExtraCounts)
+                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
                     iRate += infos().effectCity(p.Key).maiImprovementModifier[eIndex] * p.Value;
                 }
@@ -504,7 +504,7 @@ namespace BetterAI
                 int iRate = 0;
                 getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
 
-                foreach (var p in effectCityCountsScoped.Value)
+                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
                 {
                     iRate += infos().effectCity(p.Key).maiImprovementRiverModifier[eIndex] * p.Value;
                 }
@@ -512,7 +512,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
   ##############################################*/
-                foreach (var p in dEffectCityExtraCounts)
+                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
                     iRate += infos().effectCity(p.Key).maiImprovementRiverModifier[eIndex] * p.Value;
                 }
@@ -537,7 +537,7 @@ namespace BetterAI
                 int iRate = 0;
                 getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
 
-                foreach (var p in effectCityCountsScoped.Value)
+                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
                 {
                     iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eIndex] * p.Value;
                 }
@@ -545,7 +545,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
   ##############################################*/
-                foreach (var p in dEffectCityExtraCounts)
+                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
                     iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eIndex] * p.Value;
                 }
@@ -700,7 +700,7 @@ namespace BetterAI
                 int iRate = 0;
                 getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
 
-                foreach (var p in effectCityCountsScoped.Value)
+                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
                 {
                     iRate += infos().effectCity(p.Key).maaiImprovementYield[eImprovement, eYield] * p.Value;
                 }
@@ -708,7 +708,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
   ##############################################*/
-                foreach (var p in dEffectCityExtraCounts)
+                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
                     iRate += infos().effectCity(p.Key).maaiImprovementYield[eImprovement, eYield] * p.Value;
                 }
@@ -733,7 +733,7 @@ namespace BetterAI
                 int iRate = 0;
                 getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
 
-                foreach (var p in effectCityCountsScoped.Value)
+                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
                 {
                     iRate += infos().effectCity(p.Key).maaiImprovementClassYield[eImprovementClass, eYield] * p.Value;
                 }
@@ -741,7 +741,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
   ##############################################*/
-                foreach (var p in dEffectCityExtraCounts)
+                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
                     iRate += infos().effectCity(p.Key).maaiImprovementClassYield[eImprovementClass, eYield] * p.Value;
                 }
@@ -766,7 +766,7 @@ namespace BetterAI
                 int iRate = 0;
                 getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
 
-                foreach (var p in effectCityCountsScoped.Value)
+                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
                 {
                     iRate += infos().effectCity(p.Key).maaiTerrainYield[eTerrain, eYield] * p.Value;
                 }
@@ -774,7 +774,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
   ##############################################*/
-                foreach (var p in dEffectCityExtraCounts)
+                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
                     iRate += infos().effectCity(p.Key).maaiTerrainYield[eTerrain, eYield] * p.Value;
                 }
@@ -784,6 +784,21 @@ namespace BetterAI
 
                 return iRate;
             }
+        }
+
+        public virtual bool isUnitEffectCityUnlock(EffectCityType eIndex, int iEffectExtra = 0, int iFreeUnlockExtra = 0)
+        {
+            if (isFreeUnitEffectCityUnlock(eIndex, iFreeUnlockExtra))
+            {
+                return true;
+            }
+
+            if (getEffectCityCount(eIndex) + iEffectExtra > 0)
+            {
+                return true;
+            }
+
+            return false;
         }
 
 
@@ -1305,7 +1320,123 @@ namespace BetterAI
 
             return true;
         }
-//copy-paste END
+        //copy-paste END
+
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
+        //lines 9277-9292, adjusted for adjacent
+        public virtual bool canAddImprovementTileNoTerritoryCheck(ImprovementType eImprovement, Tile pTile)
+        {
+            if (!hasPlayer())
+            {
+                return false;
+            }
+
+            ImprovementType ePing = player().getTileImprovementPing(pTile.getID(), false);
+            if (ePing != eImprovement)
+            {
+                if (pTile.hasResource() && !infos().Helpers.isImprovementResourceValid(eImprovement, pTile.getResource()))
+                {
+                    return false;
+                }
+
+                if (pTile.hasImprovement())
+                {
+                    return false;
+                }
+            }
+
+            return player().canStartImprovementOnTile(pTile, eImprovement, bTestEnabled: true, bTestTerritory: false, bTestAdjacent: true, bTestReligion: true, bForceImprovement: true);
+        }
+
+        public virtual bool canAddImprovementTileAdjacent(Tile pTile, ImprovementType eImprovement)
+        {
+            //using var profileScope = new UnityProfileScope("City.canAddImprovement");
+
+            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+            {
+                Tile pAdjacentTile = pTile.tileAdjacent(eLoopDirection);
+
+                if (pAdjacentTile.cityTerritory() == this && canAddImprovementTile(eImprovement, pAdjacentTile))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        //lines 9293-9314, adjusted for adjacent
+        protected virtual Tile getBestImprovementTileAdjacent(Tile pTile, ImprovementType eImprovement, Predicate<int> condition)
+        {
+            Tile pBestTile = null;
+            long iBestValue = long.MinValue;
+
+            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+            {
+                Tile pAdjacentTile = pTile.tileAdjacent(eLoopDirection);
+
+                if (pAdjacentTile.cityTerritory() == this && canAddImprovementTile(eImprovement, pAdjacentTile))
+                {
+                    if (condition == null || condition(pAdjacentTile.getID()))
+                    {
+                        long iValue = player().AI.improvementValueTile(eImprovement, pAdjacentTile, this, false, false, true);
+                        if (iValue > iBestValue)
+                        {
+                            pBestTile = pAdjacentTile;
+                            iBestValue = iValue;
+                        }
+                    }
+                }
+            }
+
+            return pBestTile;
+        }
+
+        //lines 9315-9346, adjusted for adjacent
+        public virtual bool addImprovementTileAdjacent(Tile pTile, ImprovementType eImprovement)
+        {
+            Tile pBestTile = getBestImprovementTileAdjacent(pTile, eImprovement, iTileID => player().getTileImprovementPing(iTileID, false) == eImprovement);
+
+            if (pBestTile == null)
+            {
+                ImprovementClassType eImprovementClass = infos().improvement(eImprovement).meClass;
+                if (eImprovementClass != ImprovementClassType.NONE)
+                {
+                    pBestTile = getBestImprovementTileAdjacent(pTile, eImprovement, iTileID =>
+                    {
+                        ImprovementType ePingImprovement = player().getTileImprovementPing(iTileID, false);
+                        return (ePingImprovement != ImprovementType.NONE && infos().improvement(ePingImprovement).meClass == eImprovementClass);
+                    });
+                }
+            }
+
+            if (pBestTile == null)
+            {
+                pBestTile = getBestImprovementTileAdjacent(pTile, eImprovement, iTileID => player().getTileImprovementPing(iTileID, true) == infos().Helpers.getGenericImprovementPing());
+            }
+
+            if (pBestTile == null)
+            {
+                pBestTile = getBestImprovementTileAdjacent(pTile, eImprovement, null);
+            }
+
+            if (pBestTile != null)
+            {
+                pBestTile.setImprovementFinished(eImprovement);
+                return true;
+            }
+
+            return false;
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
+  ##############################################*/
+
 
 
 /*####### Better Old World AI - Base DLL #######
@@ -1318,7 +1449,7 @@ namespace BetterAI
 
             if (bComplete)
             {
-                foreach (var p in getCurrentEffectCityCounts())
+                foreach (KeyValuePair<EffectCityType, int> p in getCurrentEffectCityCounts())
                 {
                     EffectCityType eLoopEffectCity = p.Key;
                     if (eLoopEffectCity == eEffectCity) //this is counted twice
@@ -1505,7 +1636,7 @@ namespace BetterAI
         //Tile.canHaveImprovement: lines 4805-5098
         public virtual bool canCityHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
-            if (!bForceImprovement && !isImprovementUnlockedInCity(eImprovement, bTestEnabled, false)) //testing without tech
+            if (!bForceImprovement && !isImprovementUnlockedInCity(eImprovement, bTestEnabled, bTestTech: false)) //testing without tech
             {
                 return false;
             }

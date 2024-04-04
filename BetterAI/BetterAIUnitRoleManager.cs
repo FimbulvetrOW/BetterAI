@@ -311,7 +311,7 @@ namespace BetterAI
 
                     UnitType eFoundUnit = ((BetterAIPlayer)BAI_AI.player).getCurrentFoundUnitType();
 
-                    foreach (var p in BAI_mmapStartingTileBlockableCitySiteValues) //only the free starting city sites
+                    foreach (KeyValuePair<int, long> p in BAI_mmapStartingTileBlockableCitySiteValues) //only the free starting city sites
                     {
                         int iCitySiteTileID = p.Key;
                         long iPriority = p.Value / 2; //we don't really need to defend it

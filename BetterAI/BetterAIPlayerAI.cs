@@ -25,7 +25,7 @@ namespace BetterAI
     {
         public partial class BetterAIPlayerAI : BetterAIPlayer.PlayerAI
         {
-            protected int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 0;
+            protected int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 30;
             protected int AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = 100;
             protected int AI_TRAINING_CITY_SPECIALIZATION_MODIFIER = 100;
             protected int AI_FAMILY_OPINION_VALUE_PER = 0;
@@ -467,7 +467,7 @@ namespace BetterAI
                 return false;
             }
 
-            public virtual int cityYieldSpecializationModifier(City pCity, YieldType eYield)
+            public virtual int cityYieldSpecializationModifier(City pCity, YieldType eYield, bool bSameLandSection = true)
             {
                 int iYieldRate = pCity.calculateModifiedYield(eYield);
                 int iYieldRatePlayer = 0;
@@ -476,12 +476,12 @@ namespace BetterAI
                 int iSpecializationModifier = 0;
 
                 //encourage spezialization
-                if (eYield == infos.Globals.CIVICS_YIELD || eYield == infos.Globals.TRAINING_YIELD)
+                if (eYield == infos.Globals.CIVICS_YIELD || eYield == infos.Globals.TRAINING_YIELD || eYield == infos.Globals.GROWTH_YIELD)
                 {
                     foreach (int iCityID in getCities())
                     {
                         City pLoopCity = game.city(iCityID);
-                        if (pLoopCity != null)
+                        if (pLoopCity != null && (!bSameLandSection || pLoopCity.tile().getLandSection() == pCity.tile().getLandSection()))
                         {
                             iYieldRatePlayer += pLoopCity.calculateModifiedYield(eYield);
                             iNumPlayerCities++;
@@ -1258,7 +1258,7 @@ namespace BetterAI
                     return -1;
                 }
 
-                InfoImprovement pImprovementInfo = infos.improvement(eImprovement);
+                BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos.improvement(eImprovement);
 
                 if (pImprovementInfo.mbUrban && !pTile.isUrban() && pTile.hasResource())
                 {
@@ -1301,271 +1301,292 @@ namespace BetterAI
 
                 long iValue = 0;
 
+                int iExtraCivicsProduction = 0;
+                //beging scope here
+                using (var effectCityExtraCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
+                using (var effectCityExtraYieldsScoped = CollectionCache.GetListScoped<int>())
                 {
-                    EffectCityType eEffectCity = pImprovementInfo.meEffectCity;
+                    Dictionary<EffectCityType, int> dEffectCityExtraCounts = effectCityExtraCountsScoped.Value;
+                    List<int> extraYields = effectCityExtraYieldsScoped.Value;
+                    for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
+                    {
+                        extraYields.Add(0);
+                    }
 
-                    if (eEffectCity != EffectCityType.NONE)
+                    if (!bRemove && pTile.getImprovement() != ImprovementType.NONE)
                     {
-                        iValue += effectCityValue(eEffectCity, pCity, bRemove);
+                        addImprovementCityEffectCounts(pTile.getImprovement(), pTile, dEffectCityExtraCounts, true);
                     }
-                }
 
-                {
-                    long iBestUnitValue = 0;
-                    UnitType eBestUnit = UnitType.NONE;
-                    for (UnitType eLoopUnit = 0; eLoopUnit < infos.unitsNum(); ++eLoopUnit)
                     {
-                        if (player.canEverBuildUnit(eLoopUnit))
-                        {
-                            if (infos.unit(eLoopUnit).meImprovementPrereq == eImprovement)
-                            {
-                                long iUnitValue = getUnitBuildValue(eLoopUnit, pCity);
-                                if (iUnitValue > iBestUnitValue)
-                                {
-                                    iBestUnitValue = iUnitValue;
-                                    eBestUnit = eLoopUnit;
-                                }
-                            }
-                        }
-                    }
-                    if (iBestUnitValue > 0)
-                    {
-                        iValue += pCity.calculateModifiedYield(infos.unit(eBestUnit).meProductionType) * AI_CITY_UNITS_BUILT_PER_TRAINING / Constants.YIELDS_MULTIPLIER;
-                    }
-                }
-
-                if (pImprovementInfo.miUnitTurns > 0)
-                {
-                    long iUnitValue = 0;
-                    int iDiceTotal = 0;
-                    for (UnitType eFreeUnit = 0; eFreeUnit < infos.unitsNum(); ++eFreeUnit)
-                    {
-                        int iDie = pImprovementInfo.maiUnitDie[eFreeUnit];
-                        if (iDie > 0)
-                        {
-                            iDiceTotal += iDie;
-                            iUnitValue += unitValue(eFreeUnit, pCity, false) * iDie;
-                        }
-                    }
-                    if (iDiceTotal > 0)
-                    {
-                        iValue = iUnitValue * AI_YIELD_TURNS / iDiceTotal / pImprovementInfo.miUnitTurns;
-                    }
-                }
-
-                if (eImprovementClass != ImprovementClassType.NONE)
-                {
-                    {
-                        EffectCityType eEffectCity = infos.improvementClass(eImprovementClass).meEffectCity;
+                        EffectCityType eEffectCity = pImprovementInfo.meEffectCity;
 
                         if (eEffectCity != EffectCityType.NONE)
                         {
                             iValue += effectCityValue(eEffectCity, pCity, bRemove);
+                            cityEffectExtraYieldFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts, extraYields);
+                            iValue += cityEffectExtraUnlockValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts);
                         }
                     }
 
-                    if (pTile.hasResource())
+                    {
+                        long iBestUnitValue = 0;
+                        UnitType eBestUnit = UnitType.NONE;
+                        for (UnitType eLoopUnit = 0; eLoopUnit < infos.unitsNum(); ++eLoopUnit)
+                        {
+                            if (player.canEverBuildUnit(eLoopUnit))
+                            {
+                                if (infos.unit(eLoopUnit).meImprovementPrereq == eImprovement)
+                                {
+                                    long iUnitValue = getUnitBuildValue(eLoopUnit, pCity);
+                                    if (iUnitValue > iBestUnitValue)
+                                    {
+                                        iBestUnitValue = iUnitValue;
+                                        eBestUnit = eLoopUnit;
+                                    }
+                                }
+                            }
+                        }
+                        if (iBestUnitValue > 0)
+                        {
+                            iValue += pCity.calculateModifiedYield(infos.unit(eBestUnit).meProductionType) * AI_CITY_UNITS_BUILT_PER_TRAINING / Constants.YIELDS_MULTIPLIER;
+                        }
+                    }
+
+                    if (pImprovementInfo.miUnitTurns > 0)
+                    {
+                        long iUnitValue = 0;
+                        int iDiceTotal = 0;
+                        for (UnitType eFreeUnit = 0; eFreeUnit < infos.unitsNum(); ++eFreeUnit)
+                        {
+                            int iDie = pImprovementInfo.maiUnitDie[eFreeUnit];
+                            if (iDie > 0)
+                            {
+                                iDiceTotal += iDie;
+                                iUnitValue += unitValue(eFreeUnit, pCity, false) * iDie;
+                            }
+                        }
+                        if (iDiceTotal > 0)
+                        {
+                            iValue = iUnitValue * AI_YIELD_TURNS / iDiceTotal / pImprovementInfo.miUnitTurns;
+                        }
+                    }
+
+                    if (eImprovementClass != ImprovementClassType.NONE)
                     {
                         {
-                            EffectCityType eEffectCity = infos.improvementClass(eImprovementClass).maeResourceCityEffect[pTile.getResource()];
+                            EffectCityType eEffectCity = infos.improvementClass(eImprovementClass).meEffectCity;
 
                             if (eEffectCity != EffectCityType.NONE)
                             {
-                                iValue += adjustForInflation(AI_RESOURCE_EXTRA_VALUE);
                                 iValue += effectCityValue(eEffectCity, pCity, bRemove);
+                                cityEffectExtraYieldFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts, extraYields);
+                                iValue += cityEffectExtraUnlockValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts);
+                            }
+                        }
+
+                        if (pTile.hasResource())
+                        {
+                            {
+                                EffectCityType eEffectCity = infos.improvementClass(eImprovementClass).maeResourceCityEffect[pTile.getResource()];
+
+                                if (eEffectCity != EffectCityType.NONE)
+                                {
+                                    iValue += adjustForInflation(AI_RESOURCE_EXTRA_VALUE);
+                                    iValue += effectCityValue(eEffectCity, pCity, bRemove);
+                                    cityEffectExtraYieldFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts, extraYields);
+                                    iValue += cityEffectExtraUnlockValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts);
+                                }
+                            }
+                        }
+
+                        if (pImprovementInfo.meReligionPrereq != ReligionType.NONE)
+                        {
+                            for (TheologyType eLoopTheology = 0; eLoopTheology < infos.theologiesNum(); eLoopTheology++)
+                            {
+                                EffectCityType eEffectCity = infos.improvementClass(eImprovementClass).maeTheologyCityEffect[eLoopTheology];
+
+                                if (eEffectCity != EffectCityType.NONE)
+                                {
+                                    long iEffectValue = effectCityValue(eEffectCity, pCity, bRemove);
+                                    cityEffectExtraYieldFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts, extraYields);
+                                    iValue += cityEffectExtraUnlockValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts);
+                                    if (game.isReligionTheology(pImprovementInfo.meReligionPrereq, eLoopTheology))
+                                    {
+                                        iValue += iEffectValue;
+                                    }
+                                    else if (game.canEstablishTheology(pImprovementInfo.meReligionPrereq, eLoopTheology))
+                                    {
+                                        iValue += iEffectValue / 2;
+                                    }
+                                }
                             }
                         }
                     }
 
-                    if (pImprovementInfo.meReligionPrereq != ReligionType.NONE)
+                    if (!bRemove && player.getWorldReligionCount() == 0)
                     {
-                        for (TheologyType eLoopTheology = 0; eLoopTheology < infos.theologiesNum(); eLoopTheology++)
+                        int iPlayerImprovements = player.getFinishedImprovementCount(eImprovement);
+                        int iPlayerImprovementClasses = eImprovementClass != ImprovementClassType.NONE ? player.getFinishedImprovementClassCount(eImprovementClass) : 0;
+                        for (ReligionType eLoopReligion = 0; eLoopReligion < infos.religionsNum(); ++eLoopReligion)
                         {
-                            EffectCityType eEffectCity = infos.improvementClass(eImprovementClass).maeTheologyCityEffect[eLoopTheology];
-
-                            if (eEffectCity != EffectCityType.NONE)
+                            if (!game.isReligionFounded(eLoopReligion))
                             {
-                                long iEffectValue = effectCityValue(eEffectCity, pCity, bRemove);
-                                if (game.isReligionTheology(pImprovementInfo.meReligionPrereq, eLoopTheology))
-                                {
-                                    iValue += iEffectValue;
-                                }
-                                else if (game.canEstablishTheology(pImprovementInfo.meReligionPrereq, eLoopTheology))
-                                {
-                                    iValue += iEffectValue / 2;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (!bRemove && player.getWorldReligionCount() == 0)
-                {
-                    int iPlayerImprovements = player.getFinishedImprovementCount(eImprovement);
-                    int iPlayerImprovementClasses = eImprovementClass != ImprovementClassType.NONE ? player.getFinishedImprovementClassCount(eImprovementClass) : 0;
-                    for (ReligionType eLoopReligion = 0; eLoopReligion < infos.religionsNum(); ++eLoopReligion)
-                    {
-                        if (!game.isReligionFounded(eLoopReligion))
-                        {
-                            bool bImprovementNeeded = false;
-                            if (infos.religion(eLoopReligion).maiRequiresImprovement[eImprovement] > iPlayerImprovements)
-                            {
-                                bImprovementNeeded = true;
-                            }
-
-                            if (eImprovementClass != ImprovementClassType.NONE)
-                            {
-                                if (infos.religion(eLoopReligion).maiRequiresImprovementClass[eImprovementClass] > iPlayerImprovementClasses)
+                                bool bImprovementNeeded = false;
+                                if (infos.religion(eLoopReligion).maiRequiresImprovement[eImprovement] > iPlayerImprovements)
                                 {
                                     bImprovementNeeded = true;
                                 }
-                            }
-                            if (bImprovementNeeded)
-                            {
-                                iValue += stateReligionValue(eLoopReligion, false, false);
+
+                                if (eImprovementClass != ImprovementClassType.NONE)
+                                {
+                                    if (infos.religion(eLoopReligion).maiRequiresImprovementClass[eImprovementClass] > iPlayerImprovementClasses)
+                                    {
+                                        bImprovementNeeded = true;
+                                    }
+                                }
+                                if (bImprovementNeeded)
+                                {
+                                    iValue += stateReligionValue(eLoopReligion, false, false);
+                                }
                             }
                         }
                     }
-                }
 
-                for (DirectionType eDir = 0; eDir < DirectionType.NUM_TYPES; ++eDir)
-                {
-                    Tile pAdjacent = pTile.tileAdjacent(eDir);
-                    if (pAdjacent != null && (pAdjacent.getTeam() == Team || !pAdjacent.hasOwner()))
+                    for (DirectionType eDir = 0; eDir < DirectionType.NUM_TYPES; ++eDir)
                     {
-                        using (var improvementListScoped = CollectionCache.GetListScoped<ImprovementType>())
+                        Tile pAdjacent = pTile.tileAdjacent(eDir);
+                        if (pAdjacent != null && (pAdjacent.getTeam() == Team || !pAdjacent.hasOwner()))
                         {
-                            List<ImprovementType> aeImprovements = improvementListScoped.Value;
-                            bool bHasImprovement = false;
-                            if (pAdjacent.hasImprovement())
+                            using (var improvementListScoped = CollectionCache.GetListScoped<ImprovementType>())
                             {
-                                if (pAdjacent.getTeam() == Team)
+                                List<ImprovementType> aeImprovements = improvementListScoped.Value;
+                                bool bHasImprovement = false;
+                                if (pAdjacent.hasImprovement())
                                 {
-                                    bHasImprovement = true;
-                                    aeImprovements.Add(pAdjacent.getImprovement());
-                                }
-                            }
-                            else if (pAdjacent.hasResource())
-                            {
-                                long iBestOutput = 0;
-                                ImprovementType eBestImprovement = ImprovementType.NONE;
-                                for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos.improvementsNum(); ++eLoopImprovement)
-                                {
-                                    if (infos.Helpers.isImprovementResourceValid(eLoopImprovement, pAdjacent.getResource()))
+                                    if (pAdjacent.getTeam() == Team)
                                     {
-                                        long iOutputValue = 0;
-                                        for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
-                                        {
-                                            int iYield = pAdjacent.yieldOutput(eLoopImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: true, bBaseOnly: false);
-                                            if (iYield != 0)
-                                            {
-                                                iOutputValue += iYield * cityYieldValue(eLoopYield, pCity);
-                                                //no need to modify this, it's just for ranking
-                                            }
-                                        }
-                                        if (iOutputValue > iBestOutput)
-                                        {
-                                            iBestOutput = iOutputValue;
-                                            eBestImprovement = eLoopImprovement;
-                                        }
+                                        bHasImprovement = true;
+                                        aeImprovements.Add(pAdjacent.getImprovement());
                                     }
                                 }
-                                if (eBestImprovement != ImprovementType.NONE)
+                                else if (pAdjacent.hasResource())
                                 {
-                                    bHasImprovement = true;
-                                    aeImprovements.Add(eBestImprovement);
-                                }
-                            }
-                            else
-                            {
-                                //using var profileScopeAdjacent = new UnityProfileScope("AdjacentImprovementModifier");
-
-                                if (pImprovementInfo.meAdjacentImprovementSpecialist != ImprovementType.NONE)
-                                {
-                                    aeImprovements.Add(pImprovementInfo.meAdjacentImprovementSpecialist);
+                                    long iBestOutput = 0;
+                                    ImprovementType eBestImprovement = ImprovementType.NONE;
+                                    for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos.improvementsNum(); ++eLoopImprovement)
+                                    {
+                                        if (infos.Helpers.isImprovementResourceValid(eLoopImprovement, pAdjacent.getResource()))
+                                        {
+                                            long iOutputValue = 0;
+                                            for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
+                                            {
+                                                int iYield = pAdjacent.yieldOutput(eLoopImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: true, bBaseOnly: false);
+                                                if (iYield != 0)
+                                                {
+                                                    iOutputValue += iYield * cityYieldValue(eLoopYield, pCity);
+                                                    //no need to modify this, it's just for ranking
+                                                }
+                                            }
+                                            if (iOutputValue > iBestOutput)
+                                            {
+                                                iBestOutput = iOutputValue;
+                                                eBestImprovement = eLoopImprovement;
+                                            }
+                                        }
+                                    }
+                                    if (eBestImprovement != ImprovementType.NONE)
+                                    {
+                                        bHasImprovement = true;
+                                        aeImprovements.Add(eBestImprovement);
+                                    }
                                 }
                                 else
                                 {
-                                    foreach (KeyValuePair<ImprovementType, int> p in pImprovementInfo.maiAdjacentImprovementModifier)
+                                    //using var profileScopeAdjacent = new UnityProfileScope("AdjacentImprovementModifier");
+
+                                    if (pImprovementInfo.meAdjacentImprovementSpecialist != ImprovementType.NONE)
                                     {
-                                        aeImprovements.Add(p.Key);
+                                        aeImprovements.Add(pImprovementInfo.meAdjacentImprovementSpecialist);
                                     }
-                                    foreach (KeyValuePair<ImprovementClassType, int> p in pImprovementInfo.maiAdjacentImprovementClassModifier)
+                                    else
                                     {
-                                        InfoImprovementClass improvementClass = infos.improvementClass(p.Key);
-                                        infos.Helpers.getImprovementClassImprovements(improvementClass.meType, aeImprovements);
-                                    }
-                                    foreach ((ImprovementClassType, YieldType, int) p in pImprovementInfo.maaiAdjacentImprovementClassYield)
-                                    {
-                                        InfoImprovementClass improvementClass = infos.improvementClass(p.Item1);
-                                        infos.Helpers.getImprovementClassImprovements(improvementClass.meType, aeImprovements);
-                                    }
-                                    if (pImprovementInfo.meClass != ImprovementClassType.NONE)
-                                    {
-                                        foreach (KeyValuePair<ImprovementClassType, int> p in infos.improvementClass(pImprovementInfo.meClass).maiAdjacentImprovementClassModifier)
+                                        foreach (KeyValuePair<ImprovementType, int> p in pImprovementInfo.maiAdjacentImprovementModifier)
+                                        {
+                                            aeImprovements.Add(p.Key);
+                                        }
+                                        foreach (KeyValuePair<ImprovementClassType, int> p in pImprovementInfo.maiAdjacentImprovementClassModifier)
                                         {
                                             InfoImprovementClass improvementClass = infos.improvementClass(p.Key);
                                             infos.Helpers.getImprovementClassImprovements(improvementClass.meType, aeImprovements);
                                         }
-                                    }
-
-                                    // remove duplicates
-                                    using (var improvementSetScoped = CollectionCache.GetHashSetScoped<ImprovementType>())
-                                    {
-                                        HashSet<ImprovementType> seImprovementsDone = improvementSetScoped.Value;
-                                        for (int i = aeImprovements.Count - 1; i >= 0; --i)
+                                        foreach ((ImprovementClassType, YieldType, int) p in pImprovementInfo.maaiAdjacentImprovementClassYield)
                                         {
-                                            ImprovementType eLoopImprovement = aeImprovements[i];
-                                            if (seImprovementsDone.Contains(eLoopImprovement))
+                                            InfoImprovementClass improvementClass = infos.improvementClass(p.Item1);
+                                            infos.Helpers.getImprovementClassImprovements(improvementClass.meType, aeImprovements);
+                                        }
+                                        if (pImprovementInfo.meClass != ImprovementClassType.NONE)
+                                        {
+                                            foreach (KeyValuePair<ImprovementClassType, int> p in infos.improvementClass(pImprovementInfo.meClass).maiAdjacentImprovementClassModifier)
                                             {
-                                                aeImprovements.RemoveAt(i);
+                                                InfoImprovementClass improvementClass = infos.improvementClass(p.Key);
+                                                infos.Helpers.getImprovementClassImprovements(improvementClass.meType, aeImprovements);
                                             }
-                                            seImprovementsDone.Add(eLoopImprovement);
+                                        }
+
+                                        // remove duplicates
+                                        using (var improvementSetScoped = CollectionCache.GetHashSetScoped<ImprovementType>())
+                                        {
+                                            HashSet<ImprovementType> seImprovementsDone = improvementSetScoped.Value;
+                                            for (int i = aeImprovements.Count - 1; i >= 0; --i)
+                                            {
+                                                ImprovementType eLoopImprovement = aeImprovements[i];
+                                                if (seImprovementsDone.Contains(eLoopImprovement))
+                                                {
+                                                    aeImprovements.RemoveAt(i);
+                                                }
+                                                seImprovementsDone.Add(eLoopImprovement);
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            if (aeImprovements.Count > 0)
-                            {
-                                long iAdjacentValue = 0;
-                                foreach (ImprovementType eLoopImprovement in aeImprovements)
+                                if (aeImprovements.Count > 0)
                                 {
-                                    if (pAdjacent.getImprovement() == eLoopImprovement || pAdjacent.isImprovementValid(eLoopImprovement, pAdjacent.cityTerritory()))
+                                    long iAdjacentValue = 0;
+                                    foreach (ImprovementType eLoopImprovement in aeImprovements)
                                     {
-                                        for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
+                                        if (pAdjacent.getImprovement() == eLoopImprovement || pAdjacent.isImprovementValid(eLoopImprovement, pAdjacent.cityTerritory()))
                                         {
-                                            City pAdjacentCity = pAdjacent.cityTerritory() ?? pCity;
-                                            int iModifier = pCity.calculateTotalYieldModifier(eLoopYield);
-                                            int iAdjacentModifier = (pAdjacentCity == pCity) ? iModifier : pAdjacentCity.calculateTotalYieldModifier(eLoopYield);
-
-                                            if (pAdjacentCity.getPlayer() == getPlayer())
+                                            for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
                                             {
-                                                iAdjacentValue += infos.utils().modify(getYieldToAdjacent(eLoopYield, eImprovement, eLoopImprovement, pAdjacent.getResource()), iAdjacentModifier) * cityYieldValue(eLoopYield, pAdjacentCity);
+                                                City pAdjacentCity = pAdjacent.cityTerritory() ?? pCity;
+                                                int iModifier = pCity.calculateTotalYieldModifier(eLoopYield);
+                                                int iAdjacentModifier = (pAdjacentCity == pCity) ? iModifier : pAdjacentCity.calculateTotalYieldModifier(eLoopYield);
+
+                                                if (pAdjacentCity.getPlayer() == getPlayer())
+                                                {
+                                                    iAdjacentValue += infos.utils().modify(getYieldToAdjacent(eLoopYield, eImprovement, eLoopImprovement, pAdjacent.getResource()), iAdjacentModifier) * cityYieldValue(eLoopYield, pAdjacentCity);
+                                                }
+                                                iAdjacentValue += infos.utils().modify(getYieldToAdjacent(eLoopYield, eLoopImprovement, eImprovement, pTile.getResource()), iModifier) * cityYieldValue(eLoopYield, pCity);
                                             }
-                                            iAdjacentValue += infos.utils().modify(getYieldToAdjacent(eLoopYield, eLoopImprovement, eImprovement, pTile.getResource()), iModifier) * cityYieldValue(eLoopYield, pCity);
                                         }
                                     }
-                                }
-                                iAdjacentValue /= aeImprovements.Count;
+                                    iAdjacentValue /= aeImprovements.Count;
 
-                                if (!bHasImprovement)
-                                {
-                                    iAdjacentValue /= 2;
+                                    if (!bHasImprovement)
+                                    {
+                                        iAdjacentValue /= 2;
+                                    }
+                                    iAdjacentValue /= Constants.YIELDS_MULTIPLIER;
+                                    iValue += iAdjacentValue * AI_YIELD_TURNS;
                                 }
-                                iAdjacentValue /= Constants.YIELDS_MULTIPLIER;
-                                iValue += iAdjacentValue * AI_YIELD_TURNS;
                             }
                         }
                     }
-                }
 
-                int iExtraCivicsProduction = 0;
 
-                using (var effectCityExtraCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
-                {
-                    Dictionary<EffectCityType, int> dEffectCityExtraCounts = effectCityExtraCountsScoped.Value;
-
+                
                     //SpecialistType eImprovementSpecialist = ((bRemove || pTile.isSpecialistValid(pTile.getSpecialist(), eImprovement)) ? pTile.getSpecialist() : SpecialistType.NONE);
                     SpecialistType eImprovementSpecialist;
                     if (bRemove || pTile.isSpecialistValid(pTile.getSpecialist(), eImprovement))
@@ -1591,18 +1612,6 @@ namespace BetterAI
                         //long iTileOutputValue = pTile.yieldOutput(eImprovement, SpecialistType.NONE, eLoopYield, pCityEffects: null, bBaseOnly: false);
                         long iTileOutputValue = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), dEffectCityExtraCounts);
 
-                        if (eLoopYield == infos.Globals.CIVICS_YIELD)
-                        {
-                            if (eImprovementSpecialist != SpecialistType.NONE)
-                            {
-                                iExtraCivicsProduction = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, eImprovementSpecialist, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), dEffectCityExtraCounts);
-                            }
-                            else
-                            {
-                                iExtraCivicsProduction = (int)iTileOutputValue;
-                            }
-                        }
-
                         //if (infos.yield(eLoopYield).miPerImprovement != 0)
                         //{
                         //    iTileOutputValue += infos.utils().modify(infos.yield(eLoopYield).miPerImprovement, pCity.calculateTotalYieldModifier(eLoopYield));
@@ -1614,8 +1623,30 @@ namespace BetterAI
                             //iTileOutputValue *= cityYieldValue(eLoopYield, pCity);
                             //iTileOutputValue /= Constants.YIELDS_MULTIPLIER;
                             //iValue += iTileOutputValue * AI_YIELD_TURNS;
-                            iTileOutputValue = infos.utils().modify((iTileOutputValue * cityYieldValue(eLoopYield, pCity)), pCity.calculateTotalYieldModifier(eLoopYield));
-                            iValue += iTileOutputValue * AI_YIELD_TURNS / Constants.YIELDS_MULTIPLIER;
+
+                            int iExtraModifier = 0;
+                            foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
+                            {
+                                iExtraModifier += infos.effectCity(p.Key).maiYieldModifier[eLoopYield] * p.Value;
+                            }
+
+                            iTileOutputValue = infos.utils().modify((iTileOutputValue + extraYields[(int)eLoopYield]), pCity.calculateTotalYieldModifier(eLoopYield) + iExtraModifier);
+                            
+                            if (eLoopYield == infos.Globals.CIVICS_YIELD)
+                            {
+                                if (eImprovementSpecialist != SpecialistType.NONE)
+                                {
+                                    iExtraCivicsProduction = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, eImprovementSpecialist, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), dEffectCityExtraCounts);
+                                    iExtraCivicsProduction += infos.yield(eLoopYield).miPerImprovement;
+                                    iExtraCivicsProduction = infos.utils().modify((iExtraCivicsProduction + extraYields[(int)eLoopYield]), pCity.calculateTotalYieldModifier(eLoopYield) + iExtraModifier);
+                                }
+                                else
+                                {
+                                    iExtraCivicsProduction = (int)iTileOutputValue;
+                                }
+                            }
+
+                            iValue += iTileOutputValue * cityYieldValue(eLoopYield, pCity) * AI_YIELD_TURNS / Constants.YIELDS_MULTIPLIER;
                         }
 /*####### Better Old World AI - Base DLL #######
   ### AI: proper yield modifiers         END ###
@@ -1630,7 +1661,9 @@ namespace BetterAI
                         iValue += specialistValue(eImprovementSpecialist, pCity, pTile, pTile.getImprovement(), bIncludeCost: false, bIncludeUnlock: false, bIncludeBorderExpansion: bIncludeBorderExpansion);
                     }
 
+                
                 }
+                //end scope here
 
                 // encourage new improvements that allow good specialists
 /*####### Better Old World AI - Base DLL #######
@@ -1691,6 +1724,125 @@ namespace BetterAI
                 }
 /*####### Better Old World AI - Base DLL #######
   ### AI: less value for specialist      END ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
+                BetterAITile BAI_pTile = (BetterAITile)pTile;
+                BetterAICity BAI_pCity = (BetterAICity)pCity;
+
+                ImprovementType eBonusImprovement = ImprovementType.NONE;
+
+                long iBonusImprovementValue = int.MinValue;
+
+                if (!(pImprovementInfo.mbMakesAdjacentPassableLandTileValidForBonusImprovement))
+                {
+                    if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
+                    {
+                        if (BAI_pTile.canCityTileAddImprovementAdjacent(BAI_pCity, pImprovementInfo.meBonusAdjacentImprovement, pImprovementInfo.mbSpreadsBorders))
+                        {
+                            eBonusImprovement = pImprovementInfo.meBonusAdjacentImprovement;
+                        }
+                    }
+                    else if (pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                    {
+                        if (BAI_pTile.canCityTileAddImprovementClassAdjacent(BAI_pCity, pImprovementInfo.meBonusAdjacentImprovementClass, pImprovementInfo.mbSpreadsBorders, out eBonusImprovement))
+                        {
+                            //eBonusImprovement is already set
+                        }
+                    }
+
+                    if (eBonusImprovement != ImprovementType.NONE && BAI_pCity.canCityHaveImprovement(eBonusImprovement, bForceImprovement: true))
+                    {
+                        for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+                        {
+                            BetterAITile pAdjacentTile = (BetterAITile)pTile.tileAdjacent(eLoopDirection);
+
+                            if (pAdjacentTile != null)
+                            {
+                                if (pAdjacentTile.getImprovement() == ImprovementType.NONE
+                                    && (!pAdjacentTile.hasResource() || infos.Helpers.isImprovementResourceValid(eBonusImprovement, pAdjacentTile.getResource()))
+                                    && pAdjacentTile.cityTerritory() == pTile.cityTerritory() || (pImprovementInfo.mbSpreadsBorders && pAdjacentTile.cityTerritory() == null)
+                                    && pAdjacentTile.canGeneralTileHaveImprovement(eBonusImprovement, bForceImprovement: true)
+                                    && pAdjacentTile.canCityTileHaveImprovement(BAI_pCity, eBonusImprovement, bForceImprovement: true))
+                                {
+                                    long iLoopValue = calculateImprovementValueForTile(pAdjacentTile, pCity, eBonusImprovement);
+                                    if (iLoopValue > iBonusImprovementValue)
+                                    {
+                                        iBonusImprovementValue = iLoopValue;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }
+                else
+                {
+                    //ImprovementType eTestImprovement = ImprovementType.NONE;
+                    if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
+                    {
+                        if (BAI_pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory: TeamType.NONE, bTestTerritory: true, bTestEnabled: true, bTestReligion: true, bUpgradeImprovement:false, bForceImprovement: true))
+                        {
+                            //return false;
+                        }
+                        eBonusImprovement = pImprovementInfo.meBonusAdjacentImprovement;
+                    }
+
+                    if (eBonusImprovement == ImprovementType.NONE && pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                    {
+
+                        for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos.improvementsNum(); eLoopImprovement++)
+                        {
+                            if (infos.improvement(eLoopImprovement).meClass == pImprovementInfo.meBonusAdjacentImprovementClass)
+                            {
+                                if (BAI_pCity.canCityHaveImprovement(eLoopImprovement, eTeamTerritory: TeamType.NONE, bTestTerritory: true, bTestEnabled: true, bTestReligion: true, bUpgradeImprovement: false, bForceImprovement: true))
+                                {
+                                    eBonusImprovement = eLoopImprovement;
+                                    break;
+                                }
+                            }
+                        }
+
+                    }
+
+                    if (eBonusImprovement != ImprovementType.NONE)
+                    {
+                        //only land improvements get mbMakesAdjacentPassableLandTileValidForBonusImprovement
+                        for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+                        {
+                            BetterAITile pAdjacentTile = (BetterAITile)pTile.tileAdjacent(eLoopDirection);
+
+                            if (pAdjacentTile != null)
+                            {
+                                if (pAdjacentTile.isLand() && !(pAdjacentTile.impassable())
+                                    && pAdjacentTile.getImprovement() == ImprovementType.NONE
+                                    && (!pAdjacentTile.hasResource() || infos.Helpers.isImprovementResourceValid(eBonusImprovement, pAdjacentTile.getResource()))
+                                    && pAdjacentTile.cityTerritory() == pTile.cityTerritory() || (pImprovementInfo.mbSpreadsBorders && pAdjacentTile.cityTerritory() == null)
+                                    && pAdjacentTile.canGeneralTileHaveImprovement(eBonusImprovement, bForceImprovement: true)
+                                    && pAdjacentTile.canCityTileHaveImprovement(BAI_pCity, eBonusImprovement, bForceImprovement: true))
+                                {
+                                    long iLoopValue = calculateImprovementValueForTile(pAdjacentTile, pCity, eBonusImprovement);
+                                    if (iLoopValue > iBonusImprovementValue)
+                                    {
+                                        iBonusImprovementValue = iLoopValue;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+
+                }
+
+                if (eBonusImprovement != ImprovementType.NONE && iBonusImprovementValue != int.MinValue)
+                {
+                    iValue += iBonusImprovementValue;
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
   ##############################################*/
 
 
@@ -1875,13 +2027,78 @@ namespace BetterAI
                 }
 
             }
+            public virtual void cityEffectExtraYieldFromExtraCityEffects(EffectCityType eEffectCity, City pCity, Dictionary<EffectCityType, int> dEffectCityExtraCounts, List<int> extraYields)
+            {
+                InfoEffectCity infoEffectCity = infos.effectCity(eEffectCity);
 
+                foreach ((EffectCityType, YieldType, int) zTriple in infoEffectCity.maaiEffectCityYieldRate)
+                {
+                    int iCount = dEffectCityExtraCounts.GetOrDefault(zTriple.Item1, 0);
+                    if (iCount > 0)
+                    {
+                        extraYields[(int)zTriple.Item2] += iCount * zTriple.Item3;
+                    }
+                }
+
+                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
+                {
+                    foreach ((EffectCityType, YieldType, int) zTriple in infos.effectCity(p.Key).maaiEffectCityYieldRate)
+                    {
+                        int iCount = dEffectCityExtraCounts.GetOrDefault(zTriple.Item1, 0);
+                        if (zTriple.Item1 == eEffectCity && iCount > 0)
+                        {
+                            extraYields[(int)zTriple.Item2] += iCount * zTriple.Item3;
+                        }
+                    }
+                }
+            }
+            public virtual long cityEffectExtraUnlockValueFromExtraCityEffects(EffectCityType eEffectCity, City pCity, Dictionary<EffectCityType, int> dEffectCityExtraCounts, bool bRemove = false)
+            {
+                long iValue = 0;
+
+                int iExtraCount = bRemove ? -1 : 1;
+
+                int iAdditionalExtraCount;
+
+                InfoEffectCity pEffectCityInfo = infos.effectCity(eEffectCity);
+
+                if (dEffectCityExtraCounts != null && dEffectCityExtraCounts.Count() != 0)
+                {
+                    if (pEffectCityInfo.mbEnablesGovernor && game.isCharacters())
+                    {
+                        iAdditionalExtraCount = 0;
+                        foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
+                        {
+                            if (infos.effectCity(p.Key).mbEnablesGovernor)
+                            {
+                                iAdditionalExtraCount += p.Value;
+                            }
+                        }
+
+
+
+                        if ((pCity.isEnablesGovernor() != pCity.isEnablesGovernor(iExtraCount)) != (pCity.isEnablesGovernor(iAdditionalExtraCount) != pCity.isEnablesGovernor(iExtraCount + iAdditionalExtraCount)))
+                        {
+                            iValue += AI_CITY_GOVERNOR_VALUE * (iAdditionalExtraCount < 0 ? 1 : -1);
+                        }
+                    }
+
+                    //add here: all other unlock conditions
+
+
+                }
+
+
+                return iValue;
+            }
+
+            //unused
             public virtual long cityEffectExtraValueFromExtraCityEffects(EffectCityType eEffectCity, City pCity, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
             {
                 long iValue = 0;
                 InfoEffectCity infoEffectCity = infos.effectCity(eEffectCity);
 
-                foreach (var zTriple in infoEffectCity.maaiEffectCityYieldRate)
+                foreach ((EffectCityType, YieldType, int) zTriple in infoEffectCity.maaiEffectCityYieldRate)
                 {
                     int iCount = dEffectCityExtraCounts.GetOrDefault(zTriple.Item1, 0);
                     if (iCount > 0)
@@ -1890,13 +2107,14 @@ namespace BetterAI
                     }
                 }
 
-                foreach (var p in dEffectCityExtraCounts)
+                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
-                    foreach (var zTriple in infos.effectCity(p.Key).maaiEffectCityYieldRate)
+                    foreach ((EffectCityType, YieldType, int) zTriple in infos.effectCity(p.Key).maaiEffectCityYieldRate)
                     {
-                        if (zTriple.Item1 == eEffectCity)
+                        int iCount = dEffectCityExtraCounts.GetOrDefault(zTriple.Item1, 0);
+                        if (zTriple.Item1 == eEffectCity && iCount > 0)
                         {
-                            iValue += infos.utils().modify((zTriple.Item3 * cityYieldValue(zTriple.Item2, pCity)), pCity.calculateTotalYieldModifier(zTriple.Item2)) * AI_YIELD_TURNS / Constants.YIELDS_MULTIPLIER;
+                            iValue += infos.utils().modify((iCount * zTriple.Item3 * cityYieldValue(zTriple.Item2, pCity)), pCity.calculateTotalYieldModifier(zTriple.Item2)) * AI_YIELD_TURNS / Constants.YIELDS_MULTIPLIER;
                         }
                     }
                 }
@@ -1924,10 +2142,16 @@ namespace BetterAI
                 using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
                 using (var effectCityExtraCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
                 using (var effectCityImprovementOnlyExtraCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
+                using (var effectCityExtraYieldsScoped = CollectionCache.GetListScoped<int>())
                 {
                     Dictionary<EffectCityType, int> dEffectCityCounts = effectCityCountsScoped.Value;
                     Dictionary<EffectCityType, int> dEffectCityExtraCounts = effectCityExtraCountsScoped.Value;
                     Dictionary<EffectCityType, int> dEffectCityImprovementOnlyExtraCounts = effectCityImprovementOnlyExtraCountsScoped.Value;
+                    List<int> extraYields = effectCityExtraYieldsScoped.Value;
+                    for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
+                    {
+                        extraYields.Add(0);
+                    }
 
                     pCity.getEffectCityCountsForGovernor(pCity.governor(), dEffectCityCounts);
 
@@ -1942,7 +2166,7 @@ namespace BetterAI
                     }
 
 
-                    foreach (var p in dEffectCityExtraCounts)
+                    foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                     {
                         dEffectCityCounts[p.Key] = dEffectCityCounts.GetOrDefault(p.Key, 0) + p.Value;
                         dEffectCityImprovementOnlyExtraCounts[p.Key] = dEffectCityCounts.GetOrDefault(p.Key, 0) + p.Value;
@@ -1954,7 +2178,8 @@ namespace BetterAI
                         if (eEffectCity != EffectCityType.NONE)
                         {
                             iValue += effectCityValue(eEffectCity, pCity, bRemove);
-                            iValue += cityEffectExtraValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts); //extra value from maaiEffectCityYieldRate
+                            cityEffectExtraYieldFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts, extraYields);
+                            iValue += cityEffectExtraUnlockValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts);
                         }
                     }
 
@@ -1963,7 +2188,8 @@ namespace BetterAI
                         if (eEffectCity != EffectCityType.NONE)
                         {
                             iValue += effectCityValue(eEffectCity, pCity, bRemove);
-                            iValue += cityEffectExtraValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts); //extra value from maaiEffectCityYieldRate
+                            cityEffectExtraYieldFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts, extraYields);
+                            iValue += cityEffectExtraUnlockValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts);
                         }
                     }
 
@@ -1973,7 +2199,8 @@ namespace BetterAI
                         if (eEffectCity != EffectCityType.NONE)
                         {
                             iValue += effectCityValue(eEffectCity, pCity, bRemove);
-                            iValue += cityEffectExtraValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts); //extra value from maaiEffectCityYieldRate
+                            cityEffectExtraYieldFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts, extraYields);
+                            iValue += cityEffectExtraUnlockValueFromExtraCityEffects(eEffectCity, pCity, dEffectCityExtraCounts);
                         }
                     }
 
@@ -1987,7 +2214,8 @@ namespace BetterAI
                             if (eResourceEffectCity != EffectCityType.NONE)
                             {
                                 iValue += effectCityValue(eResourceEffectCity, pCity, bRemove);
-                                iValue += cityEffectExtraValueFromExtraCityEffects(eResourceEffectCity, pCity, dEffectCityExtraCounts); //extra value from maaiEffectCityYieldRate
+                                cityEffectExtraYieldFromExtraCityEffects(eResourceEffectCity, pCity, dEffectCityExtraCounts, extraYields);
+                                iValue += cityEffectExtraUnlockValueFromExtraCityEffects(eResourceEffectCity, pCity, dEffectCityExtraCounts);
                             }
                         }
 
@@ -2020,12 +2248,12 @@ namespace BetterAI
                             iOutput -= ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), bRemove ? dEffectCityExtraCounts : dEffectCityImprovementOnlyExtraCounts); //output without the specialist and without the city effect from that specialist
 
                             int iExtraModifier = 0;
-                            foreach (var p in dEffectCityCounts)
+                            foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                             {
                                 iExtraModifier += infos.effectCity(p.Key).maiYieldModifier[eLoopYield] * p.Value;
                             }
 
-                            foreach (var p in dEffectCityCounts)
+                            foreach (KeyValuePair<EffectCityType, int> p in dEffectCityCounts)
                             {
                                 EffectCityType eLoopEffectCity = p.Key;
                                 int iEffectOutput = infos.effectCity(eLoopEffectCity).maiYieldRateSpecialist[eLoopYield];
@@ -2113,6 +2341,8 @@ namespace BetterAI
                         else
                         {
                             iValue -= effectCityValue(infos.Globals.CITIZEN_EFFECTCITY, pCity, true);
+                            cityEffectExtraYieldFromExtraCityEffects(infos.Globals.CITIZEN_EFFECTCITY, pCity, dEffectCityExtraCounts, extraYields);
+                            iValue += cityEffectExtraUnlockValueFromExtraCityEffects(infos.Globals.CITIZEN_EFFECTCITY, pCity, dEffectCityExtraCounts);
                         }
                     }
 
@@ -2201,6 +2431,24 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI: less value for specialist      END ###
   ##############################################*/
+
+
+            protected override long calculateEffectUnitValue(EffectUnitType eEffectUnit, UnitType eForUnit, bool bIncludeIndirectEffects)
+            {
+                long iValue = base.calculateEffectUnitValue(eEffectUnit, eForUnit, bIncludeIndirectEffects);
+                
+                BetterAIInfoEffectUnit pEffectUnitInfo = (BetterAIInfoEffectUnit)infos.effectUnit(eEffectUnit);
+
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal   START ###
+  ##############################################*/
+                iValue += (pEffectUnitInfo.miHealAttack * AI_UNIT_HEAL_VALUE * 5 / 300); //less than healAlways, more than Heal
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal     END ###
+  ##############################################*/
+
+                return iValue;
+            }
 
 
             //lines 11966-13545
@@ -2428,6 +2676,716 @@ namespace BetterAI
 
                 return base.getNeedSettlers(pCity);
 
+            }
+
+            //lines 12794-13239
+            protected override long calculateEffectCityValue(EffectCityType eEffectCity, City pCity, bool bRemove)
+            {
+                //using var profileScope = new UnityProfileScope("PlayerAI.calculateEffectCityValue");
+
+                if (player == null)
+                {
+                    return 0;
+                }
+
+                int iExtraCount = bRemove ? -1 : 1;
+
+                long calculateLuxuryValue(ResourceType eResource)
+                {
+                    long iValue = 0;
+
+                    iValue += effectCityValue(infos.Globals.LUXURY_EFFECTCITY, pCity, bRemove, bWarningsDisabled: true);
+
+                    if (pCity.hasFamily())
+                    {
+                        EffectCityType eLuxuryEffectCity = pCity.familyClass().maeLuxuryEffectCity[eResource];
+
+                        if (eLuxuryEffectCity != EffectCityType.NONE)
+                        {
+                            iValue += effectCityValue(eLuxuryEffectCity, pCity, bRemove, bWarningsDisabled: true);
+                        }
+                    }
+
+                    foreach (GoalData pGoalData in ((BetterAIPlayer)player).getGoalDataList())
+                    {
+                        if (!(pGoalData.mbFinished))
+                        {
+                            if (infos.goal(pGoalData.meType).miLuxuries > 0)
+                            {
+                                iValue += bonusValue(infos.Globals.FINISHED_AMBITION_BONUS);
+                            }
+                        }
+                    }
+
+                    return iValue;
+                }
+
+                InfoEffectCity effectCity = infos.effectCity(eEffectCity);
+
+                long iValue = 0;
+
+                {
+                    long iDefenseValue = 0;
+                    if (effectCity.miCityHP != 0)
+                    {
+                        iDefenseValue += effectCity.miCityHP * AI_CITY_HP_VALUE;
+                    }
+
+                    iDefenseValue += (effectCity.miStrengthModifier * AI_UNIT_STRENGTH_MODIFIER_VALUE / 10);
+
+                    if (isBorderCity(pCity))
+                    {
+                        iDefenseValue *= 5;
+                    }
+
+                    iValue += iDefenseValue;
+                }
+
+                int iUnitsBuiltEstimate = pCity.calculateModifiedYield(infos.Globals.TRAINING_YIELD) * AI_CITY_UNITS_BUILT_PER_TRAINING / Constants.YIELDS_MULTIPLIER;
+
+                iValue += (effectCity.miUnitXP * AI_UNIT_XP_VALUE * iUnitsBuiltEstimate);
+                iValue += (effectCity.miUnitLevel * AI_UNIT_LEVEL_VALUE * iUnitsBuiltEstimate);
+                iValue += (effectCity.miUnitHeal * AI_UNIT_HEAL_VALUE * iUnitsBuiltEstimate);
+                iValue += (effectCity.miRangeChange * AI_UNIT_RANGE_VALUE);
+                iValue += (effectCity.miRandomPromotions * AI_UNIT_RANDOM_PROMOTION_VALUE * iUnitsBuiltEstimate);
+
+                iValue += (effectCity.miHurryDiscontentModifier * AI_CITY_HURRY_DISCONTENT_VALUE);
+                iValue += (pCity.lastPlayer().getEffectCityRebelProb(eEffectCity) * AI_CITY_REBEL_VALUE);
+                iValue -= (effectCity.miImprovementCostModifier * AI_CITY_IMPROVEMENT_COST_VALUE);
+                iValue -= (effectCity.miAdjacentClassCostModifier * AI_CITY_ADJACENT_CLASS_COST_VALUE);
+                iValue -= (effectCity.miSpecialistCostModifier * AI_CITY_SPECIALIST_COST_VALUE);
+                iValue -= (effectCity.miSpecialistRuralTrainTimeModifier * AI_CITY_SPECIALIST_TRAIN_VALUE / 2);
+                iValue -= (effectCity.miSpecialistUrbanCostModifier * AI_CITY_SPECIALIST_COST_VALUE / 2);
+                iValue -= (effectCity.miSpecialistUrbanTrainTimeModifier * AI_CITY_SPECIALIST_TRAIN_VALUE / 2);
+                iValue -= (effectCity.miProjectCostModifier * AI_CITY_PROJECT_COST_VALUE);
+                iValue -= (effectCity.miBuildTurnChange * AI_WORKER_BUILD_VALUE);
+                iValue -= (effectCity.miUrbanBuildTurnChange * AI_WORKER_BUILD_VALUE / 2);
+
+                if (effectCity.mbAutoBuild || effectCity.mbAutoBuildUnits)
+                {
+                    if (pCity.isAutoBuild() != pCity.isAutoBuild(iExtraCount))
+                    {
+                        iValue += AI_CITY_AUTOBUILD_VALUE; // XXX
+                    }
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better Hurry Unlock Evaluation   START ###
+  ##############################################*/
+                //if (effectCity.mbNoHurry)
+                //{
+                //    if (pCity.isNoHurry() != pCity.isNoHurry(iExtraCount))
+                //    {
+                //        iValue -= AI_CITY_HURRY_VALUE; // XXX
+                //    }
+                //}
+
+                //if (effectCity.mbHurryCivics)
+                //{
+                //    if (pCity.isHurryCivics() != pCity.isHurryCivics(iExtraCount))
+                //    {
+                //        iValue += AI_CITY_HURRY_VALUE / 2; // XXX
+                //    }
+                //}
+
+                //if (effectCity.mbHurryTraining)
+                //{
+                //    if (pCity.isHurryTraining() != pCity.isHurryTraining(iExtraCount))
+                //    {
+                //        iValue += AI_CITY_HURRY_VALUE / 2; // XXX
+                //    }
+                //}
+
+                //if (effectCity.mbHurryMoney)
+                //{
+                //    if (pCity.isHurryMoney() != pCity.isHurryMoney(iExtraCount))
+                //    {
+                //        iValue += AI_CITY_HURRY_VALUE / 2; // XXX
+                //    }
+                //}
+
+                //if (effectCity.mbHurryPopulation)
+                //{
+                //    if (pCity.isHurryPopulation() != pCity.isHurryPopulation(iExtraCount))
+                //    {
+                //        iValue += AI_CITY_HURRY_VALUE / 2; // XXX
+                //    }
+                //}
+
+                //if (effectCity.mbHurryOrders)
+                //{
+                //    if (pCity.isHurryOrders() != pCity.isHurryOrders(iExtraCount))
+                //    {
+                //        iValue += AI_CITY_HURRY_VALUE / 2; // XXX
+                //    }
+                //}
+/*####### Better Old World AI - Base DLL #######
+  ### Better Hurry Unlock Evaluation     END ###
+  ##############################################*/
+
+
+                if (effectCity.mbEnablesGovernor && game.isCharacters())
+                {
+                    if (pCity.isEnablesGovernor() != pCity.isEnablesGovernor(iExtraCount))
+                    {
+                        iValue += AI_CITY_GOVERNOR_VALUE;
+                    }
+                }
+
+                if (effectCity.mbNoReligionSpread)
+                {
+                    if (pCity.isNoRandomReligionSpreadUnlock() != pCity.isNoRandomReligionSpreadUnlock(iExtraCount))
+                    {
+                        iValue += AI_RELIGION_VALUE; // XXX
+                    }
+                }
+
+                for (UnitTraitType eLoopUnitTrait = 0; eLoopUnitTrait < infos.unitTraitsNum(); eLoopUnitTrait++)
+                {
+                    iValue += (effectCity.maiUnitTraitXP[eLoopUnitTrait] * AI_UNIT_XP_VALUE / AI_UNIT_TRAITS);
+                    iValue += (effectCity.maiUnitTraitLevel[eLoopUnitTrait] * AI_UNIT_LEVEL_VALUE / AI_UNIT_TRAITS);
+                    iValue += -(effectCity.maiUnitTraitCostModifier[eLoopUnitTrait] * AI_UNIT_COST_VALUE / AI_UNIT_TRAITS);
+                    iValue += -(effectCity.maiUnitTraitTrainModifier[eLoopUnitTrait] * AI_UNIT_STRENGTH_MODIFIER_VALUE / AI_UNIT_TRAITS);
+                }
+
+                foreach (YieldType eLoopYield in infos.effectCity(eEffectCity).maeBuyTile)
+                {
+                    if (pCity.isBuyTileUnlock(eLoopYield) != pCity.isBuyTileUnlock(eLoopYield, iExtraCount))
+                    {
+                        iValue += 40 * AI_TILE_VALUE; // XXX
+                    }
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better Hurry Unlock Evaluation   START ###
+  ##############################################*/
+
+                //foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryPopulation)
+                //{
+                //    if (!pCity.isHurryPopulation() && (pCity.isHurryPopulation(eLoopBuild) != pCity.isHurryPopulation(eLoopBuild, iExtraCount)))
+                //    {
+                //        iHurryValue += AI_CITY_HURRY_VALUE / 2;
+                //    }
+                //}
+
+                //foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryCivics)
+                //{
+                //    if (!pCity.isHurryCivics() && (pCity.isHurryCivics(eLoopBuild) != pCity.isHurryCivics(eLoopBuild, iExtraCount)))
+                //    {
+                //        iHurryValue += AI_CITY_HURRY_VALUE / 2;
+                //    }
+                //}
+
+                //foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryTraining)
+                //{
+                //    if (!pCity.isHurryTraining() && (pCity.isHurryTraining(eLoopBuild) != pCity.isHurryTraining(eLoopBuild, iExtraCount)))
+                //    {
+                //        iHurryValue += AI_CITY_HURRY_VALUE / 2;
+                //    }
+                //}
+
+                //foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryMoney)
+                //{
+                //    if (!pCity.isHurryMoney() && (pCity.isHurryMoney(eLoopBuild) != pCity.isHurryMoney(eLoopBuild, iExtraCount)))
+                //    {
+                //        iHurryValue += AI_CITY_HURRY_VALUE / 2;
+                //    }
+                //}
+
+                //foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryOrders)
+                //{
+                //    if (!pCity.isHurryOrders() && (pCity.isHurryOrders(eLoopBuild) != pCity.isHurryOrders(eLoopBuild, iExtraCount)))
+                //    {
+                //        iHurryValue += AI_CITY_HURRY_VALUE / 2;
+                //    }
+                //}
+                //iValue += iHurryValue / (int)infos.buildsNum();
+
+
+                int iTotalHurryValue = 0;
+
+                if (effectCity.mbNoHurry && pCity.isNoHurry() != pCity.isNoHurry(iExtraCount))
+                {
+                    iValue -= AI_CITY_HURRY_VALUE; // XXX
+                }
+                else
+                {
+                    if (effectCity.mbHurryCivics)
+                    {
+                        if (pCity.isHurryCivics() != pCity.isHurryCivics(iExtraCount))
+                        {
+                            iTotalHurryValue += AI_CITY_HURRY_VALUE / 4; // XXX
+
+                            int iHurryValue = 0;
+                            for (BuildType eLoopBuild = 0; eLoopBuild < infos.buildsNum(); eLoopBuild++)
+                            {
+                                if (pCity.isHurryCivics(eLoopBuild))
+                                {
+                                    iHurryValue -= AI_CITY_HURRY_VALUE / 4;
+                                }
+                            }
+                            iTotalHurryValue -= iHurryValue / (int)infos.buildsNum();
+                        }
+                    }
+                    else if (!pCity.isHurryCivics())
+                    {
+                        int iHurryValue = 0;
+                        foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryCivics)
+                        {
+                            if (!pCity.isHurryCivics() && (pCity.isHurryCivics(eLoopBuild) != pCity.isHurryCivics(eLoopBuild, iExtraCount)))
+                            {
+                                iHurryValue += AI_CITY_HURRY_VALUE / 4;
+                            }
+                        }
+                        iTotalHurryValue += iHurryValue / (int)infos.buildsNum();
+                    }
+
+                    if (effectCity.mbHurryTraining)
+                    {
+                        if (pCity.isHurryTraining() != pCity.isHurryTraining(iExtraCount))
+                        {
+                            iTotalHurryValue += AI_CITY_HURRY_VALUE / 3; // XXX
+
+                            int iHurryValue = 0;
+                            for (BuildType eLoopBuild = 0; eLoopBuild < infos.buildsNum(); eLoopBuild++)
+                            {
+                                if (pCity.isHurryTraining(eLoopBuild))
+                                {
+                                    iHurryValue -= AI_CITY_HURRY_VALUE / 3;
+                                }
+                            }
+                            iTotalHurryValue -= iHurryValue / (int)infos.buildsNum();
+                        }
+                    }
+                    else if (!pCity.isHurryTraining())
+                    {
+                        int iHurryValue = 0;
+                        foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryCivics)
+                        {
+                            if (!pCity.isHurryTraining() && (pCity.isHurryTraining(eLoopBuild) != pCity.isHurryTraining(eLoopBuild, iExtraCount)))
+                            {
+                                iHurryValue += AI_CITY_HURRY_VALUE / 3;
+                            }
+                        }
+                        iTotalHurryValue += iHurryValue / (int)infos.buildsNum();
+                    }
+
+                    if (effectCity.mbHurryMoney)
+                    {
+                        if (pCity.isHurryMoney() != pCity.isHurryMoney(iExtraCount))
+                        {
+                            iTotalHurryValue += AI_CITY_HURRY_VALUE / 2; // XXX
+
+                            int iHurryValue = 0;
+                            for (BuildType eLoopBuild = 0; eLoopBuild < infos.buildsNum(); eLoopBuild++)
+                            {
+                                if (pCity.isHurryMoney(eLoopBuild))
+                                {
+                                    iHurryValue -= AI_CITY_HURRY_VALUE / 2;
+                                }
+                            }
+                            iTotalHurryValue -= iHurryValue / (int)infos.buildsNum();
+                        }
+                    }
+                    else if (!pCity.isHurryMoney())
+                    {
+                        int iHurryValue = 0;
+                        foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryCivics)
+                        {
+                            if (!pCity.isHurryMoney() && (pCity.isHurryMoney(eLoopBuild) != pCity.isHurryMoney(eLoopBuild, iExtraCount)))
+                            {
+                                iHurryValue += AI_CITY_HURRY_VALUE / 2;
+                            }
+                        }
+                        iTotalHurryValue += iHurryValue / (int)infos.buildsNum();
+                    }
+
+                    if (effectCity.mbHurryPopulation)
+                    {
+                        if (pCity.isHurryPopulation() != pCity.isHurryPopulation(iExtraCount))
+                        {
+                            iTotalHurryValue += AI_CITY_HURRY_VALUE / 2; // XXX
+
+                            int iHurryValue = 0;
+                            for (BuildType eLoopBuild = 0; eLoopBuild < infos.buildsNum(); eLoopBuild++)
+                            {
+                                if (pCity.isHurryPopulation(eLoopBuild))
+                                {
+                                    iHurryValue -= AI_CITY_HURRY_VALUE / 2;
+                                }
+                            }
+                            iTotalHurryValue -= iHurryValue / (int)infos.buildsNum();
+                        }
+                    }
+                    else if (!pCity.isHurryPopulation())
+                    {
+                        int iHurryValue = 0;
+                        foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryCivics)
+                        {
+                            if (!pCity.isHurryPopulation() && (pCity.isHurryPopulation(eLoopBuild) != pCity.isHurryPopulation(eLoopBuild, iExtraCount)))
+                            {
+                                iHurryValue += AI_CITY_HURRY_VALUE / 2;
+                            }
+                        }
+                        iTotalHurryValue += iHurryValue / (int)infos.buildsNum();
+                    }
+
+                    if (effectCity.mbHurryOrders)
+                    {
+                        if (pCity.isHurryOrders() != pCity.isHurryOrders(iExtraCount))
+                        {
+                            iTotalHurryValue += AI_CITY_HURRY_VALUE / 4; // XXX
+
+                            int iHurryValue = 0;
+                            for (BuildType eLoopBuild = 0; eLoopBuild < infos.buildsNum(); eLoopBuild++)
+                            {
+                                if (pCity.isHurryOrders(eLoopBuild))
+                                {
+                                    iHurryValue -= AI_CITY_HURRY_VALUE / 3;
+                                }
+                            }
+                            iTotalHurryValue -= iHurryValue / (int)infos.buildsNum();
+                        }
+                    }
+                    else if (!pCity.isHurryOrders())
+                    {
+                        int iHurryValue = 0;
+                        foreach (BuildType eLoopBuild in infos.effectCity(eEffectCity).maeHurryCivics)
+                        {
+                            if (!pCity.isHurryOrders() && (pCity.isHurryOrders(eLoopBuild) != pCity.isHurryOrders(eLoopBuild, iExtraCount)))
+                            {
+                                iHurryValue += AI_CITY_HURRY_VALUE / 3;
+                            }
+                        }
+                        iTotalHurryValue += iHurryValue / (int)infos.buildsNum();
+                    }
+
+                    iValue += Math.Min(iTotalHurryValue, AI_CITY_HURRY_VALUE);
+
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Better Hurry Unlock Evaluation     END ###
+  ##############################################*/
+
+                iValue = adjustForInflation(iValue);
+
+
+                // evertything below needs to be already adjusted for inflation
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better Unit Unlock Evaluation    START ###
+  ##############################################*/
+                //foreach (EffectCityType eLoopEffectCity in effectCity.maeFreeUnitEffectCity)
+                //{
+                //    if (pCity.isFreeUnitEffectCityUnlock(eLoopEffectCity) != pCity.isFreeUnitEffectCityUnlock(eLoopEffectCity, iExtraCount))
+                //    {
+                //        iValue += effectCityValue(eLoopEffectCity, pCity, bRemove);
+                //    }
+                //}
+/*####### Better Old World AI - Base DLL #######
+  ### Better Unit Unlock Evaluation    START ###
+  ##############################################*/
+
+                if (pCity.hasFamily())
+                {
+                    iValue += getFamilyOpinionValue(pCity.getFamily(), effectCity.miFamilyOpinion);
+                }
+
+                if (effectCity.mbAlwaysConnected)
+                {
+                    if (pCity.isAlwaysConnectedUnlock() != pCity.isAlwaysConnectedUnlock(iExtraCount))
+                    {
+                        iValue += getRoadValue(pCity, false, !pCity.tile().onTradeNetworkCapital(getPlayer()), bRemove);
+                    }
+                }
+
+                if (effectCity.mbLuxury)
+                {
+                    iValue += calculateLuxuryValue(effectCity.meSourceResource);
+                }
+
+                foreach (PromotionType eLoopPromotion in effectCity.maeFreePromotion)
+                {
+                    if (pCity.isFreePromotion(eLoopPromotion) != pCity.isFreePromotion(eLoopPromotion, iExtraCount))
+                    {
+                        iValue += promotionValue(eLoopPromotion, UnitType.NONE) * iUnitsBuiltEstimate;
+                    }
+                }
+
+                for (UnitTraitType eLoopUnitTrait = 0; eLoopUnitTrait < infos.unitTraitsNum(); eLoopUnitTrait++)
+                {
+                    PromotionType ePromotion = effectCity.maeTraitPromotion[eLoopUnitTrait];
+                    if (ePromotion != PromotionType.NONE)
+                    {
+                        if (!pCity.isFreePromotion(ePromotion) && (pCity.isFreeTraitPromotion(eLoopUnitTrait, ePromotion) != pCity.isFreeTraitPromotion(eLoopUnitTrait, ePromotion, iExtraCount)))
+                        {
+                            iValue += promotionValue(ePromotion, UnitType.NONE) * iUnitsBuiltEstimate / AI_UNIT_TRAITS;
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eEffectCityUnlock = effectCity.meEffectCityUnlock;
+
+                    if (eEffectCityUnlock != EffectCityType.NONE)
+                    {
+                        iValue += effectCityValue(eEffectCityUnlock, pCity, bRemove, bWarningsDisabled: true);
+                    }
+                }
+
+                {
+                    EffectCityType eSourceUnlock = effectCity.meSourceUnlock;
+
+                    if (eSourceUnlock != EffectCityType.NONE)
+                    {
+                        iValue += effectCityValue(eSourceUnlock, pCity, bRemove, bWarningsDisabled: true);
+                    }
+                }
+
+                {
+                    BonusType eCultureBonus = effectCity.meCultureBonus;
+
+                    if (eCultureBonus != BonusType.NONE)
+                    {
+                        BonusParameters zParameters = new BonusParameters(null);
+                        zParameters.pTargetCity = pCity;
+                        iValue += bonusValue(eCultureBonus, ref zParameters) * Math.Max(1, (int)infos.culturesNum() - pCity.getCultureStep());
+                    }
+                }
+
+                {
+                    ResourceType eLuxuryResource = effectCity.meLuxuryResource;
+
+                    if (eLuxuryResource != ResourceType.NONE)
+                    {
+                        iValue += calculateLuxuryValue(eLuxuryResource);
+                    }
+                }
+
+                for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
+                {
+                    int iExtraBaseYield = pCity.getEffectCityYieldRate(eEffectCity, eLoopYield, pCity.governor());
+
+                    foreach (int iTileID in pCity.getTerritoryTiles())
+                    {
+                        Tile pLoopTile = game.tile(iTileID);
+                        if (pLoopTile.hasImprovement())
+                        {
+                            iExtraBaseYield += getEffectCityTileYieldRate(eEffectCity, game.tile(iTileID), pLoopTile.getImprovement(), pLoopTile.getSpecialist(), eLoopYield, pCity);
+                        }
+                    }
+                    foreach (EffectCityType eLoopEffectCity in pCity.getActiveEffectCity())
+                    {
+                        int iEffectCityYield = infos.effectCity(eLoopEffectCity).maaiEffectCityYieldRate[eEffectCity, eLoopYield];
+                        if (iEffectCityYield != 0)
+                        {
+                            iExtraBaseYield += iEffectCityYield * pCity.getEffectCityCount(eLoopEffectCity);
+                        }
+                    }
+
+                    if (isBorderCity(pCity))
+                    {
+                        iExtraBaseYield += effectCity.maiYieldRateDefending[eLoopYield]; // assume it's going to be defended if it's a border city
+                    }
+
+                    int iExtraModifier = effectCity.maiYieldModifier[eLoopYield];
+                    int iModifiedExtraYield = 0;
+                    if (iExtraBaseYield != 0)
+                    {
+                        iModifiedExtraYield += infos.utils().modify(iExtraBaseYield, pCity.calculateTotalYieldModifier(eLoopYield) + iExtraModifier);
+                    }
+                    if (iExtraModifier != 0)
+                    {
+                        iModifiedExtraYield += infos.utils().modify(cityYield(eLoopYield, pCity), iExtraModifier);
+                    }
+                    if (iModifiedExtraYield != 0)
+                    {
+                        iValue += ((iModifiedExtraYield * cityYieldValue(eLoopYield, pCity) * AI_YIELD_TURNS) / Constants.YIELDS_MULTIPLIER);
+                    }
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better Unit Unlock Evaluation    START ###
+  ##############################################*/
+                using (var unitTypelistScoped = CollectionCache.GetListScoped<UnitType>())
+                {
+                    List<UnitType> unitsUnlocked = unitTypelistScoped.Value;
+
+                    for (UnitType eLoopUnit = 0; eLoopUnit < infos.unitsNum(); eLoopUnit++)
+                    {
+                        if (!(player.canBuildUnit(eLoopUnit))) continue;  //if we can't build it, none of this matters
+
+                        iValue -= (effectCity.maiUnitCostModifier[eLoopUnit] * AI_UNIT_COST_VALUE / 10);
+                        iValue -= (effectCity.maiUnitTrainModifier[eLoopUnit] * AI_UNIT_COST_VALUE / 10);
+
+                        //if (pCity.getEffectCityCount(eEffectCity) == 0)
+                        //{
+                        //    if (infos.unit(eLoopUnit).meEffectCityPrereq == eEffectCity)
+                        //    {
+                        //        if (player.canBuildUnit(eLoopUnit))
+                        //        {
+                        //            iValue += Math.Max(0, unitValue(eLoopUnit, pCity, true));
+
+                        //            long iBestExisting = 0;
+                        //            for (UnitType eLoopExisting = 0; eLoopExisting < infos.unitsNum(); eLoopExisting++)
+                        //            {
+                        //                if (infos.unit(eLoopExisting).maeUpgradeUnit.Contains(eLoopUnit))
+                        //                {
+                        //                    iBestExisting = Math.Max(unitValue(eLoopExisting, pCity, true), iBestExisting);
+                        //                }
+                        //            }
+                        //            iValue -= iBestExisting;
+                        //        }
+                        //    }
+                        //}
+
+                        bool bFreeUnitEffectCity = false;
+
+                        foreach (EffectCityType eLoopEffectCity in effectCity.maeFreeUnitEffectCity)
+                        {
+                            if (infos.unit(eLoopUnit).meEffectCityPrereq == eLoopEffectCity)
+                            {
+                                bFreeUnitEffectCity = true;
+                                break;
+                            }
+                        }
+
+                        if (infos.unit(eLoopUnit).meEffectCityPrereq == eEffectCity || bFreeUnitEffectCity)
+                        {
+                            if (((BetterAICity)pCity).isUnitEffectCityUnlock(eEffectCity) != ((BetterAICity)pCity).isUnitEffectCityUnlock(eEffectCity,
+                                (infos.unit(eLoopUnit).meEffectCityPrereq == eEffectCity ? iExtraCount : 0), (bFreeUnitEffectCity ? iExtraCount : 0)))
+                            {
+                                unitsUnlocked.Add(eLoopUnit);
+                            }
+                        }
+                    }
+
+                    unitsUnlocked.Sort((x, y) => CompareUnitValue(x, y, pCity));
+
+                    //foreach (UnitType eLoopUnlockedUnit in unitsUnlocked)
+                    for (int i = 0; i < unitsUnlocked.Count; i++)
+                    {
+                        BetterAIInfoUnit pLoopUnlockedUnit = (BetterAIInfoUnit)infos.unit(unitsUnlocked[i]);
+
+                        bool bBetterUpgrade = false;
+                        //foreach (UnitType eLoopPossibleUpgradeUnit in unitsUnlocked)
+                        for (int j = i + 1; j < unitsUnlocked.Count; j++)
+                        {
+                            if (pLoopUnlockedUnit.mseUpgradeUnitAccumulated.Contains(unitsUnlocked[j])
+                                //&& unitValue(eLoopPossibleUpgradeUnit, pCity, true) > unitValue(eLoopUnlockedUnit, pCity, true)  //sidegrade possibilities: count each unlock separately. Skip value adding only if the other upgrade unit is actually better
+                                )
+                            {
+                                bBetterUpgrade = true;
+                                break;
+                            }
+                        }
+
+                        if (!bBetterUpgrade)
+                        {
+                            //This part has no relevance in base game:
+                            // units with EffectCityPrereq can't be upgraded from any unit without the same EffectCityPrereq
+                            long iBestExisting = 0;
+                            for (UnitType eLoopExisting = 0; eLoopExisting < infos.unitsNum(); eLoopExisting++)
+                            {
+                                if (((BetterAIInfoUnit)infos.unit(eLoopExisting)).mseUpgradeUnitAccumulated.Contains(unitsUnlocked[i])
+                                    && infos.unit(eLoopExisting).meEffectCityPrereq != pLoopUnlockedUnit.meEffectCityPrereq  //these are already checked
+                                    && player.canBuildUnit(unitsUnlocked[i]))  //no use looking at units we can't build
+                                {
+                                    iBestExisting = Math.Max(unitValue(eLoopExisting, pCity, true), iBestExisting);
+                                }
+                            }
+                            
+                            iValue += infos.utils().modify(Math.Max(0, unitValue(unitsUnlocked[i], pCity, true) - iBestExisting), cityYieldSpecializationModifier(pCity, pLoopUnlockedUnit.meProductionType)); ;
+                        }
+                    }
+
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Better Unit Unlock Evaluation      END ###
+  ##############################################*/
+
+
+                foreach (GoalData pGoalData in ((BetterAIPlayer)player).getGoalDataList())
+                {
+                    if (!(pGoalData.mbFinished))
+                    {
+                        if ((infos.goal(pGoalData.meType).maiEffectCityCount[eEffectCity] > 0) ||
+                            ((infos.goal(pGoalData.meType).maiEffectCityCount[eEffectCity] > 0) && (pGoalData.miCityID == ((pCity != null) ? pCity.getID() : -1))))
+                        {
+                            iValue += bonusValue(infos.Globals.FINISHED_AMBITION_BONUS);
+                        }
+                    }
+                }
+
+                if (pCity.getEffectCityCount(eEffectCity) == (bRemove ? 1 : 0))
+                {
+                    for (ProjectType eLoopProject = 0; eLoopProject < infos.projectsNum(); ++eLoopProject)
+                    {
+                        if (!pCity.hasProject(eLoopProject))
+                        {
+                            InfoProject project = infos.project(eLoopProject);
+                            if (project.meEffectCityPrereq == eEffectCity)
+                            {
+                                if (!project.mbHidden)
+                                {
+                                    if (project.meTechPrereq != TechType.NONE && player.isTechAcquired(project.meTechPrereq))
+                                    {
+                                        iValue += projectValue(eLoopProject, pCity, false, false, true, true, false);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for (ImprovementClassType eLoopImprovementClass = 0; eLoopImprovementClass < infos.improvementClassesNum(); eLoopImprovementClass++)
+                {
+                    if (effectCity.maiImprovementClassUpgradeTurnChange[eLoopImprovementClass] != 0)
+                    {
+                        // XXX
+                    }
+                }
+
+                for (ReligionType eLoopReligion = 0; eLoopReligion < infos.religionsNum(); eLoopReligion++)
+                {
+                    int iSubValue = effectCity.maiReligionOpinion[eLoopReligion];
+                    if (iSubValue != 0)
+                    {
+                        iValue += getReligionOpinionValue(eLoopReligion, iSubValue, AI_YIELD_TURNS);
+                    }
+                }
+
+                for (ImprovementClassType eLoopImprovementClass = 0; eLoopImprovementClass < infos.improvementClassesNum(); eLoopImprovementClass++)
+                {
+                    if (effectCity.mabNoImprovementClassMax[(int)eLoopImprovementClass])
+                    {
+                        // XXX
+                    }
+                }
+
+                for (TerrainType eLoopTerrain = 0; eLoopTerrain < infos.terrainsNum(); ++eLoopTerrain)
+                {
+                    if (effectCity.mabUrbanTerrainValid[(int)eLoopTerrain])
+                    {
+                        iValue += adjustForInflation(pCity.getTerritoryTileCount(eLoopTerrain) * AI_BUILD_URBAN_VALUE);
+                    }
+                }
+
+                foreach (InfoImprovement improvement in infos.improvements())
+                {
+                    if (improvement.meEffectCityPrereq == eEffectCity || improvement.maeEffectCityAnyPrereq.Contains(eEffectCity))
+                    {
+                        iValue += adjustForInflation(AI_CITY_IMPROVEMENT_VALUE);
+                    }
+                }
+
+                return iValue;
+            }
+
+
+            public virtual int CompareUnitValue(UnitType x, UnitType y, City pCity)
+            {
+                return (int)(unitValue(x, pCity, true) - unitValue(y, pCity, true));
             }
 
             //lines 15046-15076

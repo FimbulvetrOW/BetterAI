@@ -74,6 +74,33 @@ namespace BetterAI
   ### ZOC ignore exceptions              END ###
   ##############################################*/
 
+/*####### Better Old World AI - Base DLL #######
+  ### Make fixed range visible         START ###
+  ##############################################*/
+        //lines 3776-3783
+        public virtual TextVariable buildRangeLinkVariable(int iValue, bool bSigned = true, bool bFlat = false)
+        {
+            //using (new UnityProfileScope("HelpText.buildRangeLinkVariable"))
+            {
+                TextVariable concatenatedName = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", (bFlat ? TEXTVAR_TYPE("TEXT_HELPTEXT_FLAT", ((bSigned) ? buildSignedTextVariable(iValue) : iValue)) : ((bSigned) ? buildSignedTextVariable(iValue) : iValue)), mSpriteRepository?.GetInlineIconVariable(HUDIconTypes.RANGE));
+                return buildLinkTextVariable(concatenatedName, ItemType.HELP_LINK, nameof(LinkType.HELP_RANGE));
+            }
+        }
+
+        //lines 3785-3792
+        public virtual TextVariable buildRangeMinMaxLinkVariable(int iMin, int iMax, bool bFlat = false)
+        {
+            //using (new UnityProfileScope("HelpText.buildRangeLinkVariable"))
+            {
+                TextVariable concatenatedName = TEXTVAR_TYPE("TEXT_HELPTEXT_LINK_RANGE_MIN_MAX", iMin, (bFlat ? TEXTVAR_TYPE("TEXT_HELPTEXT_FLAT", iMax) : iMax), mSpriteRepository?.GetInlineIconVariable(HUDIconTypes.RANGE));
+                return buildLinkTextVariable(concatenatedName, ItemType.HELP_LINK, nameof(LinkType.HELP_RANGE));
+            }
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Make fixed range visible         START ###
+  ##############################################*/
+
+
         //lines 8684-13513
         public override TextBuilder buildWidgetHelp(TextBuilder builder, WidgetData pWidget, ClientManager pManager, bool bIncludeEncyclopediaFooter = true)
         {
@@ -2233,6 +2260,24 @@ namespace BetterAI
                     }
                 }
 
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
+                BetterAIInfoImprovement pImprovementInfo = ((BetterAIInfoImprovement)(infos().improvement(eImprovement)));
+
+                if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
+                {
+                    builder.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ADDS_ADJACENT_BONUS_IMPROVEMENT", TEXTVAR_TYPE(infos().improvement(pImprovementInfo.meBonusAdjacentImprovement).mName)));
+                }
+                else if (pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    builder.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_ADDS_ADJACENT_BONUS_IMPROVEMENT", TEXTVAR_TYPE(infos().improvementClass(pImprovementInfo.meBonusAdjacentImprovementClass).mName)));
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
+  ##############################################*/
+
                 using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
                 {
                     using (subText.BeginScope(scopeType))
@@ -3060,9 +3105,9 @@ namespace BetterAI
                         }
                     }
 
-                    /*####### Better Old World AI - Base DLL #######
-                      ### City Biome                       START ###
-                      ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### City Biome                       START ###
+  ##############################################*/
                     {
                         CityBiomeType eCityBiomeType = pImprovementInfo.meCityBiomePrereq;
                         if (eCityBiomeType != CityBiomeType.NONE)
@@ -3332,14 +3377,22 @@ namespace BetterAI
                                 {
                                     if (iRangeMax > 0)
                                     {
+/*####### Better Old World AI - Base DLL #######
+  ### Make fixed range visible         START ###
+  ##############################################*/
                                         if (iRangeMin == 0)
                                         {
-                                            builder.Add(buildRangeLinkVariable(iRangeMax, false));
+                                            //builder.Add(buildRangeLinkVariable(iRangeMax, false));
+                                            builder.Add(buildRangeLinkVariable(iRangeMax, false, infos().unit(eUnit).mbRangeFlat));
                                         }
                                         else if (iRangeMin > 0)
                                         {
-                                            builder.Add(buildRangeMinMaxLinkVariable(iRangeMin, iRangeMax));
+                                            //builder.Add(buildRangeMinMaxLinkVariable(iRangeMin, iRangeMax));
+                                            builder.Add(buildRangeMinMaxLinkVariable(iRangeMin, iRangeMax, infos().unit(eUnit).mbRangeFlat));
                                         }
+/*####### Better Old World AI - Base DLL #######
+  ### Make fixed range visible         START ###
+  ##############################################*/
                                     }
                                 }
                             }
@@ -4082,6 +4135,25 @@ namespace BetterAI
   ### Land Unit Water Movement           END ###
   ##############################################*/
 
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal   START ###
+  ##############################################*/
+            {
+                int iValue = pEffectUnitInfo.miHealAttack;
+                if (iValue > 0)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_HELP_HEAL_ATTACK", buildSignedTextVariable(iValue), TEXTVAR(bRightJustify));
+                }
+                else if (iValue < 0)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_HELP_HURT_ATTACK", buildSignedTextVariable(iValue), TEXTVAR(bRightJustify));
+                }
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal     END ###
+  ##############################################*/
+
             return builder;
         }
 
@@ -4720,7 +4792,7 @@ namespace BetterAI
                             }
                         }
 
-                        foreach (var p in dEffectCityCounts)
+                        foreach (KeyValuePair<EffectCityType, int> p in dEffectCityCounts)
                         {
                             EffectCityType eLoopEffectCity = p.Key;
                             int iCount = p.Value;
@@ -4750,7 +4822,7 @@ namespace BetterAI
                                         {
                                             using (subText.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: buildEnclosedParenthesisIf(yieldEffectText, null), emptyScopeText: TEXTVAR(false)))
                                             {
-                                                foreach (var q in dEffectCityCounts)
+                                                foreach (KeyValuePair<EffectCityType, int> q in dEffectCityCounts)
                                                 {
                                                     EffectCityType eOtherEffectCity = q.Key;
                                                     int iOtherCount = q.Value;
@@ -5040,7 +5112,7 @@ namespace BetterAI
                             }
                         }
 
-                        foreach (var p in dEffectCityCounts)
+                        foreach (KeyValuePair<EffectCityType, int> p in dEffectCityCounts)
                         {
                             EffectCityType eLoopEffectCity = p.Key;
                             int iCount = p.Value;
