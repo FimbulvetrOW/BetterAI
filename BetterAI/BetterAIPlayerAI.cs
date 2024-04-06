@@ -248,6 +248,8 @@ namespace BetterAI
                 AI_WORKER_ORDER_SURPLUS_MODIFIER = pInfos.getGlobalInt("AI_WORKER_ORDER_SURPLUS_MODIFIER");
                 AI_TECH_VALUE_TURN_MODIFIER = pInfos.getGlobalInt("AI_TECH_VALUE_TURN_MODIFIER");
                 AI_BORDER_EXPANSION_VALUE_MODIFIER = pInfos.getGlobalInt("AI_BORDER_EXPANSION_VALUE_MODIFIER");
+                AI_MAX_ALLOWED_EXPENSE_IN_SHORTAGE = pInfos.getGlobalInt("AI_MAX_ALLOWED_EXPENSE_IN_SHORTAGE");
+                AI_AVG_CULTURE_ESTIMATE = pInfos.getGlobalInt("AI_AVG_CULTURE_ESTIMATE");
 
                 AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = pInfos.getGlobalInt("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");
                 AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = pInfos.getGlobalInt("AI_CIVICS_CITY_SPECIALIZATION_MODIFIER");
@@ -828,7 +830,7 @@ namespace BetterAI
   ##############################################*/
                     {
                         // don't claim reserved sites if we already started with extra cities
-                        if (!player.isHuman() && game.hasDevelopmentCities())
+                        if (player.doesStartWithCities())
                         {
                             // at least for a grace period
                             if (game.getTurn() < ((game.isGameOption(infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? AI_PLAY_TO_WIN_GRACE_TURNS : AI_GRACE_TURNS))
@@ -902,35 +904,20 @@ namespace BetterAI
                 }
                 else
                 {
-                    int iBestCityWaterArea = -1;
                     foreach (int iTileId in pCity.getTerritoryTiles())
                     {
                         Tile pTile = game.tile(iTileId);
                         if (pTile.isSaltWater())
                         {
-                            if (iBestCityWaterArea == -1 || game.getWaterAreaCount(pTile.getArea()) > game.getWaterAreaCount(iBestCityWaterArea))
+                            if (game.getWaterAreaCount(pTile.getArea()) > 2 * infos.Globals.FRESH_WATER_THRESHOLD)
                             {
-                                iBestCityWaterArea = pTile.getArea();
+                                siCityAreas.Add(pTile.getArea());
                             }
                         }
                     }
-
-                    //cities put ships only in 1 area
-                    if (iBestCityWaterArea == -1) return;
-
-                    Tile pUnitTile = game.findUnitTileNearby(eUnit, pCity.tile(), pCity.getPlayer(), pCity.getTribe(), TeamType.NONE, bTestTile: true, bSpecialTile: true, iRequiresArea: -1, pRequiresCity: pCity, null);
-                    if (pUnitTile == null)
-                    {
-                        pUnitTile = game.findUnitTileNearby(eUnit, pCity.tile(), pCity.getPlayer(), pCity.getTribe(), TeamType.NONE, bTestTile: true, bSpecialTile: false, iRequiresArea: iBestCityWaterArea, pRequiresCity: pCity, null);
-                    }
-                    if (pUnitTile != null)
-                    {
-                        if (game.getWaterAreaCount(pUnitTile.getArea()) > 2 * infos.Globals.FRESH_WATER_THRESHOLD)
-                        {
-                            siCityAreas.Add(pUnitTile.getArea());
-                        }
-                    }
                 }
+
+                return;
             }
 
 /*####### Better Old World AI - Base DLL #######
@@ -1338,7 +1325,7 @@ namespace BetterAI
                             {
                                 if (infos.unit(eLoopUnit).meImprovementPrereq == eImprovement)
                                 {
-                                    long iUnitValue = getUnitBuildValue(eLoopUnit, pCity);
+                                    long iUnitValue = getUnitBuildValue(eLoopUnit, pCity, -1);
                                     if (iUnitValue > iBestUnitValue)
                                     {
                                         iBestUnitValue = iUnitValue;
@@ -1363,7 +1350,7 @@ namespace BetterAI
                             if (iDie > 0)
                             {
                                 iDiceTotal += iDie;
-                                iUnitValue += unitValue(eFreeUnit, pCity, false) * iDie;
+                                iUnitValue += unitValue(eFreeUnit, pCity, -1, false) * iDie;
                             }
                         }
                         if (iDiceTotal > 0)
@@ -3095,7 +3082,7 @@ namespace BetterAI
                 {
                     if (pCity.isAlwaysConnectedUnlock() != pCity.isAlwaysConnectedUnlock(iExtraCount))
                     {
-                        iValue += getRoadValue(pCity, false, !pCity.tile().onTradeNetworkCapital(getPlayer()), bRemove);
+                        iValue += getRoadValue(pCity, false, !pCity.tile().onTradeNetworkCapital(getPlayer()), bRemove, null);
                     }
                 }
 
@@ -3188,7 +3175,7 @@ namespace BetterAI
                         iExtraBaseYield += effectCity.maiYieldRateDefending[eLoopYield]; // assume it's going to be defended if it's a border city
                     }
 
-                    int iExtraModifier = effectCity.maiYieldModifier[eLoopYield];
+                    int iExtraModifier = pCity.getEffectCityYieldModifier(eEffectCity, eLoopYield);
                     int iModifiedExtraYield = 0;
                     if (iExtraBaseYield != 0)
                     {
@@ -3291,11 +3278,11 @@ namespace BetterAI
                                     && infos.unit(eLoopExisting).meEffectCityPrereq != pLoopUnlockedUnit.meEffectCityPrereq  //these are already checked
                                     && player.canBuildUnit(unitsUnlocked[i]))  //no use looking at units we can't build
                                 {
-                                    iBestExisting = Math.Max(unitValue(eLoopExisting, pCity, true), iBestExisting);
+                                    iBestExisting = Math.Max(unitValue(eLoopExisting, pCity, -1, true), iBestExisting);
                                 }
                             }
                             
-                            iValue += infos.utils().modify(Math.Max(0, unitValue(unitsUnlocked[i], pCity, true) - iBestExisting), cityYieldSpecializationModifier(pCity, pLoopUnlockedUnit.meProductionType)); ;
+                            iValue += infos.utils().modify(Math.Max(0, unitValue(unitsUnlocked[i], pCity, -1, true) - iBestExisting), cityYieldSpecializationModifier(pCity, pLoopUnlockedUnit.meProductionType)); ;
                         }
                     }
 
@@ -3385,7 +3372,7 @@ namespace BetterAI
 
             public virtual int CompareUnitValue(UnitType x, UnitType y, City pCity)
             {
-                return (int)(unitValue(x, pCity, true) - unitValue(y, pCity, true));
+                return (int)(unitValue(x, pCity, -1, true) - unitValue(y, pCity, -1, true));
             }
 
             //lines 15046-15076

@@ -1314,7 +1314,7 @@ namespace BetterAI
 
                     setRaidedTurn(game().getTurn());
 
-                    player().addTurnSummary(() => TextManager.TEXT("TEXT_GAME_BOUNDARY_RAID_WARNING", HelpText.buildCityLinkVariable(this, player())), TurnLogType.TRIBAL_RAID);
+                    player().addTurnSummary(() => TextManager.TEXT("TEXT_GAME_BOUNDARY_RAID_WARNING", HelpText.buildCityLinkVariable(this, player(), bSelect: false)), TurnLogType.TRIBAL_RAID);
                 }
             }
 

@@ -74,33 +74,6 @@ namespace BetterAI
   ### ZOC ignore exceptions              END ###
   ##############################################*/
 
-/*####### Better Old World AI - Base DLL #######
-  ### Make fixed range visible         START ###
-  ##############################################*/
-        //lines 3776-3783
-        public virtual TextVariable buildRangeLinkVariable(int iValue, bool bSigned = true, bool bFlat = false)
-        {
-            //using (new UnityProfileScope("HelpText.buildRangeLinkVariable"))
-            {
-                TextVariable concatenatedName = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", (bFlat ? TEXTVAR_TYPE("TEXT_HELPTEXT_FLAT", ((bSigned) ? buildSignedTextVariable(iValue) : iValue)) : ((bSigned) ? buildSignedTextVariable(iValue) : iValue)), mSpriteRepository?.GetInlineIconVariable(HUDIconTypes.RANGE));
-                return buildLinkTextVariable(concatenatedName, ItemType.HELP_LINK, nameof(LinkType.HELP_RANGE));
-            }
-        }
-
-        //lines 3785-3792
-        public virtual TextVariable buildRangeMinMaxLinkVariable(int iMin, int iMax, bool bFlat = false)
-        {
-            //using (new UnityProfileScope("HelpText.buildRangeLinkVariable"))
-            {
-                TextVariable concatenatedName = TEXTVAR_TYPE("TEXT_HELPTEXT_LINK_RANGE_MIN_MAX", iMin, (bFlat ? TEXTVAR_TYPE("TEXT_HELPTEXT_FLAT", iMax) : iMax), mSpriteRepository?.GetInlineIconVariable(HUDIconTypes.RANGE));
-                return buildLinkTextVariable(concatenatedName, ItemType.HELP_LINK, nameof(LinkType.HELP_RANGE));
-            }
-        }
-/*####### Better Old World AI - Base DLL #######
-  ### Make fixed range visible         START ###
-  ##############################################*/
-
-
         //lines 8684-13513
         public override TextBuilder buildWidgetHelp(TextBuilder builder, WidgetData pWidget, ClientManager pManager, bool bIncludeEncyclopediaFooter = true)
         {
@@ -3145,6 +3118,7 @@ namespace BetterAI
                         }
                     }
 
+                    bool bAdjacencyValid = false;
                     if (pTile != null)
                     {
                         if (pImprovementInfo.mbTerritoryOnly)
@@ -3160,9 +3134,27 @@ namespace BetterAI
 
                         if (eImprovementClass != ImprovementClassType.NONE)
                         {
-                            if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !(pTile.notAdjacentToImprovementClass(eImprovementClass)))
+                            if (infos().improvementClass(eImprovementClass).mbAdjacentValid)
                             {
-                                lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT", buildImprovementClassLinkVariable(eImprovementClass))));
+                                if (pTile.adjacentToCityImprovementClassFinished(eImprovementClass))
+                                {
+                                    bAdjacencyValid = true;
+                                    lRequirements.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENTCLASS_ADJACENCY_VALID", buildImprovementClassLinkVariable(eImprovementClass)));
+                                }
+
+                            }
+
+                            if (infos().improvementClass(eImprovementClass).mbNoAdjacent)
+                            {
+                                TextVariable textvar = TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT", buildImprovementClassLinkVariable(eImprovementClass));
+                                if (!bAdjacencyValid && !(pTile.notAdjacentToImprovementClass(eImprovementClass)))
+                                {
+                                    lRequirements.Add(buildWarningTextVariable(textvar));
+                                }
+                                else
+                                {
+                                    lRequirements.Add(textvar);
+                                }
                             }
                         }
 
@@ -3170,18 +3162,36 @@ namespace BetterAI
                         {
                             if (pImprovementInfo.mbNoAdjacentReligion)
                             {
-                                if (pTile.adjacentToOtherImprovementReligion(eReligionPrereq))
+                                TextVariable textvar = TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT_RELIGION");
+                                if (!bAdjacencyValid && pTile.adjacentToOtherImprovementReligion(eReligionPrereq))
                                 {
-                                    lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT_RELIGION")));
+                                    lRequirements.Add(buildWarningTextVariable(textvar));
+                                }
+                                else
+                                {
+                                    lRequirements.Add(textvar);
                                 }
                             }
                         }
                     }
 
-                    if (infos().improvement(eImprovement).mbRequiresUrban)
+                    if (pImprovementInfo.mbRequiresBorder)
+                    {
+                        TextVariable textvar = TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_REQUIRES_BORDER");
+                        if (!bAdjacencyValid && !pTile.isBorder())
+                        {
+                            lRequirements.Add(buildWarningTextVariable(textvar));
+                        }
+                        else
+                        {
+                            lRequirements.Add(textvar);
+                        }
+                    }
+
+                    if (pImprovementInfo.mbRequiresUrban)
                     {
                         TextVariable textvar = TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_URBAN_BUILDING", buildUrbanLinkVariable());
-                        if (pTile != null && !pTile.urbanEligible())
+                        if (!bAdjacencyValid && pTile != null && !pTile.urbanEligible())
                         {
                             lRequirements.Add(buildWarningTextVariable(textvar));
                         }
@@ -3198,7 +3208,7 @@ namespace BetterAI
                             int iCount = ((pCityTerritory != null) ? pCityTerritory.getImprovementCount(eImprovement) : 0);
                             int iValue = pImprovementInfo.miMaxCityCount;
 
-                            if (iValue > ((iCount > 0) ? 0 : 1))
+                            if (iValue > 0)
                             {
                                 TextVariable reqItem = buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_CITY_IMPROVEMENT_COUNT", TEXTVAR(iValue)), (iCount >= iValue));
 
@@ -3295,6 +3305,18 @@ namespace BetterAI
                                     req.AddItem(reqItem);
                                 }
                             }
+
+                            if (infos().improvementClass(eImprovementClass).mbContiguous)
+                            {
+                                lRequirements.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENTCLASS_CONTIGUOUS", buildImprovementClassLinkVariable(eImprovementClass)));
+                            }
+
+                            if (!bAdjacencyValid && infos().improvementClass(eImprovementClass).mbAdjacentValid)
+                            {
+                                lRequirements.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENTCLASS_ADJACENCY_VALID", buildImprovementClassLinkVariable(eImprovementClass)));
+                            }
+
+
                         }
 
                         if (req.Count > 0)
@@ -3377,22 +3399,21 @@ namespace BetterAI
                                 {
                                     if (iRangeMax > 0)
                                     {
-/*####### Better Old World AI - Base DLL #######
-  ### Make fixed range visible         START ###
-  ##############################################*/
                                         if (iRangeMin == 0)
                                         {
-                                            //builder.Add(buildRangeLinkVariable(iRangeMax, false));
-                                            builder.Add(buildRangeLinkVariable(iRangeMax, false, infos().unit(eUnit).mbRangeFlat));
+                                            if (infos().unit(eUnit).mbRangeFlat)
+                                            {
+                                                builder.Add(buildRangeFixedLinkVariable(iRangeMax, false));
+                                            }
+                                            else
+                                            {
+                                                builder.Add(buildRangeLinkVariable(iRangeMax, false));
+                                            }
                                         }
                                         else if (iRangeMin > 0)
                                         {
-                                            //builder.Add(buildRangeMinMaxLinkVariable(iRangeMin, iRangeMax));
-                                            builder.Add(buildRangeMinMaxLinkVariable(iRangeMin, iRangeMax, infos().unit(eUnit).mbRangeFlat));
+                                            builder.Add(buildRangeMinMaxLinkVariable(iRangeMin, iRangeMax));
                                         }
-/*####### Better Old World AI - Base DLL #######
-  ### Make fixed range visible         START ###
-  ##############################################*/
                                     }
                                 }
                             }
@@ -3845,6 +3866,16 @@ namespace BetterAI
                     {
                         outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_RAIDING"), buildTeamLinkVariable(eLoopTeam, pGame, pActivePlayer));
                     }
+                }
+
+                if (pUnit.hasOriginalTribe() && pUnit.getOriginalTribe() != pUnit.getTribe())
+                {
+                    outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_ORIGINAL_TRIBE"), buildTribeLinkVariable(pUnit.getOriginalTribe(), pGame));
+                }
+
+                if (pUnit.hasOriginalPlayer() && pUnit.getOriginalPlayer() != pUnit.getPlayer())
+                {
+                    outUnitData.AddStat(TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_ORIGINAL_TRIBE"), buildPlayerLinkVariable(pGame.player(pUnit.getOriginalPlayer()), pActivePlayer));
                 }
 
                 if (pUnit.hasRebelPlayer())
@@ -5116,7 +5147,8 @@ namespace BetterAI
                         {
                             EffectCityType eLoopEffectCity = p.Key;
                             int iCount = p.Value;
-                            int iValue = (infos().effectCity(eLoopEffectCity).maiYieldModifier[eYield] * iCount);
+                            //int iValue = (infos().effectCity(eLoopEffectCity).maiYieldModifier[eYield] * iCount);
+                            int iValue = (pCity.getEffectCityYieldModifier(eLoopEffectCity, eYield) * iCount); //includes maaiEffectCityYieldModifier
                             if (bReverseSign)
                             {
                                 iValue = -(iValue);

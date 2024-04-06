@@ -158,13 +158,6 @@ namespace BetterAI
         }
 
 
-
-        private List<string> strictModeDeferredItems = new List<string> { "Infos/achievement", "Infos/bonus", "Infos/eventStory", "Infos/eventOption",
-            "Infos/subject", "Infos/assetVariation", "Infos/subjectRelation",
-            "Infos/audio", "Infos/subjectTextVar", "Infos/borderPattern",
-            "Infos/goal", "Infos/characterPortrait", "Infos/effectCity", "Infos/effectPlayer",
-            "Infos/characterPortraitAgeInterpolation", "Infos/characterPortraitFeaturePoints", "Infos/characterPortraitOpinion"};
-
         protected override void ReadInfoListData(List<XmlDataListItemBase> items, bool deferredPass)
         {
             //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData");
@@ -172,13 +165,13 @@ namespace BetterAI
             bool isThreadSafe(XmlDataListItemBase item)
             {
                 if (deferredPass) return false;
-                return !(item.GetFileName() == "Infos/preload-text" || item.GetFileName() == "Infos/preload-concept" || item.GetFileName() == "Infos/language");
+                return !item.GetFlags().HasFlag(XmlDataListFlags.NonThreadSafe);
             }
 
             bool thisPass(XmlDataListItemBase item)
             {
                 if (!mModSettings.ModPath.IsStrictMode()) return !deferredPass;
-                return strictModeDeferredItems.Contains(item.GetFileName()) ? deferredPass : !deferredPass;
+                return item.GetFlags().HasFlag(XmlDataListFlags.StrictModeDeferred) ? deferredPass : !deferredPass;
             }
 
 
@@ -410,7 +403,6 @@ namespace BetterAI
 
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
-  ### Improvement Freshwaster Invalid        ###
   ### Bonus adjacent Improvement             ###
   ##############################################*/
     //corresponding classes are in InfoBase.cs
@@ -482,7 +474,6 @@ namespace BetterAI
     }
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                       END ###
-  ### Improvement Freshwaster Invalid        ###
   ### Bonus adjacent Improvement             ###
   ##############################################*/
 

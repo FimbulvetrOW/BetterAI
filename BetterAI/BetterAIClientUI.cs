@@ -589,118 +589,7 @@ namespace BetterAI
             }
         }
 
-        //lines 17336-17432
-        protected override void updateCityListPanel()
-        {
-            if (currentCityListSort == CityListSortType.CULTURE_LEVEL)
-            {
-                //copy-paste start
-                //using (new UnityProfileScope("ClientUI.updateCityListPanel"))
-                {
-                    Player pActivePlayer = ClientMgr.activePlayer();
-
-                    using (var colorScope = CollectionCache.GetStringBuilderScoped())
-                    using (var cityListScoped = CollectionCache.GetListScoped<int>())
-                    {
-                        StringBuilder colorSB = colorScope.Value;
-                        List<int> cityList = cityListScoped.Value;
-                        foreach (int iLoopCity in pActivePlayer.getCities())
-                        {
-                            cityList.Add(iLoopCity);
-                        }
-
-                        if (!isCityListInitialized)
-                        {
-                            for (YieldType eLoopYield = 0; eLoopYield < Infos.yieldsNum(); eLoopYield++)
-                            {
-                                UIAttributeTag yieldHeader = UI.GetUIAttributeTag("CityList-Yield", (int)eLoopYield);
-                                yieldHeader.SetTEXT("Data", TextManager, HelpText.buildCommaData(TEXTVAR((int)CityListSortType.YIELD), TEXTVAR((int)eLoopYield)));
-                                yieldHeader.SetKey("Icon", Infos.yield(eLoopYield).mzIconName);
-
-                                if (Infos.yield(eLoopYield).meSubtractFromYield != YieldType.NONE)
-                                {
-                                    yieldHeader.IsActive = false;
-                                }
-                            }
-
-                            UI.SetUIAttribute("CityList-GovernorActive", (Game.isCharacters()).ToStringCached());
-                            UI.SetUIAttribute("CityList-FamilyActive", (Game.isCharacters()).ToStringCached());
-                            isCityListInitialized = true;
-                        }
-
-                        //switch (currentCityListSort)
-                        //{
-                        //    case CityListSortType.YIELD:
-                        //        cityList.Sort((x, y) => isCitySortAscending ? CompareYieldProduction(x, y, currentYieldSort) : CompareYieldProduction(y, x, currentYieldSort));
-                        //        break;
-
-                        //    case CityListSortType.DISCONTENT_LEVEL:
-                        //        cityList.Sort((x, y) => isCitySortAscending ? CompareDiscontentLevels(x, y) : CompareDiscontentLevels(y, x));
-                        //        break;
-
-                        //    case CityListSortType.CULTURE_LEVEL:
-                        //        cityList.Sort((x, y) => isCitySortAscending ? CompareCultureLevels(x, y) : CompareCultureLevels(y, x));
-                        //        break;
-
-                        //    case CityListSortType.FAMILY:
-                        //        cityList.Sort((x, y) => isCitySortAscending ? CompareFamily(x, y) : CompareFamily(y, x));
-                        //        break;
-
-                        //    case CityListSortType.PRODUCTION:
-                        //        cityList.Sort((x, y) => isCitySortAscending ? CompareProduction(x, y) : CompareProduction(y, x));
-                        //        break;
-
-                        //    case CityListSortType.RELIGION:
-                        //        cityList.Sort((x, y) => isCitySortAscending ? CompareReligion(x, y) : CompareReligion(y, x));
-                        //        break;
-
-                        //    case CityListSortType.GOVERNOR:
-                        //        cityList.Sort((x, y) => isCitySortAscending ? CompareGovernor(x, y) : CompareGovernor(y, x));
-                        //        break;
-
-                        //    case CityListSortType.POPULATION:
-                        //        cityList.Sort((x, y) => isCitySortAscending ? ComparePopulation(x, y) : ComparePopulation(y, x));
-                        //        break;
-                        //}
-
-/*####### Better Old World AI - Base DLL #######
-  ### Culture Level Sort               START ###
-  ##############################################*/
-                        cityList.Sort((x, y) => isCitySortAscending ? CompareCultureLevels(x, y) : CompareCultureLevels(y, x));
-/*####### Better Old World AI - Base DLL #######
-  ### Culture Level Sort                 END ###
-  ##############################################*/
-
-                        for (int i = 0; i < cityList.Count; i++)
-                        {
-                            UIAttributeTag cityAttribute = UI.GetUIAttributeTag("CityListCity", i.ToStringCached());
-                            City city = Game.city(cityList[i]);
-
-                            cityAttribute.SetInt("ID", cityList[i]);
-                            cityAttribute.SetKey("OddRow", (i % 2 == 0).ToStringCached());
-                            cityAttribute.SetInt("SelectionState", city.getID());
-                        }
-
-                        UI.SetUIAttribute("CityList-NumCities", cityList.Count.ToStringCached());
-                        UI.SetUIAttribute("CityList-Tab-IsActive", (cityList.Count > 0).ToStringCached());
-                    }
-
-                    if (!isShowOwnCities)
-                    {
-                        updateAgentCityList();
-                    }
-
-                    UI.SetUIAttribute("TabPanel-Cities-IsVisible", (mCurrentTabPanel == TabPanelState.CITIES && isShowOwnCities).ToStringCached());
-                    UI.SetUIAttribute("TabPanel-Agents-IsVisible", (mCurrentTabPanel == TabPanelState.CITIES && !isShowOwnCities).ToStringCached());
-                }
-
-                //copy-paste end
-            }
-            else
-            {
-                base.updateCityListPanel();
-            }
-        }
+        //why did I override updateCityListPanel() ?
 
         //lines 17072-17085
         protected override int CompareHappinessLevels(int cityID, int otherCityID)
@@ -940,7 +829,7 @@ namespace BetterAI
             {
                 makeDirty(DirtyType.IDLE_BUTTONS);
 
-                if (bForcePopup || !pActivePlayer.isPlayerOption(Infos.Globals.USE_MINI_TECH_CARDS))
+                if (bForcePopup /*|| !pActivePlayer.isPlayerOption(Infos.Globals.USE_MINI_TECH_CARDS)*/)
                 {
                     if (UI.IsPopupActive("POPUP_MAKE_CHARACTER_DECISION"))
                         UI.SetPopupInactive("POPUP_MAKE_CHARACTER_DECISION", true);
@@ -958,10 +847,6 @@ namespace BetterAI
                 UpdateResearchButtonVisibility();
             }
         }
-
-
-
-
 
     }
 }

@@ -183,6 +183,45 @@ namespace BetterAI
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
 
+        public virtual bool isBorder(TeamType eTeam)
+        {
+            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+            {
+                Tile pAdjacentTile = tileAdjacent(eLoopDirection, true);
+
+                if (pAdjacentTile != null)
+                {
+                    if (pAdjacentTile.getTeam() != eTeam)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public virtual bool adjacentToCityImprovementClassFinished(City pCity, ImprovementClassType eImprovementClass)
+        {
+            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+            {
+                Tile pAdjacentTile = tileAdjacent(eLoopDirection);
+
+                if (pAdjacentTile != null)
+                {
+                    if (pAdjacentTile.getTeam() == pCity.getTeam())
+                    {
+                        if (pAdjacentTile.getImprovementClassFinished() == eImprovementClass)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
 
         //canHaveImprovement: lines 4805-5098
         public override bool canCityHaveImprovement(City pCityTerritory, ImprovementType eImprovement, bool bForceImprovement)
@@ -197,6 +236,7 @@ namespace BetterAI
                 return false;
             }
             BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+            ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
 
             if (!bForceImprovement)
             {
@@ -225,6 +265,117 @@ namespace BetterAI
                     }
                 }
             }
+
+            bool bSkipAdjacentCheck = false;
+            bool bDoAdjacentCheck = false;
+
+            if (eImprovementClass != ImprovementClassType.NONE)
+            {
+
+                if (infos().improvementClass(eImprovementClass).mbAdjacentValid)
+                {
+                    if (adjacentToCityImprovementClassFinished(pCity, eImprovementClass))
+                    {
+                        bSkipAdjacentCheck = true;
+                    }
+                    else
+                    {
+                        bDoAdjacentCheck = true;
+                    }
+                }
+
+                if (infos().improvementClass(eImprovementClass).mbContiguous)
+                {
+                    if (!adjacentToCityImprovementClassFinished(pCity, eImprovementClass))
+                    {
+                        if (pCity == null)
+                        {
+                            return false;
+                        }
+
+                        if (pCity.hasPlayer() && pCity.player().getFinishedImprovementClassCount(eImprovementClass) > 0)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            if (bTestAdjacent && !bSkipAdjacentCheck)
+            {
+                //this has to be in the CityTile part too now because of the bSkipAdjacentCheck part
+                if (bDoAdjacentCheck && pImprovementInfo.mbRequiresUrban)
+                {
+                    if (!urbanEligible())
+                    {
+                        return false;
+                    }
+                }
+
+                if (pImprovementInfo.mbRequiresBorder)
+                {
+                    if (!isBorder(pCity.getTeam()))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            if (bTestEnabled)
+            {
+                //for improvements with mbAdjacentValid, these tests were skipped in General Tile, so they need to be done now
+                if (bTestAdjacent && bDoAdjacentCheck)
+                {
+                    ReligionType eReligionPrereq = pImprovementInfo.meReligionPrereq;
+
+                    if (bTestReligion && eReligionPrereq != ReligionType.NONE)
+                    {
+                        if (pImprovementInfo.mbNoAdjacentReligion)
+                        {
+                            if (adjacentToOtherImprovementReligion(eReligionPrereq))
+                            {
+                                return false;
+                            }
+                        }
+                    }
+
+                    if (!bUpgradeImprovement)
+                    {
+                        ImprovementType eAdjacentImprovementPrereq = pImprovementInfo.meAdjacentImprovementPrereq;
+
+                        if (eAdjacentImprovementPrereq != ImprovementType.NONE)
+                        {
+                            if (!adjacentToCityImprovementFinished(eAdjacentImprovementPrereq))
+                            {
+                                return false;
+                            }
+                        }
+                    }
+
+                    if (!bUpgradeImprovement)
+                    {
+                        ImprovementClassType eAdjacentImprovementClassPrereq = pImprovementInfo.meAdjacentImprovementClassPrereq;
+
+                        if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
+                        {
+                            if (!adjacentToCityImprovementClassFinished(eAdjacentImprovementClassPrereq))
+                            {
+                                return false;
+                            }
+                        }
+                    }
+
+                    if (eImprovementClass != ImprovementClassType.NONE)
+                    {
+                        if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !notAdjacentToImprovementClass(eImprovementClass))
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+
 
 
 /*####### Better Old World AI - Base DLL #######
@@ -341,7 +492,6 @@ namespace BetterAI
             ReligionType eReligionPrereq = pImprovementInfo.meReligionPrereq;
             if (!bTestReligion && eReligionPrereq != ReligionType.NONE)
             {
-
                 if (!hasCityTerritory())
                 {
                     return false;
@@ -356,7 +506,23 @@ namespace BetterAI
                 }
             }
 
-            if (bTestAdjacent)
+            ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
+            bool bSkipAdjacentCheck = false;
+
+
+            if (eImprovementClass != ImprovementClassType.NONE)
+            {
+                if (infos().improvementClass(eImprovementClass).mbAdjacentValid)
+                {
+                    //mbAdjacentValid: this needs to be checked in CityTile part
+                    //if (adjacentToCityImprovementClassFinished(eImprovementClass))
+                    {
+                        bSkipAdjacentCheck = true;
+                    }
+                }
+            }
+
+            if (bTestAdjacent && !bSkipAdjacentCheck)
             {
                 if (pImprovementInfo.mbRequiresUrban)
                 {
@@ -374,8 +540,7 @@ namespace BetterAI
                     return false;
                 }
 
-                ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
-                if (bTestAdjacent)
+                if (bTestAdjacent && !bSkipAdjacentCheck)
                 {
                     if (bTestReligion && eReligionPrereq != ReligionType.NONE)
                     {

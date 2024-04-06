@@ -305,7 +305,7 @@ namespace BetterAI
 
             BetterAIUnit pUnit = (BetterAIUnit)swapUnit(pTile, pActingPlayer);
 
-            pUnit.setTileID(getTileID());
+            pUnit.setTileID(getTileID(), pActingPlayer);
 
 /*####### Better Old World AI - Base DLL #######
   ### Fix Swap Unit Exploit            START ###
@@ -319,7 +319,7 @@ namespace BetterAI
 
             pUnit.wake();
 
-            setTileID(pTile.getID());
+            setTileID(pTile.getID(), pActingPlayer);
             changeTurnSteps(1);
             act(pActingPlayer, iCost);
             wake();
@@ -595,6 +595,7 @@ namespace BetterAI
 
             bool bSettlementAttack = pToTile.hasImprovementTribeSite();
             bool bCityAttack = canDamageCity(pToTile);
+            bool bOwnerActing = pActingPlayer != null && pActingPlayer == player();
 
             BetterAIUnit pDefendingUnit = (BetterAIUnit)pToTile.defendingUnit();
             List<int> aiAdditionalDefendingUnits = null;
@@ -643,9 +644,9 @@ namespace BetterAI
 
             int iCounterDamage = getCounterAttackDamage((bCityAttack) ? null : pDefendingUnit, pToTile);
 
-            int iKills = attackTile(pFromTile, pToTile, true, 100, ref azTileTexts, out AttackOutcome eOutcome, ref bEvent);
+            int iKills = attackTile(pFromTile, pToTile, true, 100, pActingPlayer, ref azTileTexts, out AttackOutcome eOutcome, ref bEvent);
 
-            if (hasPlayer() && (pDefendingUnit != null) && (eOutcome == AttackOutcome.NORMAL) && !bEvent)
+            if (bOwnerActing && (pDefendingUnit != null) && (eOutcome == AttackOutcome.NORMAL) && !bEvent)
             {
                 bEvent = player().doEventTrigger(((isWaterAttack(pDefendingUnit)) ? infos().Globals.UNIT_COMBAT_WATER_EVENTTRIGGER : infos().Globals.UNIT_COMBAT_EVENTTRIGGER), this, pDefendingUnit);
             }
@@ -669,7 +670,7 @@ namespace BetterAI
                             {
                                 BetterAIUnit pLoopDefendingUnit = (BetterAIUnit)pLoopTile.defendingUnit();
 
-                                iKills += attackTile(pFromTile, pLoopTile, false, attackPercent(eLoopAttack), ref azTileTexts, out AttackOutcome eLoopOutcome, ref bEvent);
+                                iKills += attackTile(pFromTile, pLoopTile, false, attackPercent(eLoopAttack), pActingPlayer, ref azTileTexts, out AttackOutcome eLoopOutcome, ref bEvent);
 
                                 if (pLoopDefendingUnit != null)
                                 {
@@ -729,7 +730,7 @@ namespace BetterAI
                             Tile pPushTile = getPushTile(pLoopUnit, pFromTile, pToTile);
                             if (pPushTile != null)
                             {
-                                pLoopUnit.setTileID(pPushTile.getID(), true, true, ref azTileTexts);
+                                pLoopUnit.setTileID(pPushTile.getID(), true, true, pActingPlayer, ref azTileTexts);
                                 player()?.AI.clearLastSeenUnitState();
 
                                 if ((pLoopUnit.getCooldown() == infos().Globals.UNLIMBERED_COOLDOWN) ||
@@ -766,7 +767,7 @@ namespace BetterAI
 
                 if (bAdvance)
                 {
-                    setTileID(pToTile.getID(), true, true, ref azTileTexts);
+                    setTileID(pToTile.getID(), true, true, pActingPlayer, ref azTileTexts);
                 }
 
                 if ((pDefendingUnit != null) && (pDefendingUnit.getHP() == 0) && ((bAdvance) ? canHaveRoutCooldown(pToTile, pToTile, pDefendingUnit) : ((pFromTile.hasCity() || pFromTile.isCitySiteActive() || canDamageUnit(pToTile) || pDefendingUnit.isAlive()) && pFromTile.isTileAdjacent(pToTile) && canHaveRoutCooldown(pToTile, pFromTile, pDefendingUnit))))
@@ -776,7 +777,10 @@ namespace BetterAI
                     if (hasPlayer())
                     {
                         changeRoutChain(1);
-                        player().doEventTrigger(infos().Globals.UNIT_ROUT_EVENTTRIGGER, this);
+                        if (bOwnerActing)
+                        {
+                            player().doEventTrigger(infos().Globals.UNIT_ROUT_EVENTTRIGGER, this);
+                        }
                     }
 /*####### Better Old World AI - Base DLL #######
   ### Protect against Null Ref         START ###
