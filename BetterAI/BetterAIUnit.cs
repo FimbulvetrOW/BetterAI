@@ -366,6 +366,11 @@ namespace BetterAI
 
         public virtual bool isTileCloserOrTeamTerritory(TeamType eTeam, Tile pTestTile, HashSet<Tile> otherTiles, bool bSameArea = false)
         {
+            if (tile() == pTestTile)
+            {
+                return true;
+            }
+
             if (pTestTile.impassable())
             {
                 return false;
@@ -376,34 +381,27 @@ namespace BetterAI
                 return true;
             }
 
-            if (bSameArea)
+            if (bSameArea) //for land units on water, or water units on land, bSameArea will always be false, so info().mbWater implies tile().isWater() here
             {
-                if (pTestTile.getArea() != tile().getArea())
+                if (info().mbWater ? pTestTile.getArea() != tile().getArea() : pTestTile.getLandSection() != tile().getLandSection())
                 {
                     return false;
                 }
 
+                //no check for team territory here. Could have somewhat undesired results if city territory crosses blockers but that should be extremely rare.
+
+                if (!(((BetterAITile)pTestTile).isPathShorterToOtherTiles(tile(), otherTiles)))
+                {
+                    return false;
+                }
+            }
+            else
+            {
                 if (tile().getTeam() != TeamType.NONE && tile().getTeam() == getTeam())
                 {
                     return true;
                 }
 
-                if (tile().isWater() || otherTiles.Last().getLandSection() == tile().getLandSection())
-                {
-                    if (!(((BetterAITile)pTestTile).isPathShorterToOtherTiles(tile(), otherTiles)))
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            if (tile().getTeam() != TeamType.NONE && tile().getTeam() == getTeam())
-            {
-                return true;
-            }
-
-            //if (!tile().isLand() || otherTiles.First().getLandSection() != tile().getLandSection())
-            {
                 if (!(((BetterAITile)pTestTile).isDistanceCloserToOtherTiles(tile(), otherTiles)))
                 {
                     return false;
@@ -484,7 +482,7 @@ namespace BetterAI
                         }
                     }
                 }
-                if (aiCityTiles.Count() == 0)
+                if (aiCityTiles.Count() == 0 || tile().isWater() != info().mbWater)
                 {
                     switchOffAreaLimit();
                 }
@@ -494,16 +492,25 @@ namespace BetterAI
                 //first, try to stay in the same area
                 do
                 {
-                    pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFromAndCloser(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea));
-                    if (pTile != null) return pTile;
+                    if (isHiddenTileFrom(TeamType.NONE, tile()))
+                    {
+                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFromAndCloser(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea));
+                        if (pTile != null) return pTile;
 
-                    pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFrom(TeamType.NONE, x, bSameArea: bSameArea));
-                    if (pTile != null) return pTile;
+                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFrom(TeamType.NONE, x));
+                        if (pTile != null) return pTile;
+                    }
+                    else
+                    {
+                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isTileCloserOrTeamTerritory(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea));
+                        if (pTile != null) return pTile;
 
-                    pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isTileCloserOrTeamTerritory(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea));
-                    if (pTile != null) return pTile;
-
+                        //units won't jump to different land masses/water bodies if there is any tile available, even if it's further away.
+                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, null);
+                        if (pTile != null) return pTile;
+                    }
                 } while (switchOffAreaLimit());
+
 /*####### Better Old World AI - Base DLL #######
   ### Better bounce tile search          END ###
   ##############################################*/
@@ -927,12 +934,18 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Attack Heal                      START ###
   ##############################################*/
-        public virtual int getAttackHeal()
+        public virtual int getAttackHeal(Tile pFromTile, Tile pToTile)
         {
             int iValue = 0;
-            foreach (EffectUnitType eLoopEffectUnit in getEffectUnits())
+            if (pFromTile != null && pToTile != null)
             {
-                iValue += ((BetterAIInfoEffectUnit)infos().effectUnit(eLoopEffectUnit)).miHealAttack;
+                if (pFromTile.isTileAdjacent(pToTile) && pFromTile.isWater() == pToTile.isWater())
+                {
+                    foreach (EffectUnitType eLoopEffectUnit in getEffectUnits())
+                    {
+                        iValue += ((BetterAIInfoEffectUnit)infos().effectUnit(eLoopEffectUnit)).miHealAttack;
+                    }
+                }
             }
 
             return iValue;
@@ -1000,16 +1013,12 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Attack Heal                      START ###
   ##############################################*/
-            if (pFromTile.isTileAdjacent(pToTile) && pFromTile.isWater() == pToTile.isWater())
+            int iAttackHeal = getAttackHeal(pFromTile, pToTile);
+            if (iAttackHeal != 0)
             {
-                int iAttackHeal = getAttackHeal();
-                if (iAttackHeal != 0)
-                {
-                    iValue -= iAttackHeal;
-                    iValue = Math.Max(iValue, getHP() - getHPMax());
-                }
+                iValue -= iAttackHeal;
+                iValue = Math.Max(iValue, getHP() - getHPMax());
             }
-
 /*####### Better Old World AI - Base DLL #######
   ### Attack Heal                        END ###
   ##############################################*/

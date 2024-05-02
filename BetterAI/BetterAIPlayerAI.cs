@@ -1841,20 +1841,35 @@ namespace BetterAI
                     }
                 }
 
-                if (pImprovementInfo.mbNoVegetation && pTile.hasVegetation())
+/*####### Better Old World AI - Base DLL #######
+  ### Max vegetation remove value 0    START ###
+  ##############################################*/
                 {
-                    for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
+                    long iSubValue = 0;
+                    if (pImprovementInfo.mbNoVegetation && pTile.hasVegetation())
                     {
-                        int iYieldAmount = player.getYieldRemove(pTile, eLoopYield, true, pCity);
-
-                        iYieldAmount -= getYieldLostFromClear(pTile, pCity, eLoopYield, pTile.getVegetation());
-                        if (pTile.vegetation().meVegetationRemove != VegetationType.NONE)
+                        for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
                         {
-                            iYieldAmount -= getYieldLostFromClear(pTile, pCity, eLoopYield, pTile.vegetation().meVegetationRemove);
+                            //getYieldRemove part moved to improvementValue - bIcludeCost
+                            //int iYieldAmount = player.getYieldRemove(pTile, eLoopYield, true, pCity);
+
+                            int iYieldAmount = -getYieldLostFromClear(pTile, pCity, eLoopYield, pTile.getVegetation());
+                            if (pTile.vegetation().meVegetationRemove != VegetationType.NONE)
+                            {
+                                iYieldAmount -= getYieldLostFromClear(pTile, pCity, eLoopYield, pTile.vegetation().meVegetationRemove);
+                            }
+                            iSubValue += iYieldAmount * yieldValue(eLoopYield);
                         }
-                        iValue += iYieldAmount * yieldValue(eLoopYield);
+
+                        //extra order cost from vegetation's iBuildCost is in improvementValue - bIcludeCost
+                        //iSubValue -= pTile.vegetation().miBuildCost * yieldValue(infos.Globals.ORDERS_YIELD);
+
+                        iValue += Math.Min(0, iSubValue);
                     }
                 }
+/*####### Better Old World AI - Base DLL #######
+  ### Max vegetation remove value 0      END ###
+  ##############################################*/
 
                 iValue += getImprovementFamilyOpinionValue(pCity, eImprovement);
 
@@ -3513,6 +3528,36 @@ namespace BetterAI
                         {
                             iValue -= infos.Helpers.getBuildCost(eImprovement, eLoopYield, pTile) * yieldValue(eLoopYield);
                         }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Max vegetation remove value 0    START ###
+  ##############################################*/
+                        {
+                            long iSubValue = 0;
+                            long iLimit = 0;
+                            if (infos.improvement(eImprovement).mbNoVegetation && pTile.hasVegetation())
+                            {
+                                for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
+                                {
+                                    int iRemoveYieldAmount = player.getYieldRemove(pTile, eLoopYield, true, pCity);
+                                    iSubValue += iRemoveYieldAmount * yieldValue(eLoopYield);
+
+                                    int iLostYieldAmount = getYieldLostFromClear(pTile, pCity, eLoopYield, pTile.getVegetation());
+                                    if (pTile.vegetation().meVegetationRemove != VegetationType.NONE)
+                                    {
+                                        iLostYieldAmount += getYieldLostFromClear(pTile, pCity, eLoopYield, pTile.vegetation().meVegetationRemove);
+                                    }
+                                    iLimit += iLostYieldAmount * yieldValue(eLoopYield);
+                                }
+
+                                iSubValue -= pTile.vegetation().miBuildCost * yieldValue(infos.Globals.ORDERS_YIELD);
+                            }
+
+                            iValue += Math.Min(iLimit, iSubValue);
+                        }
+/*####### Better Old World AI - Base DLL #######
+  ### Max vegetation remove value 0      END ###
+  ##############################################*/
                     }
 
                     if (pTile.hasImprovement())

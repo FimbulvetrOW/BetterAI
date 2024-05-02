@@ -46,7 +46,11 @@ namespace BetterAI
                 iMinThisTileDistance = Math.Min(iMinThisTileDistance, this.distanceTile(pOtherTile));
             }
 
-            return iMinThisTileDistance <= iMinStartTileDistance - (iDistance / 2);
+            //original, to be restored when bounce on founding and city owner change is fixed:
+            //bool bCloser = iMinThisTileDistance <= iMinStartTileDistance - (iDistance / 2);
+            bool bCloser = iMinThisTileDistance <= iMinStartTileDistance - ((iDistance - 2) / 2) - 1;
+
+            return bCloser;
         }
 
 
@@ -78,7 +82,9 @@ namespace BetterAI
                 if (pNearestCityTile != null)
                 {
                     game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iDistance);
-                    if (game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iValue) && iValue - (iDistance / 2) <= iMinStartTileDistance)
+                    //original, to be restored when bounce on founding and city owner change is fixed:
+                    //if (game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iValue) && iValue - (iDistance / 2) <= iMinStartTileDistance)
+                    if (game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iValue) && iValue - ((iDistance - 2) / 2) - 1 <= iMinStartTileDistance)
                     {
                         return true;
                     }
