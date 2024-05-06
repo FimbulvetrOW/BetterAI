@@ -438,8 +438,6 @@ namespace BetterAI
                 }
                 //copy-paste END
 
-
-
                 protected virtual Unit assignUnitToBuyTile(Tile pTile, YieldType eYield, City pCity, bool bAllowCivilian)
                 {
                     int iBestValue = 0;
@@ -520,8 +518,6 @@ namespace BetterAI
   ##############################################*/
                     return false;
                 }
-
-
 
             }
         }

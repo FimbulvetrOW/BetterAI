@@ -19,7 +19,6 @@ using static TenCrowns.ClientCore.ClientUI;
 using static BetterAI.BetterAIInfos;
 using BetterAI;
 using Random = Mohawk.SystemCore.Random;
-using System.IO.Ports;
 
 namespace BetterAI
 {
@@ -52,7 +51,6 @@ namespace BetterAI
 
             return bCloser;
         }
-
 
         public virtual bool isPathShorterToOtherTiles(Tile pStartTile, HashSet<Tile> otherTiles)
         {
@@ -184,7 +182,6 @@ namespace BetterAI
 
             return false;
         }
-
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
@@ -227,7 +224,6 @@ namespace BetterAI
 
             return false;
         }
-
 
         //canHaveImprovement: lines 4805-5098
         public override bool canCityHaveImprovement(City pCityTerritory, ImprovementType eImprovement, bool bForceImprovement)
@@ -351,7 +347,7 @@ namespace BetterAI
 
                         if (eAdjacentImprovementPrereq != ImprovementType.NONE)
                         {
-                            if (!adjacentToCityImprovementFinished(eAdjacentImprovementPrereq))
+                            if (!adjacentToImprovementFinished(eAdjacentImprovementPrereq))
                             {
                                 return false;
                             }
@@ -364,7 +360,7 @@ namespace BetterAI
 
                         if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
                         {
-                            if (!adjacentToCityImprovementClassFinished(eAdjacentImprovementClassPrereq))
+                            if (!adjacentToImprovementClassFinished(eAdjacentImprovementClassPrereq))
                             {
                                 return false;
                             }
@@ -380,9 +376,6 @@ namespace BetterAI
                     }
                 }
             }
-
-
-
 
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
@@ -446,7 +439,6 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
-
 
             return true;
         }
@@ -565,7 +557,7 @@ namespace BetterAI
 
                         if (eAdjacentImprovementPrereq != ImprovementType.NONE)
                         {
-                            if (!adjacentToCityImprovementFinished(eAdjacentImprovementPrereq))
+                            if (!adjacentToImprovementFinished(eAdjacentImprovementPrereq))
                             {
                                 return false;
                             }
@@ -578,7 +570,7 @@ namespace BetterAI
 
                         if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
                         {
-                            if (!adjacentToCityImprovementClassFinished(eAdjacentImprovementClassPrereq))
+                            if (!adjacentToImprovementClassFinished(eAdjacentImprovementClassPrereq))
                             {
                                 return false;
                             }
@@ -708,7 +700,6 @@ namespace BetterAI
             return true;
         }
 
-
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
   ##############################################*/
@@ -795,15 +786,10 @@ namespace BetterAI
 
             }
             return;
-
-
         }
-
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
-
-
 
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
@@ -1119,9 +1105,9 @@ namespace BetterAI
             }
             return iModifier;
         }
-
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value              END ###
   ##############################################*/
+
     }
 }

@@ -14,6 +14,7 @@ using UnityEngine.UI;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Collections.Concurrent;
 
 namespace BetterAI
 {
@@ -294,7 +295,7 @@ namespace BetterAI
                         using (var pacifyDataScope = new WidgetDataScope(nameof(ItemType.START_MISSION), Infos.Globals.PACIFY_CITY_MISSION.ToStringCached(), chancellorID.ToStringCached(), pSelectedCity.getID().ToStringCached(), true.ToStringCached()))
                         {
                             mSelectedPanel.SetBool("City-Pacify-IsInteractable", chancellorID != -1 &&
-                                pActivePlayer.canStartMission(Infos.Globals.PACIFY_CITY_MISSION, chancellorID, pSelectedCity.getID().ToStringCached()));
+                                pActivePlayer.canStartMission(Infos.Globals.PACIFY_CITY_MISSION, chancellorID, pSelectedCity.getID().ToStringCached(), bControl: Interfaces.Input.isControlPressed()));
                             mSelectedPanel.SetKey("City-Pacify-Type", pacifyDataScope.Type);
                             mSelectedPanel.SetKey("City-Pacify-Data", pacifyDataScope.DataList);
                         }
@@ -335,6 +336,9 @@ namespace BetterAI
         }
         //copy-paste END
 
+/*####### Better Old World AI - Base DLL #######
+  ### Worker Default List Extra Items  START ###
+  ##############################################*/
         //lines 11725-11756
         public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, WorkerActionFilter eFilter = WorkerActionFilter.CURRENT_TILE)
         {
@@ -513,8 +517,9 @@ namespace BetterAI
                 base.GetValidImprovementsForTile(aeImprovements, pTile, pUnit, eFilter);
             }
         }
-
-
+/*####### Better Old World AI - Base DLL #######
+  ### Worker Default List Extra Items    END ###
+  ##############################################*/
 
         //lines 17830-17937
         protected override void updateQueuePanel()
@@ -589,8 +594,6 @@ namespace BetterAI
             }
         }
 
-        //why did I override updateCityListPanel() ?
-
         //lines 17072-17085
         protected override int CompareHappinessLevels(int cityID, int otherCityID)
         {
@@ -633,8 +636,6 @@ namespace BetterAI
             }
         }
 
-
-
         //lines 17022-17035
         protected override int CompareCultureLevels(int cityID, int otherCityID)
         {
@@ -674,178 +675,6 @@ namespace BetterAI
                 return city.getCulture() - otherCity.getCulture();
             }
             //copy-paste end
-        }
-
-        //lines 23595-23756
-        public override void ShowChooseResearchPopup(bool bFullUpdate = true, bool bMakeActive = true, bool bForcePopup = false, bool bCloseButton = true)
-        {
-            Player pActivePlayer = ClientMgr.activePlayer();
-            int numTechOptions = 0;
-
-            clearBorderExpansionPreview();
-
-            maeAvailableTechs.Clear();
-            for (TechType eLoopTech = 0; eLoopTech < Infos.techsNum(); eLoopTech++)
-            {
-                if (pActivePlayer.isTechAvailable(eLoopTech))
-                {
-                    maeAvailableTechs.Add(eLoopTech);
-                    UIAttributeTag cardTag = UI.GetUIAttributeTag("ChooseResearchButtons-Card", numTechOptions);
-
-                    if (bFullUpdate)
-                    {
-                        FillTechUnlockInfo(cardTag, eLoopTech, false);
-
-                        mRedrawTechButton.IsInteractable = pActivePlayer?.canTechRedraw() ?? false;
-
-                        using (var scope = CollectionCache.GetStringBuilderScoped())
-                        {
-                            using (var optionsScope = new WidgetDataScope(nameof(ItemType.RESEARCH_TECH), eLoopTech.ToStringCached()))
-                            {
-                                cardTag.DataSB = optionsScope.DataList;
-                                cardTag.ItemType = optionsScope.Type;
-                            }
-                            cardTag.LabelSB = HelpText.removeLink(HelpText.replaceTextLinks(TEXT(scope.Value, Infos.tech(eLoopTech).mName)));
-                        }
-
-                        cardTag.SetKey("Image", SpriteRepo.GetSpriteName(eLoopTech));
-
-                        if (pActivePlayer.getTechDiscoveryBonus(eLoopTech) != BonusType.NONE)
-                        {
-                            cardTag.SetKey("State", "Bonus");
-                        }
-                        else
-                        {
-                            cardTag.SetKey("State", "Normal");
-                        }
-
-                        cardTag.SetBool("IsQueueEmpty", false);
-
-                        int turnsLeft = Infos.Helpers.turnsLeft(pActivePlayer.getTechCostWhole(eLoopTech), pActivePlayer.getTechProgressExtra(eLoopTech, true), pActivePlayer.calculateYieldAfterUnits(Infos.Globals.SCIENCE_YIELD));
-                        cardTag.SetTEXT("TurnText", TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_SHOW_CHOOSE_RESEARCH_POPUP_TURNS_LEFT", TEXTVAR(turnsLeft), Game.turnScaleName(turnsLeft)));
-                        cardTag.SetTEXT("TurnTextShort", TextManager, TEXTVAR_TYPE("TEXT_HELPTEXT_RESEARCH_TURNS_LEFT_SHORT", TEXTVAR(turnsLeft), Game.turnScaleNameShort(turnsLeft)));
-
-                        cardTag.SetBool("IsRecommended", false);
-                        cardTag.SetBool("Advice-IsActive", Infos.tech(eLoopTech).meAdvice != TextType.NONE);
-                    }
-
-                    TechNodeTargetState eTargetState = TechNodeTargetState.NONE;
-                    bool isTarget = pActivePlayer.isTechTarget(eLoopTech) && !pActivePlayer.isTechAcquired(eLoopTech);
-
-                    if (isTarget)
-                    {
-                        eTargetState = TechNodeTargetState.TARGETED;
-                    }
-                    else
-                    {
-                        foreach (InfoTech tech in Infos.techs())
-                        {
-                            if (ClientMgr.activePlayer().isTechTarget(tech.meType) && TechTree.Node(eLoopTech, Game).IsAncestorOf(tech.meType))
-                            {
-                                eTargetState = TechNodeTargetState.TARGETPREREQ;
-                                break;
-                            }
-                        }
-                    }
-
-                    TechTree.TechNodeHelpType targetHelp = eTargetState == TechNodeTargetState.TARGETED ? TechTree.TechNodeHelpType.TARGET : TechTree.TechNodeHelpType.TARGETPREREQ;
-                    using (var targetDataScope = new WidgetDataScope(nameof(ItemType.TECH_TREE_NODE_STATUS_ICON), eLoopTech.ToStringCached(), ((int)targetHelp).ToStringCached()))
-                    {
-                        cardTag.SetKey("Target-State", eTargetState.ToStringCached());
-                        cardTag.SetKey("Target-ItemType", targetDataScope.Type);
-                        cardTag.SetKey("Target-Data", targetDataScope.DataList);
-                    }
-
-                    if (bFullUpdate)
-                    {
-                        TechType eTechDiscovered = pActivePlayer.getPopupTechDiscovered();
-                        if (eTechDiscovered != TechType.NONE)
-                        {
-                            InfoTech tech = Infos.tech(eTechDiscovered);
-                            mChooseResearchPanel.SetKey("Title", TEXT("TEXT_UI_TECH_PANEL_TECH_DISCOVERED", HelpText.buildTechLinkVariable(pActivePlayer.getPopupTechDiscovered())));
-                            mChooseResearchPanel.SetKey("Title-Icon", tech.mzIconName);
-                            mChooseResearchPanel.SetKey("Title-Icon-State", pActivePlayer.getTechDiscoveryBonus(eTechDiscovered) == BonusType.NONE ? "Normal" : "Bonus");
-                            mChooseResearchPanel.SetBool("Title-Icon-IsActive", true);
-                            using (var discoveredDataScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_TECH), eTechDiscovered.ToStringCached()))
-                                mChooseResearchPanel.SetKey("Title-Icon-Data", discoveredDataScope.DataList);
-                        }
-                        else
-                        {
-                            mChooseResearchPanel.SetKey("Title", TEXT("TEXT_UI_TECH_PANEL_CHOOSE_RESEARCH"));
-                            mChooseResearchPanel.SetBool("Title-Icon-IsActive", false);
-                        }
-                        mChooseResearchPanel.SetBool("CloseButton-IsActive", bCloseButton);
-                        mbChooseResearchInitialized = true;
-                    }
-
-                    numTechOptions++;
-                }
-            }
-
-            if (bFullUpdate)
-            {
-                if (!pActivePlayer.isResearching())
-                {
-                    foreach (TechType eLoopTech in maeAvailableTechs)
-                    {
-                        BonusType eBonus = pActivePlayer.getTechDiscoveryBonus(eLoopTech);
-                        if (eBonus != BonusType.NONE)
-                        {
-                            using (var territoryTilesScoped = CollectionCache.GetDictionaryScoped<int, CityTerritory>())
-                            {
-                                updateBorderExpansionPreview(eBonus, territoryTilesScoped.Value);
-                            }
-                        }
-                    }
-                }
-
-                invalidateQueuedUpdates(QueuedTagUpdateInvalidation.RESEARCH_UPDATE);
-/*####### Better Old World AI - Base DLL #######
-  ### No BestResearch, because no      START ###
-  ### cached improvement values (no idea why)###
-  ##############################################*/
-                //Task.Run(() =>
-                //{
-                //    TechType eBestTech;
-                //    lock (ClientMgr.TaskLock)
-                //    {
-                //        eBestTech = pActivePlayer.AI.getBestResearch();
-                //    }
-
-                //    for (int i = 0; i < maeAvailableTechs.Count; i++)
-                //        ResearchRecommendationCallback(i, maeAvailableTechs[i], eBestTech);
-                //});
-/*####### Better Old World AI - Base DLL #######
-  ### No BestResearch, because no        END ###
-  ### cached improvement values (no idea why)###
-  ##############################################*/
-            }
-
-
-            mChooseResearchPanel.SetBool("CanResearch", numTechOptions > 0);
-            mChooseResearchPanel.SetInt("Count", numTechOptions);
-
-            if (bMakeActive)
-            {
-                makeDirty(DirtyType.IDLE_BUTTONS);
-
-                if (bForcePopup /*|| !pActivePlayer.isPlayerOption(Infos.Globals.USE_MINI_TECH_CARDS)*/)
-                {
-                    if (UI.IsPopupActive("POPUP_MAKE_CHARACTER_DECISION"))
-                        UI.SetPopupInactive("POPUP_MAKE_CHARACTER_DECISION", true);
-
-                    UI.SetPopupActive("POPUP_CHOOSE_RESEARCH", false, null, UpdateResearchUI);
-                }
-                else if (mbChooseResearchInitialized)
-                {
-                    pActivePlayer.clientRemoveDecisionType(DecisionType.CHOOSE_RESEARCH);
-                    makeDirty(DirtyType.IDLE_BUTTONS);
-
-                    mResearchButton.SetBool("CanRedraw", ClientMgr.activePlayer().canTechRedraw());
-                }
-
-                UpdateResearchButtonVisibility();
-            }
         }
 
     }

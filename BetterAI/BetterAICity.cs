@@ -30,8 +30,6 @@ namespace BetterAI
         protected bool mbTerritoryChanged = true;
         protected bool mbTerrainChanged = false;
 
-        //protected bool mbProductionHurried = false;
-
         public virtual CityBiomeType getCityBiome()
         {
             //calculate only on demand
@@ -41,7 +39,6 @@ namespace BetterAI
             }
             return meCityBiome;
         }
-
 
         protected virtual void calculateCityBiome()
         {
@@ -524,7 +521,6 @@ namespace BetterAI
             }
         }
 
-
         public virtual int getImprovementClassModifierForGovernor(ImprovementClassType eIndex, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
@@ -556,7 +552,6 @@ namespace BetterAI
                 return iRate;
             }
         }
-
 
         //lines 4272-4282
         public override int getYieldTurnsLeft(YieldType eYield)
@@ -801,8 +796,6 @@ namespace BetterAI
             return false;
         }
 
-
-
         //lines 5505-5530
         public override void setHappinessLevel(int iNewValue)
         {
@@ -835,7 +828,6 @@ namespace BetterAI
             }
         }
 
-
         public override int getNewHappinessLevel(int iChange)
         {
             int iNewLevel = getHappinessLevel() + iChange;
@@ -854,7 +846,6 @@ namespace BetterAI
 
             return iNewLevel;
         }
-
 
         //lines 5531-5561
         public override void changeHappinessLevel(int iChange)
@@ -903,6 +894,29 @@ namespace BetterAI
   ### Disconent Level 0                  END ###
   ##############################################*/
 
+/*####### Better Old World AI - Base DLL #######
+  ### Fix: Culture shrinking           START ###
+  ##############################################*/
+        public override void shrinkCulture()
+        {
+            if (getTeamCultureStep(getTeam()) > 0)
+            {
+                setTeamCultureStep(getTeam(), getTeamCultureStep(getTeam()) - 1);
+            }
+            else
+            {
+                for (CultureType ePreviousCulture = 0; ePreviousCulture < infos().culturesNum(); ++ePreviousCulture)
+                {
+                    if (infos().culture(ePreviousCulture).meNextCulture == getTeamCulture(getTeam()))
+                    {
+                        setTeamCulture(getTeam(), ePreviousCulture);
+                    }
+                }
+            }
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Fix: Culture shrinking             END ###
+  ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###
@@ -1019,9 +1033,7 @@ namespace BetterAI
         }
         //base game code paste END
 
-
         //Hurry changes START
-
         //lines 6385-6427
         protected override CityProductionYield getNetCityProductionYieldHelper(YieldType eYield)
         {
@@ -1080,9 +1092,6 @@ namespace BetterAI
             return zYield;
         }
 
-        //overriding doPlayerTurn is no longer needed
-
-
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry               START ###
   ##############################################*/
@@ -1134,7 +1143,6 @@ namespace BetterAI
   ### Altnernative Hurry               END ###
   ##############################################*/
         }
-
 
         //now the hurry costs
         //this method is only used for hurry cost, so I can just override it, so I don't have to override all the getHurry<yield> methods
@@ -1322,8 +1330,6 @@ namespace BetterAI
         }
         //copy-paste END
 
-
-
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
   ##############################################*/
@@ -1437,8 +1443,6 @@ namespace BetterAI
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
 
-
-
 /*####### Better Old World AI - Base DLL #######
   ### self-aaiEffectCityYieldRate      START ###
   ##############################################*/
@@ -1468,7 +1472,6 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### self-aaiEffectCityYieldRate        END ###
   ##############################################*/
-
 
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
@@ -1666,7 +1669,6 @@ namespace BetterAI
                         }
                     }
                 }
-
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                       END ###
   ##############################################*/
@@ -1674,7 +1676,6 @@ namespace BetterAI
                 //following: a lot of base game code (from Tile.canHaveImprovement)
                 //basically canHaveImprovement without the culture check. Tech is checked elsewhere
                 //city-specific only
-
                 {
                     ReligionType eReligionSpread = game().getImprovementReligionSpread(eImprovement);
 
@@ -2004,12 +2005,9 @@ namespace BetterAI
                 }
 
                 return true;
-
                 //end base game code
             }
         }
-
-
 
     }
 }

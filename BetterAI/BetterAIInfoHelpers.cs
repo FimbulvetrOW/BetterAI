@@ -12,9 +12,11 @@ namespace BetterAI
         {
         }
 
+/*####### Better Old World AI - Base DLL #######
+  ### Old (precise) collateral damage  START ###
+  ##############################################*/
         public override int getAttackDamage(int iFromStrength, int iToStrength, int iPercent)
         {
-
             if (((BetterAIInfoGlobals)mInfos.Globals).BAI_PRECISE_COLLATERAL_DAMAGE == 0)
             {
                 return base.getAttackDamage(iFromStrength, iToStrength, iPercent);
@@ -41,6 +43,9 @@ namespace BetterAI
 
             return Math.Max(1, iDamage);
         }
+/*####### Better Old World AI - Base DLL #######
+  ### Old (precise) collateral damage    END ###
+  ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
   ### Leader yield preview fix         START ###
@@ -52,7 +57,6 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
  ### Leader yield preview fix           END ###
  ##############################################*/
-
 
         public override int modifyRating(int iValue, int iRating, int iOffset, Game pGame)
         {
@@ -129,7 +133,6 @@ namespace BetterAI
 
             return iYield;
         }
-
 
     }
 }

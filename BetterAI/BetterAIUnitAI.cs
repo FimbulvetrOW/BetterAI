@@ -13,7 +13,6 @@ namespace BetterAI
         {
             static public int LAST_STAND_EXTRA_HP = 3;
 
-
             //re-enabling pillaging on water by tribal land units if delay turns are set
             //lines 1019-1064
             public override bool shouldTribePillage(Tile pTile)

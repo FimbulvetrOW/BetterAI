@@ -157,7 +157,6 @@ namespace BetterAI
 
         }
 
-
         protected override void ReadInfoListData(List<XmlDataListItemBase> items, bool deferredPass)
         {
             //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData");
@@ -173,7 +172,6 @@ namespace BetterAI
                 if (!mModSettings.ModPath.IsStrictMode()) return !deferredPass;
                 return item.GetFlags().HasFlag(XmlDataListFlags.StrictModeDeferred) ? deferredPass : !deferredPass;
             }
-
 
             void read(XmlDataListItemBase item)
             {
@@ -201,7 +199,6 @@ namespace BetterAI
                     validationNodes.Add(nodes);
                 }
                 
-
                 foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD_ALWAYS))
                 {
                     XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
@@ -497,7 +494,6 @@ namespace BetterAI
     //InfoBase.cs, line 1701
     public class BetterAIInfoEffectUnit : InfoEffectUnit
     {
-
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
@@ -575,7 +571,6 @@ namespace BetterAI
   ### Tile-based Combat Modifiers        END ###
   ##############################################*/
         }
-
     }
 
 /*####### Better Old World AI - Base DLL #######

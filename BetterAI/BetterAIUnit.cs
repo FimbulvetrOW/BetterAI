@@ -535,66 +535,6 @@ namespace BetterAI
             return false;
         }
 
-        //For debugging these null refs. Not in use.
-        //private Func<string> PushText()
-        //{
-        //    if (this == null)
-        //    {
-        //        UnityEngine.Debug.Log("Push Text: Unit == null");
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-        //    }
-        //    else if (infos() == null)
-        //    {
-        //        UnityEngine.Debug.Log("Push Text: Unit.infos() == null");
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-        //    }
-        //    else if (getPushEffectUnit() == EffectUnitType.NONE)
-        //    {
-        //        UnityEngine.Debug.Log("Push Text: getPushEffectUnit() == EffectUnitType.NONE");
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-        //    }
-        //    else if (infos().effectUnit(getPushEffectUnit()) == null)
-        //    {
-        //        UnityEngine.Debug.Log("Push Text: infos().effectUnit(getPushEffectUnit()) == null");
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-        //    }
-        //    else
-        //    {
-        //        //return () => TextManager.TEXT(infos().effectUnit(getPushEffectUnit()).mName);
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC");
-        //    }
-        //}
-
-        //private Func<string> RoutText()
-        //{
-        //    if (this == null)
-        //    {
-        //        UnityEngine.Debug.Log("Rout Text: Unit == null");
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-        //    }
-        //    else if (infos() == null)
-        //    {
-        //        UnityEngine.Debug.Log("Rout Text: Unit.infos() == null");
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-        //    }
-        //    else if (getRoutEffectUnit() == EffectUnitType.NONE)
-        //    {
-        //        UnityEngine.Debug.Log("Rout Text: getRoutEffectUnit() == EffectUnitType.NONE");
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-        //    }
-        //    else if (infos().effectUnit(getRoutEffectUnit()) == null)
-        //    {
-        //        UnityEngine.Debug.Log("Rout Text: infos().effectUnit(getRoutEffectUnit()) == null");
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-        //    }
-        //    else
-        //    {
-        //        //return () => TextManager.TEXT(infos().effectUnit(getRoutEffectUnit()).mName);
-        //        return () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT");
-        //    }
-        //}
-
-
         //lines 8008-8324
         public override void attackUnitOrCity(Tile pToTile, Player pActingPlayer)
         {
@@ -1008,7 +948,6 @@ namespace BetterAI
             {
                 iValue += infos().Globals.COUNTER_ROUT_DAMAGE;
             }
-            
 
 /*####### Better Old World AI - Base DLL #######
   ### Attack Heal                      START ###
@@ -1025,7 +964,6 @@ namespace BetterAI
 
             return Math.Min(iValue, (getHP() - 1));
         }
-
 
         //lines 9063-9089
         public override bool canPillage(Tile pTile, Player pActingPlayer, bool bTestEnabled = true)
@@ -1120,7 +1058,6 @@ namespace BetterAI
   ### Agent Network Cost Scaling         END ###
   ##############################################*/
 
-
         public override bool canUpgradeFromToUnit(UnitType eFromUnit, UnitType eToUnit, int iTimeout = 0)
         {
 /*####### Better Old World AI - Base DLL #######
@@ -1176,7 +1113,6 @@ namespace BetterAI
 
             return false;
         }
-
 
     }
 }

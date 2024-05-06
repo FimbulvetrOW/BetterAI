@@ -376,7 +376,6 @@ namespace BetterAI
   ### Additional fields for Courtiers    END ###
   ##############################################*/
 
-
         public override bool addPing(PingData sPing)
         {
             removePing(sPing.miTileID);
@@ -423,7 +422,6 @@ namespace BetterAI
             }
             return false;
         }
-
 
     }
 }
