@@ -895,30 +895,6 @@ namespace BetterAI
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
-  ### Fix: Culture shrinking           START ###
-  ##############################################*/
-        public override void shrinkCulture()
-        {
-            if (getTeamCultureStep(getTeam()) > 0)
-            {
-                setTeamCultureStep(getTeam(), getTeamCultureStep(getTeam()) - 1);
-            }
-            else
-            {
-                for (CultureType ePreviousCulture = 0; ePreviousCulture < infos().culturesNum(); ++ePreviousCulture)
-                {
-                    if (infos().culture(ePreviousCulture).meNextCulture == getTeamCulture(getTeam()))
-                    {
-                        setTeamCulture(getTeam(), ePreviousCulture);
-                    }
-                }
-            }
-        }
-/*####### Better Old World AI - Base DLL #######
-  ### Fix: Culture shrinking             END ###
-  ##############################################*/
-
-/*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###
   ##############################################*/
         //copy & paste START
@@ -1389,7 +1365,16 @@ namespace BetterAI
                 {
                     if (condition == null || condition(pAdjacentTile.getID()))
                     {
-                        long iValue = player().AI.improvementValueTile(eImprovement, pAdjacentTile, this, false, false, true);
+                        long iValue = 0;
+                        if (hasPlayer())
+                        {
+                            iValue = player().AI.improvementValueTile(eImprovement, pAdjacentTile, this, false, false, true);
+                        }
+                        else if (isTribe())
+                        {
+                            iValue = game().randomNext(1000) + 1;
+                        }
+
                         if (iValue > iBestValue)
                         {
                             pBestTile = pAdjacentTile;

@@ -1141,13 +1141,10 @@ namespace BetterAI
                     }
                 }
 
-                int iModifier = 0;
-                if (!isPeaceful() || game.isCompetitiveGameMode())
+                int iModifier = 50;
+                if (isPeaceful() && !game.isCompetitiveGameMode())
                 {
-                    iModifier += 50;
-                }
-                else
-                {
+                    int iPowerModifier = 0;
                     for (PlayerType eLoopPlayer = 0; eLoopPlayer < game.getNumPlayers(); ++eLoopPlayer)
                     {
                         Player pLoopPlayer = game.player(eLoopPlayer);
@@ -1156,10 +1153,14 @@ namespace BetterAI
                             PowerType eStrength = player.calculatePowerOf(eLoopPlayer);
                             if (eStrength != PowerType.NONE)
                             {
-                                iModifier = Math.Max(iModifier, infos.power(eStrength).miWarModifier);
+                                iPowerModifier = Math.Max(iPowerModifier, infos.power(eStrength).miWarModifier);
                             }
                         }
                     }
+
+                    iModifier += iPowerModifier;
+                    iModifier += game.opponentLevel().miWarModifier;
+                    iModifier -= 100;
                 }
 
 /*####### Better Old World AI - Base DLL #######
@@ -3349,7 +3350,7 @@ namespace BetterAI
                     }
                 }
 
-                if (pCity.getEffectCityCount(eEffectCity) == (bRemove ? 1 : 0))
+                if ((pCity.getEffectCityCount(eEffectCity) > 0) != (pCity.getEffectCityCount(eEffectCity) + iExtraCount > 0))
                 {
                     for (ProjectType eLoopProject = 0; eLoopProject < infos.projectsNum(); ++eLoopProject)
                     {

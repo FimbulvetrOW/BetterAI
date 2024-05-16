@@ -277,7 +277,7 @@ namespace BetterAI
                     for (int i = 0; i < pGame.getNumOccurrences(); ++i)
                     {
                         OccurrenceData pLoopData = pGame.getOccurrenceDataAt(i);
-                        if (pLoopData.isActive(pGame))
+                        if (pGame.isOccurrenceActive(pLoopData.miID))
                         {
                             InfoOccurrence occurrence = infos().occurrence(pLoopData.meType);
                             int iValue = occurrence.miBaseYieldCoastModifier;

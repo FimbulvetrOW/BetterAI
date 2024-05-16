@@ -238,6 +238,12 @@ namespace BetterAI
         //lines 6661-6697
         public override bool canSwapUnits(Tile pTile, Player pActingPlayer, bool bMarch)
         {
+            if (pActingPlayer == null || pActingPlayer.isAIAutoPlay())
+            {
+                // no AI swapping - don't want any unplanned moves 
+                return false;
+            }
+
             if (!canAct(pActingPlayer, (1 + ((isFatigued()) ? infos().Globals.UNIT_FATIGUE_COST : 0))))
             {
                 return false;

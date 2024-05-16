@@ -1,18 +1,11 @@
-﻿using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TenCrowns.AppCore;
-using TenCrowns.GameCore;
+﻿using TenCrowns.GameCore;
 using TenCrowns.GameCore.Text;
-using static TenCrowns.GameCore.Text.TextExtensions;
-using Constants = TenCrowns.GameCore.Constants;
-using Enum = System.Enum;
-using TenCrowns.ClientCore;
+using UnityEngine;
 using Mohawk.SystemCore;
 using Mohawk.UIInterfaces;
-using UnityEngine;
-using UnityEngine.UI;
-using System;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
+using TenCrowns.ClientCore;
 
 namespace BetterAI
 {

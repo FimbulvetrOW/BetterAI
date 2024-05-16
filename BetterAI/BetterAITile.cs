@@ -290,14 +290,17 @@ namespace BetterAI
                 {
                     if (!adjacentToCityImprovementClassFinished(pCity, eImprovementClass))
                     {
-                        if (pCity == null)
+                        for (int iI = 0; iI < game().getNumTiles(); iI++)
                         {
-                            return false;
-                        }
+                            Tile pLoopTile = game().tile(iI);
 
-                        if (pCity.hasPlayer() && pCity.player().getFinishedImprovementClassCount(eImprovementClass) > 0)
-                        {
-                            return false;
+                            if (pLoopTile != null && pLoopTile.getID() != getID() && pLoopTile.hasImprovement())
+                            {
+                                if (pLoopTile.improvement().meClass == eImprovementClass)
+                                {
+                                    return false;
+                                }
+                            }
                         }
                     }
                 }
@@ -841,7 +844,7 @@ namespace BetterAI
                 for (int i = 0; i < game().getNumOccurrences(); ++i)
                 {
                     OccurrenceData pLoopData = game().getOccurrenceDataAt(i);
-                    if (pLoopData.isActive(game()) && pLoopData.isValidForPlayer(getOwner()))
+                    if (game().isOccurrenceActive(pLoopData.meType, getOwner()))
                     {
                         if (infos().occurrence(pLoopData.meType).mbNoYieldsOnCoast)
                         {
