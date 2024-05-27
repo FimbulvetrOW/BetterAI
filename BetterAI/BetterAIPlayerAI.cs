@@ -1729,6 +1729,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
   ##############################################*/
+                if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    UnityEngine.Debug.Log("BonusAdjacentImprovement: AI eval start");
+                }
                 BetterAITile BAI_pTile = (BetterAITile)pTile;
                 BetterAICity BAI_pCity = (BetterAICity)pCity;
 
@@ -1865,6 +1869,11 @@ namespace BetterAI
                 if (eBonusImprovement != ImprovementType.NONE && iBonusImprovementValue != int.MinValue)
                 {
                     iValue += iBonusImprovementValue;
+                }
+                
+                if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    UnityEngine.Debug.Log("BonusAdjacentImprovement: AI eval end");
                 }
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###

@@ -383,12 +383,19 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
   ##############################################*/
+
+            if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+            {
+                UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement start");
+            }
+
             if (!(pImprovementInfo.mbMakesAdjacentPassableLandTileValidForBonusImprovement))
             {
                 if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
                 {
                     if (!canCityTileAddImprovementAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovement, pImprovementInfo.mbSpreadsBorders))
                     {
+                        UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 1");
                         return false;
                     }
                 }
@@ -396,6 +403,7 @@ namespace BetterAI
                 {
                     if (!canCityTileAddImprovementClassAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovementClass, pImprovementInfo.mbSpreadsBorders, out _))
                     {
+                        UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 2");
                         return false;
                     }
                 }
@@ -407,6 +415,7 @@ namespace BetterAI
                 {
                     if (pCity.player() == null || pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true) || !pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement: false, bForceImprovement: true))
                     {
+                        UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 3");
                         return false;
                     }
                     eTestImprovement = pImprovementInfo.meBonusAdjacentImprovement;
@@ -430,14 +439,21 @@ namespace BetterAI
 
                     if (!bFound)
                     {
+                        UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 4");
                         return false;
                     }
                 }
 
                 if (!adjacentToPassableLandSameCityWithoutImprovement(infos().improvement(eImprovement).mbSpreadsBorders, eTestImprovement))
                 {
+                    UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 5");
                     return false;
                 }
+            }
+
+            if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+            {
+                UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 6");
             }
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
@@ -642,7 +658,13 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
   ##############################################*/
+
             {
+                if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    UnityEngine.Debug.Log("BonusAdjacentImprovement: isImprovementValid start");
+                }
+
                 //check if the BonusAdjacentImprovements are also valid
                 if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
                 {
@@ -651,14 +673,18 @@ namespace BetterAI
                     for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
                     {
                         Tile pAdjacentTile = tileAdjacent(eLoopDirection);
-                        if (pAdjacentTile != null && pAdjacentTile.cityTerritory() == pCityTerritory || pAdjacentTile.cityTerritory() == null)
+                        if (pAdjacentTile != null)
                         {
-                            if (pAdjacentTile.isImprovementValid(eImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity))
+                            if (pAdjacentTile.cityTerritory() == pCityTerritory || pAdjacentTile.cityTerritory() == null)
                             {
-                                bFound = true;
-                                break;
+                                if (pAdjacentTile.isImprovementValid(pImprovementInfo.meBonusAdjacentImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity))
+                                {
+                                    bFound = true;
+                                    break;
+                                }
                             }
                         }
+
                     }
 
                     if (!bFound)
@@ -677,12 +703,15 @@ namespace BetterAI
                             for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
                             {
                                 Tile pAdjacentTile = tileAdjacent(eLoopDirection);
-                                if (pAdjacentTile != null && pAdjacentTile.cityTerritory() == pCityTerritory || pAdjacentTile.cityTerritory() == null)
+                                if (pAdjacentTile != null)
                                 {
-                                    if (pAdjacentTile.isImprovementValid(eImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity))
+                                    if (pAdjacentTile.cityTerritory() == pCityTerritory || pAdjacentTile.cityTerritory() == null)
                                     {
-                                        bFound = true;
-                                        break;
+                                        if (pAdjacentTile.isImprovementValid(eLoopImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity))
+                                        {
+                                            bFound = true;
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -694,6 +723,11 @@ namespace BetterAI
                     {
                         return false;
                     }
+                }
+
+                if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    UnityEngine.Debug.Log("BonusAdjacentImprovement: isImprovementValid end");
                 }
             }
 /*####### Better Old World AI - Base DLL #######
