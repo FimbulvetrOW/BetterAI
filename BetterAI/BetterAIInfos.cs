@@ -654,6 +654,7 @@ namespace BetterAI
         public int BAI_USE_TRIANGLE_IN_COMPETITIVE = 0;
         public int BAI_COMPETITIVE_COURT_YIELD_MODIFIER = 0;
         public int BAI_BETTER_BOUNCE = 0;
+        public int BAI_PLAYEREVENT_STAT_BONUS_GOES_TO_PRIMARY_STAT_PERCENT = 0;
 
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
@@ -692,6 +693,7 @@ namespace BetterAI
             BAI_COMPETITIVE_COURT_YIELD_MODIFIER = infos.getGlobalInt("BAI_COMPETITIVE_COURT_YIELD_MODIFIER");
 
             BAI_BETTER_BOUNCE = infos.getGlobalInt("BAI_BETTER_BOUNCE");
+            BAI_PLAYEREVENT_STAT_BONUS_GOES_TO_PRIMARY_STAT_PERCENT = infos.getGlobalInt("BAI_PLAYEREVENT_STAT_BONUS_GOES_TO_PRIMARY_STAT_PERCENT");
         }
     }
 /*####### Better Old World AI - Base DLL #######

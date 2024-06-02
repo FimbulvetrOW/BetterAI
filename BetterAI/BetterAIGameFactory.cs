@@ -41,6 +41,11 @@ namespace BetterAI
         {
             return new BetterAIHelpText(pModSettings);
         }
+        public override Game CreateGame(ModSettings pModSettings, IApplication pApp, bool bShowGame)
+        {
+            return new BetterAIGame(pModSettings, pApp, bShowGame);
+        }
+
         public override City CreateCity()
         {
             return new BetterAICity();

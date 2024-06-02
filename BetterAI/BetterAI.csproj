@@ -77,6 +77,7 @@
     <Compile Include="BetterAIClientRenderer.cs" />
     <Compile Include="BetterAIClientUI.cs" />
     <Compile Include="BetterAIEnums.cs" />
+    <Compile Include="BetterAIGame.cs" />
     <Compile Include="BetterAIGameFactory.cs" />
     <Compile Include="BetterAIHelpText.cs" />
     <Compile Include="BetterAIInfoHelpers.cs" />
@@ -84,6 +85,7 @@
     <Compile Include="BetterAIPlayer.cs" />
     <Compile Include="BetterAIPlayerAI.cs" />
     <Compile Include="BetterAIPlayerCache.cs" />
+    <Compile Include="BetterAIPlayerEvent.cs" />
     <Compile Include="BetterAITile.cs" />
     <Compile Include="BetterAIUnit.cs" />
     <Compile Include="BetterAIUnitAI.cs" />
