@@ -23,7 +23,7 @@ namespace BetterAI
 {
     public class BetterAICharacter : Character
     {
-
+        //lines 4427-4438
         public override int getLegitimacy(int iIndex, int iNumLeaders)
         {
             if (hasCognomen() && hasPlayer() && isOrWasLeader())
@@ -61,6 +61,73 @@ namespace BetterAI
             }
             return 0;
         }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+        //lines 2615-2624
+        public override void setCityAgentID(int iNewValue)
+        {
+            if (getCityAgentID() != iNewValue)
+            {
+                updateLastData(DirtyType.miCityAgentID, mpCurrentData.miCityAgentID, ref mpLastUpdateData.miCityAgentID);
+
+                if (((BetterAIInfoJob)infos().job(infos().Globals.AGENT_JOB)).bAnyTraitEffectPlayer)
+                {
+                    if (getCityAgentID() != -1)
+                    {
+
+                    }
+                    else if (iNewValue != -1)
+                    {
+
+                    }
+                }
+
+                mpCurrentData.miCityAgentID = iNewValue;
+
+                updateOpinionPlayer();
+            }
+        }
+
+        public override void resetTraitEffectPlayer(TraitType eTrait, int iChange)
+        {
+            base.resetTraitEffectPlayer(eTrait, iChange);
+            if (!isLeader() && isJob())
+            {
+                EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eTrait))).maeJobEffectPlayer[getJob()];
+
+                if (eEffectPlayer != EffectPlayerType.NONE)
+                {
+                    player().changeEffectPlayerCount(eEffectPlayer, iChange);
+                }
+            }
+
+            if (((BetterAIInfoTrait)(infos().trait(eTrait))).bAnyTraitEffectPlayer)
+            {
+                for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
+                {
+                    EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eTrait))).maeTraitEffectPlayer[eLoopTrait];
+                    if (eEffectPlayer != EffectPlayerType.NONE)
+                    {
+                        player().changeEffectPlayerCount(eEffectPlayer, iChange);
+                    }
+
+                    if (eTrait != eLoopTrait)
+                    {
+                        eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eLoopTrait))).maeTraitEffectPlayer[eTrait];
+                        if (eEffectPlayer != EffectPlayerType.NONE)
+                        {
+                            player().changeEffectPlayerCount(eEffectPlayer, iChange);
+                        }
+                    }
+                }
+            }
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+
 
         //lines 7677-7701
         public override void generateRatingsCourtier(CourtierType eCourtier)
