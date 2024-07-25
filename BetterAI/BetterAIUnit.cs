@@ -234,104 +234,6 @@ namespace BetterAI
         }
         //copy-pasted from Unit.cs END
 
-        //copy-paste START
-        //lines 6661-6697
-        public override bool canSwapUnits(Tile pTile, Player pActingPlayer, bool bMarch)
-        {
-            if (pActingPlayer == null || pActingPlayer.isAIAutoPlay())
-            {
-                // no AI swapping - don't want any unplanned moves 
-                return false;
-            }
-
-            if (!canAct(pActingPlayer, (1 + ((isFatigued()) ? infos().Globals.UNIT_FATIGUE_COST : 0))))
-            {
-                return false;
-            }
-
-            if (isFatigued() && !isMarch())
-            {
-                if ((bMarch) ? !canMarch(pActingPlayer) : true)
-                {
-                    return false;
-                }
-            }
-
-            if (!canOccupyTile(pTile, getTeam(), bTestTheirUnits: true, bTestOurUnits: false, bBump: true))
-            {
-                return false;
-            }
-
-            if (!(pTile.isTileAdjacent(tile())))
-            {
-                return false;
-            }
-
-            if (tile().isHostileZOC(this) && pTile.isHostileZOC(this))
-            {
-                return false;
-            }
-
-/*####### Better Old World AI - Base DLL #######
-  ### Fix Swap Unit Exploit            START ###
-  ##############################################*/
-            BetterAIUnit pUnit = (BetterAIUnit)swapUnit(pTile, pActingPlayer);
-            if (pUnit == null)
-            {
-                return false;
-            }
-            else
-            {
-                if (pUnit.getStepsToFatigue() < ((BetterAIInfoGlobals)infos().Globals).BAI_SWAP_UNIT_FATIGUE_COST || pUnit.isMarch()) //getStepsToFatigue() is always at least 0
-                {
-                    return false;
-                }
-            }
-/*####### Better Old World AI - Base DLL #######
-  ### Fix Swap Unit Exploit              END ###
-  ##############################################*/
-
-            return true;
-        }
-
-        //lines 6698-6721
-        public override void swapUnits(Tile pTile, Player pActingPlayer, bool bMarch)
-        {
-            MohawkAssert.Assert(canSwapUnits(pTile, pActingPlayer, bMarch));
-
-            int iCost = (1 + ((isFatigued()) ? infos().Globals.UNIT_FATIGUE_COST : 0));
-
-            if (bMarch)
-            {
-                if (isFatigued() && !isMarch())
-                {
-                    march(pActingPlayer);
-                }
-            }
-
-            BetterAIUnit pUnit = (BetterAIUnit)swapUnit(pTile, pActingPlayer);
-
-            pUnit.setTileID(getTileID(), pActingPlayer);
-
-/*####### Better Old World AI - Base DLL #######
-  ### Fix Swap Unit Exploit            START ###
-  ##############################################*/
-
-            pUnit.changeTurnSteps(((BetterAIInfoGlobals)infos().Globals).BAI_SWAP_UNIT_FATIGUE_COST);
-
-/*####### Better Old World AI - Base DLL #######
-  ### Fix Swap Unit Exploit              END ###
-  ##############################################*/
-
-            pUnit.wake();
-
-            setTileID(pTile.getID(), pActingPlayer);
-            changeTurnSteps(1);
-            act(pActingPlayer, iCost);
-            wake();
-        }
-        //copy-paste END
-
 /*####### Better Old World AI - Base DLL #######
   ### Better bounce tile search        START ###
   ##############################################*/
@@ -421,11 +323,11 @@ namespace BetterAI
   ##############################################*/
 
         //lines 6929-6939
-        public override Tile bounceTile(TeamType eTeamTerritoryAvoid = TeamType.NONE)
+        public override Tile bounceTile(TeamType eTeamTerritoryAvoid = TeamType.NONE, Tile pAvoidTile = null, Unit pIgnoreUnit = null)
         {
             if (((BetterAIInfoGlobals)infos().Globals).BAI_BETTER_BOUNCE == 0 || player() == null || player().getCities() == null || player().getCities().Count() == 0)
             {
-                return base.bounceTile(eTeamTerritoryAvoid);
+                return base.bounceTile(eTeamTerritoryAvoid, pAvoidTile, pIgnoreUnit);
             }
 
 /*####### Better Old World AI - Base DLL #######
@@ -500,19 +402,19 @@ namespace BetterAI
                 {
                     if (isHiddenTileFrom(TeamType.NONE, tile()))
                     {
-                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFromAndCloser(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea));
+                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFromAndCloser(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea), pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
                         if (pTile != null) return pTile;
 
-                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFrom(TeamType.NONE, x));
+                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isHiddenTileFrom(TeamType.NONE, x), pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
                         if (pTile != null) return pTile;
                     }
                     else
                     {
-                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isTileCloserOrTeamTerritory(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea));
+                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, x => isTileCloserOrTeamTerritory(TeamType.NONE, x, aiCityTiles, bSameArea: bSameArea), pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
                         if (pTile != null) return pTile;
 
                         //units won't jump to different land masses/water bodies if there is any tile available, even if it's further away.
-                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, null);
+                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, predicate: null, pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
                         if (pTile != null) return pTile;
                     }
                 } while (switchOffAreaLimit());
@@ -521,7 +423,7 @@ namespace BetterAI
   ### Better bounce tile search          END ###
   ##############################################*/
 
-                pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, -1, null, null);
+                pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, -1, null, predicate: null, pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
 
                 return pTile;
             }
@@ -604,7 +506,7 @@ namespace BetterAI
                 bEvent = player().doEventTrigger(((isWaterAttack(pDefendingUnit)) ? infos().Globals.UNIT_COMBAT_WATER_EVENTTRIGGER : infos().Globals.UNIT_COMBAT_EVENTTRIGGER), this, pDefendingUnit);
             }
 
-            bool bAdvance = canAdvanceAfterAttack(pFromTile, pToTile, pDefendingUnit, true);
+            bool bAdvance = canAdvanceAfterAttack(pFromTile, pToTile, pDefendingUnit, true, pActingPlayer);
 
             for (AttackType eLoopAttack = 0; eLoopAttack < infos().attacksNum(); eLoopAttack++)
             {
@@ -723,7 +625,7 @@ namespace BetterAI
                     setTileID(pToTile.getID(), true, true, pActingPlayer, ref azTileTexts);
                 }
 
-                if ((pDefendingUnit != null) && (pDefendingUnit.getHP() == 0) && ((bAdvance) ? canHaveRoutCooldown(pToTile, pToTile, pDefendingUnit) : ((pFromTile.hasCity() || pFromTile.isCitySiteActive() || canDamageUnit(pToTile) || pDefendingUnit.isAlive()) && pFromTile.isTileAdjacent(pToTile) && canHaveRoutCooldown(pToTile, pFromTile, pDefendingUnit))))
+                if ((pDefendingUnit != null) && (pDefendingUnit.getHP() == 0) && ((bAdvance) ? canHaveRoutCooldown(pToTile, pToTile, pDefendingUnit, pActingPlayer) : ((pFromTile.hasCity() || pFromTile.isCitySiteActive() || canDamageUnit(pToTile) || pDefendingUnit.isAlive()) && pFromTile.isTileAdjacent(pToTile) && canHaveRoutCooldown(pToTile, pFromTile, pDefendingUnit, pActingPlayer))))
                 {
                     doCooldown(infos().Globals.ROUT_COOLDOWN);
 
@@ -876,6 +778,79 @@ namespace BetterAI
             game().doNetwork(); // to update health bars
             game().sendPendingClientMessages();
         }
+
+
+        //lines 8432-8470
+        public override Tile getPushTile(Unit pUnit, Tile pFromTile, Tile pToTile)
+        {
+            DirectionType eDirection = pFromTile.getDirection(pToTile);
+
+            if (eDirection != DirectionType.NONE)
+            {
+                bool bPositive = (pFromTile.turnSeed() % 2 == 0);
+
+/*####### Better Old World AI - Base DLL #######
+  ### Push Tile: don't use bounce      START ###
+  ##############################################*/
+                //Tile pFirstTile = pToTile.tileAdjacent(eDirection);
+                //Tile pSecondTile = pToTile.tileAdjacent(infos().utils().wrapDirection(eDirection, ((bPositive) ? 1 : -1)));
+                //Tile pThirdTile = pToTile.tileAdjacent(infos().utils().wrapDirection(eDirection, ((bPositive) ? -1 : 1)));
+
+                //if ((pFirstTile != null) && pFirstTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
+                //{
+                //    return pFirstTile;
+                //}
+                //else if ((pSecondTile != null) && pSecondTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
+                //{
+                //    return pSecondTile;
+                //}
+                //else if ((pThirdTile != null) && pThirdTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
+                //{
+                //    return pThirdTile;
+                //}
+                //else
+                //{
+                //    Tile pBounceTile = pUnit.bounceTile(pAvoidTile: pFromTile, pIgnoreUnit: this);
+
+                //    if (pBounceTile != null)
+                //    {
+                //        if (pBounceTile.isTileAdjacent(pToTile))
+                //        {
+                //            return pBounceTile;
+                //        }
+                //    }
+                //}
+
+
+                Tile pPushTile = pToTile.tileAdjacent(eDirection);
+                if ((pPushTile != null && pPushTile != pFromTile) && pPushTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
+                {
+                    return pPushTile;
+                }
+                for (int i = 1; i < (int)DirectionType.NUM_TYPES / 2; i++)
+                {
+                    pPushTile = pToTile.tileAdjacent(infos().utils().wrapDirection(eDirection, ((bPositive) ? i : -i)));
+                    if ((pPushTile != null && pPushTile != pFromTile) && pPushTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
+                    {
+                        return pPushTile;
+                    }
+
+                    pPushTile = pToTile.tileAdjacent(infos().utils().wrapDirection(eDirection, ((bPositive) ? -i : i)));
+                    if ((pPushTile != null && pPushTile != pFromTile) && pPushTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
+                    {
+                        return pPushTile;
+                    }
+
+                    bPositive = !bPositive;
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Push Tile: don't use bounce        END ###
+  ##############################################*/
+
+            }
+            return null;
+        }
+
 
 /*####### Better Old World AI - Base DLL #######
   ### Attack Heal                      START ###

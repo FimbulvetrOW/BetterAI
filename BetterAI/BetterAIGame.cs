@@ -28,108 +28,119 @@ namespace BetterAI
         {
             ReligionType eBestReligion = ReligionType.NONE;
             City pBestCity = null;
-            int iBestValue = 0;
+            int iBestValue = int.MinValue;
 
-            for (int iPass = 0; iPass < 2; iPass++)
+            void checkCityValue(City pTestCity)
             {
-                for (ReligionType eLoopReligion = 0; eLoopReligion < infos().religionsNum(); eLoopReligion++)
+                for (ReligionType eLoopReligion = 0; eLoopReligion < infos().religionsNum(); ++eLoopReligion)
                 {
-                    if (infos().religion(eLoopReligion).mbHidden)
+                    if (!infos().religion(eLoopReligion).mbHidden && isWorldReligion(eLoopReligion) && pTestCity.canFoundReligion(eLoopReligion, bTestPrereq))
                     {
-                        continue;
-                    }
-
-                    if (isWorldReligion(eLoopReligion))
-                    {
-                        if ((iPass == 0) ? canFoundReligion(eLoopReligion, true) : true)
-                        {
-                            foreach (City pLoopCity in getCities())
-                            {
-                                if ((ePlayer != PlayerType.NONE) ? (pLoopCity.getPlayer() == ePlayer) : true)
-                                {
-                                    if (pLoopCity.canFoundReligion(eLoopReligion, bTestPrereq))
-                                    {
-                                        int iValue = randomNext(1000) + 1;
+                        int iValue = 0;
 
 /*####### Better Old World AI - Base DLL #######
   ### Respect Preferred Religion       START ###
   ##############################################*/
-                                        if (pLoopCity == pCity)
-                                        {
-                                            //iValue += 16000;
-                                            iValue += 64000;
-                                        }
+                        if (!(pTestCity.isReligionHolyCityAny()))
+                        {
+                            //iValue += 64000;
+                            iValue += 128000;
+                        }
 
-                                        if (!(pLoopCity.isReligionHolyCityAny()))
-                                        {
-                                            //iValue += 8000;
-                                            iValue += 32000;
-                                        }
+                        if (pTestCity.player().countWorldReligionsWithHolyCities() == 0)
+                        {
+                            //iValue += 32000;
+                            iValue += 64000;
+                        }
 
-                                        if (pLoopCity.player().countWorldReligionsWithHolyCities() == 0)
-                                        {
-                                            //iValue += 4000;
-                                            iValue += 16000;
-                                        }
+                        if (!(pTestCity.isCapital()))
+                        {
+                            //iValue += 16000;
+                            iValue += 32000;
 
-                                        if (!(pLoopCity.isCapital()))
-                                        {
-                                            //iValue += 2000;
-                                            iValue += 8000;
-                                        }
+                        }
 
-                                        if (pLoopCity.isHuman())
-                                        {
-                                            //iValue += 1000;
-                                            iValue += 4000;
-                                        }
+                        //Dynasty preference > isHuman()
+                        if (pTestCity.isHuman())
+                        {
+                            //iValue += 8000;
+                            iValue += 1000;
+                        }
 
-                                        //if (ePlayer != PlayerType.NONE && player(ePlayer).hasDynasty() && player(ePlayer).dynasty().mePreferredReligion == eLoopReligion)
-                                        //{
-                                        //    iValue = int.MaxValue;
-                                        //}
 
-                                        //Dynasty has no preference: +1000
-                                        //Dynasty has preference, Religion is preference: +2000
-                                        //Dynasty has preference, Religion is not preference: +0
-                                        iValue += 1000;
-                                        if (pLoopCity.getPlayer() != PlayerType.NONE && pLoopCity.player().hasDynasty() && pLoopCity.player().dynasty().mePreferredReligion != ReligionType.NONE)
-                                        {
-                                            if (pLoopCity.player().dynasty().mePreferredReligion == eLoopReligion)
-                                            {
-                                                iValue += 1000;
-                                            }
-                                            else
-                                            {
-                                                iValue -= 1000;
-                                            }
-                                        }
+                        //if (pTestCity.player().hasDynasty() && pTestCity.player().dynasty().mePreferredReligion == eLoopReligion)
+                        //{
+                        //    iValue += 4000;
+                        //}
+
+                        //Dynasty has no preference: +8000
+                        //Dynasty has preference, Religion is preference: +16000
+                        //Dynasty has preference, Religion is not preference: +0
+                        iValue += 8000;
+                        if (pTestCity.getPlayer() != PlayerType.NONE && pTestCity.player().hasDynasty() && pTestCity.player().dynasty().mePreferredReligion != ReligionType.NONE)
+                        {
+                            if (pTestCity.player().dynasty().mePreferredReligion == eLoopReligion)
+                            {
+                                iValue += 8000;
+                            }
+                            else
+                            {
+                                iValue -= 8000;
+                            }
+                        }
 /*####### Better Old World AI - Base DLL #######
   ### Respect Preferred Religion         END ###
   ##############################################*/
 
-                                        if (iValue > iBestValue)
-                                        {
-                                            eBestReligion = eLoopReligion;
-                                            pBestCity = pLoopCity;
-                                            iBestValue = iValue;
-                                        }
-                                    }
-                                }
+                        if (!bTestPrereq)
+                        {
+                            if (pTestCity.canFoundReligion(eLoopReligion, true))
+                            {
+                                iValue += 4000;
                             }
+                            else if (canFoundReligion(eLoopReligion, true))
+                            {
+                                iValue += 2000;
+                            }
+                        }
+
+                        iValue += randomNext(1000);
+
+                        if (iValue > iBestValue)
+                        {
+                            eBestReligion = eLoopReligion;
+                            pBestCity = pTestCity;
+                            iBestValue = iValue;
                         }
                     }
                 }
+            }
 
-                if ((eBestReligion != ReligionType.NONE) && (pBestCity != null))
+            if (pCity != null)
+            {
+                checkCityValue(pCity);
+            }
+            else if (ePlayer != PlayerType.NONE)
+            {
+                foreach (int iCityID in player(ePlayer).getCities())
                 {
-                    pBestCity.foundReligion(eBestReligion, bTestPrereq);
-
-                    return eBestReligion;
+                    checkCityValue(city(iCityID));
+                }
+            }
+            else
+            {
+                foreach (City pLoopCity in getCities())
+                {
+                    checkCityValue(pLoopCity);
                 }
             }
 
-            return ReligionType.NONE;
+            if (pBestCity != null)
+            {
+                pBestCity.foundReligion(eBestReligion, bTestPrereq);
+            }
+
+            return eBestReligion;
         }
 
     }

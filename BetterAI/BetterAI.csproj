@@ -82,6 +82,7 @@
     <Compile Include="BetterAIHelpText.cs" />
     <Compile Include="BetterAIInfoHelpers.cs" />
     <Compile Include="BetterAIInfos.cs" />
+    <Compile Include="BetterAIMapBuilder.cs" />
     <Compile Include="BetterAIPlayer.cs" />
     <Compile Include="BetterAIPlayerAI.cs" />
     <Compile Include="BetterAIPlayerCache.cs" />

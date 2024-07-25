@@ -13,8 +13,41 @@ namespace BetterAI
         }
 
 /*####### Better Old World AI - Base DLL #######
+  ### Does improvement spread borders  START ###
+  ##############################################*/
+        public virtual bool improvementSpreadsBorders(ImprovementType eImprovement, Game pGame = null, Player pPlayer = null, Tile pTile = null)
+        {
+            if (eImprovement != ImprovementType.NONE && pGame != null)
+            {
+                if (pGame.infos().improvement(eImprovement).mbUrban || pGame.infos().improvement(eImprovement).mbSpreadsBorders)
+                {
+                    return true;
+                }
+                else
+                {
+                    if (pTile != null && pTile.getFreeSpecialist(eImprovement) != SpecialistType.NONE)
+                    {
+                        return true;
+                    }
+
+                    if (pPlayer != null)
+                    {
+                        return pPlayer.isSpreadBordersUnlock(eImprovement);
+                    }
+                }
+            }
+
+            return false;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Does improvement spread borders  START ###
+  ##############################################*/
+
+
+/*####### Better Old World AI - Base DLL #######
   ### Old (precise) collateral damage  START ###
   ##############################################*/
+        //lines 623-640
         public override int getAttackDamage(int iFromStrength, int iToStrength, int iPercent)
         {
             if (((BetterAIInfoGlobals)mInfos.Globals).BAI_PRECISE_COLLATERAL_DAMAGE == 0)
@@ -47,17 +80,7 @@ namespace BetterAI
   ### Old (precise) collateral damage    END ###
   ##############################################*/
 
-/*####### Better Old World AI - Base DLL #######
-  ### Leader yield preview fix         START ###
-  ##############################################*/
-        public override int getRatingYieldRateLeader(RatingType eRating, YieldType eYield, int iValue, OpinionCharacterType eOpinionCharacter, Game pGame)
-        {
-            return getRatingYieldRateCourt(eRating, eYield, iValue, 0, OpinionCharacterType.NONE, pGame);
-        }
-/*####### Better Old World AI - Base DLL #######
- ### Leader yield preview fix           END ###
- ##############################################*/
-
+        //lines 1035-1048
         public override int modifyRating(int iValue, int iRating, int iOffset, Game pGame)
         {
 /*####### Better Old World AI - Base DLL #######
@@ -78,6 +101,8 @@ namespace BetterAI
             }
             return iValue;
         }
+
+        //lines 1049-1062
         public override int boostRating(int iValue, int iRating, Game pGame)
         {
 /*####### Better Old World AI - Base DLL #######
@@ -99,6 +124,7 @@ namespace BetterAI
             return iValue;
         }
 
+        //lines 1063-1085
         protected override int getRatingYieldRateCourt(RatingType eRating, YieldType eYield, int iValue, int iModifier, OpinionCharacterType eOpinionCharacter, Game pGame)
         {
             if (iValue == 0)
@@ -133,6 +159,42 @@ namespace BetterAI
 
             return iYield;
         }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Leader yield preview fix         START ###
+  ##############################################*/
+        //lines 1086-1089
+        public override int getRatingYieldRateLeader(RatingType eRating, YieldType eYield, int iValue, OpinionCharacterType eOpinionCharacter, Game pGame)
+        {
+            return getRatingYieldRateCourt(eRating, eYield, iValue, 0, OpinionCharacterType.NONE, pGame);
+        }
+/*####### Better Old World AI - Base DLL #######
+ ### Leader yield preview fix           END ###
+ ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### Empty Sites Override             START ###
+  ##############################################*/
+        //lines 2521-2528
+        public override int getNumEmptySites(TribeLevelType eTribeLevel, DifficultyType eDifficulty)
+        {
+            if (eTribeLevel == TribeLevelType.NONE || ((BetterAIInfoTribeLevel)(mInfos.tribeLevel(eTribeLevel))).miEmptySites < 0)
+            {
+                if (eDifficulty == DifficultyType.NONE)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return (mInfos.tribeLevel(eTribeLevel).miBarbSitesNearby * mInfos.difficulty(eDifficulty).miEmptyNearbySitePercent + 50) / 100; // round to nearest
+                }
+                //return base.getNumEmptySites(eTribeLevel, eDifficulty);
+            }
+            else return ((BetterAIInfoTribeLevel)(mInfos.tribeLevel(eTribeLevel))).miEmptySites;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Empty Sites Override               END ###
+  ##############################################*/
 
     }
 }

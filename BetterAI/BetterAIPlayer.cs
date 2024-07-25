@@ -72,6 +72,18 @@ namespace BetterAI
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
+  ### Does improvement spread borders  START ###
+  ##############################################*/
+        public virtual bool improvementSpreadsBorders(ImprovementType eImprovement, int iTileID)
+        {
+            return (eImprovement != ImprovementType.NONE) && (infos().improvement(eImprovement).mbUrban || infos().improvement(eImprovement).mbSpreadsBorders || isSpreadBordersUnlock(eImprovement) || ((iTileID != -1) && game().tile(iTileID).getFreeSpecialist(eImprovement) != SpecialistType.NONE));
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Does improvement spread borders    END ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
   ### Fix: Handling of Regents for           ###
   ### legitimacy from former leaders   START ###
   ##############################################*/
@@ -131,6 +143,19 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Fix: Handling of Regents for           ###
   ### legitimacy from former leaders   START ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### Less development cities variation START ##
+  ##############################################*/
+        //lines 15239-15242
+        public override bool isStartCityNumberFlexible()
+        {
+            return base.isStartCityNumberFlexible() && (((BetterAIInfoGlobals)(infos().Globals)).BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT > 0);
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Less development cities variation  END ###
   ##############################################*/
 
 

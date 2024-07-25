@@ -76,11 +76,11 @@ namespace BetterAI
                 {
                     if (getCityAgentID() != -1)
                     {
-
+                        //remove job-trait player effect
                     }
                     else if (iNewValue != -1)
                     {
-
+                        //add job-trait player effect
                     }
                 }
 
@@ -107,14 +107,14 @@ namespace BetterAI
             {
                 for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
                 {
-                    EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eTrait))).maeTraitEffectPlayer[eLoopTrait];
-                    if (eEffectPlayer != EffectPlayerType.NONE)
-                    {
-                        player().changeEffectPlayerCount(eEffectPlayer, iChange);
-                    }
-
                     if (eTrait != eLoopTrait)
                     {
+                        EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eTrait))).maeTraitEffectPlayer[eLoopTrait];
+                        if (eEffectPlayer != EffectPlayerType.NONE)
+                        {
+                            player().changeEffectPlayerCount(eEffectPlayer, iChange);
+                        }
+
                         eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eLoopTrait))).maeTraitEffectPlayer[eTrait];
                         if (eEffectPlayer != EffectPlayerType.NONE)
                         {
@@ -174,11 +174,26 @@ namespace BetterAI
                     List<RatingType> aeRatings = ratingsListScoped.Value;
                     List<TraitType> aeTraits = traitListScoped.Value;
 
+                    int iBestIndependentTraitValue = -1;
+                    TraitType eIndependentTrait = TraitType.NONE;
+
                     for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
                     {
-                        if (isValidUpgradeTrait(eLoopTrait))
+                        if (isValidUpgradeTrait(eLoopTrait, bGeneral: false, bGovernor: false))
                         {
-                            aeTraits.Add(eLoopTrait);
+                            if ((isUnitGeneral() || isCityGovernor()) && isValidUpgradeTrait(eLoopTrait, isUnitGeneral(), isCityGovernor()))
+                            {
+                                aeTraits.Add(eLoopTrait);
+                            }
+                            else if (isLeaderOrHeir())
+                            {
+                                int iValue = game().randomNext(1000);
+                                if (iValue > iBestIndependentTraitValue)
+                                {
+                                    iBestIndependentTraitValue = iValue;
+                                    eIndependentTrait = eLoopTrait;
+                                }
+                            }
                         }
                     }
                     aeTraits.Shuffle(nextRandomSeed());
@@ -209,6 +224,11 @@ namespace BetterAI
                         {
                             aeRatings.RemoveRange(0, iExtraRatings);
                         }
+                    }
+
+                    if (eIndependentTrait != TraitType.NONE)
+                    {
+                        aeTraits.Add(eIndependentTrait);
                     }
 
                     if (aeTraits.Count + aeRatings.Count > 0)

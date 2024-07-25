@@ -213,7 +213,7 @@ namespace BetterAI
                 AI_CITY_PROJECT_COST_VALUE = pInfos.getGlobalInt("AI_CITY_PROJECT_COST_VALUE");
                 AI_CITY_HURRY_DISCONTENT_VALUE = pInfos.getGlobalInt("AI_CITY_HURRY_DISCONTENT_VALUE");
                 AI_CITY_REBEL_VALUE = pInfos.getGlobalInt("AI_CITY_REBEL_VALUE");
-                AI_CITY_AUTOBUILD_VALUE = pInfos.getGlobalInt("AI_CITY_AUTOBUILD_VALUE");
+                AI_CITY_NO_UNIT_VALUE = pInfos.getGlobalInt("AI_CITY_NO_UNIT_VALUE");
                 AI_CITY_HURRY_VALUE = pInfos.getGlobalInt("AI_CITY_HURRY_VALUE");
                 AI_CITY_GOVERNOR_VALUE = pInfos.getGlobalInt("AI_CITY_GOVERNOR_VALUE");
                 AI_CITY_IMPROVEMENT_VALUE = pInfos.getGlobalInt("AI_CITY_IMPROVEMENT_VALUE");
@@ -1158,9 +1158,9 @@ namespace BetterAI
                         }
                     }
 
-                    iModifier += iPowerModifier;
-                    iModifier += game.opponentLevel().miWarModifier;
-                    iModifier -= 100;
+                    iPowerModifier += game.opponentLevel().miWarModifier;
+
+                    iModifier = Math.Max(-50, Math.Min(iModifier, iPowerModifier - 100));
                 }
 
 /*####### Better Old World AI - Base DLL #######
@@ -1739,6 +1739,7 @@ namespace BetterAI
                 ImprovementType eBonusImprovement = ImprovementType.NONE;
 
                 long iBonusImprovementValue = int.MinValue;
+                bool bImprovementSpreadsBorders = ((BetterAIInfoHelpers)(infos.Helpers)).improvementSpreadsBorders(eImprovement, game, player, pTile);
 
                 if (!(pImprovementInfo.mbMakesAdjacentPassableLandTileValidForBonusImprovement))
                 {
@@ -1750,7 +1751,7 @@ namespace BetterAI
                             return -1;
                         }
 
-                        if (BAI_pTile.canCityTileAddImprovementAdjacent(BAI_pCity, pImprovementInfo.meBonusAdjacentImprovement, pImprovementInfo.mbSpreadsBorders))
+                        if (BAI_pTile.canCityTileAddImprovementAdjacent(BAI_pCity, pImprovementInfo.meBonusAdjacentImprovement, bImprovementSpreadsBorders))
                         {
                             eBonusImprovement = pImprovementInfo.meBonusAdjacentImprovement;
                         }
@@ -1763,7 +1764,7 @@ namespace BetterAI
                             return -1;
                         }
 
-                        BAI_pTile.canCityTileAddImprovementClassAdjacent(BAI_pCity, pImprovementInfo.meBonusAdjacentImprovementClass, pImprovementInfo.mbSpreadsBorders, out eBonusImprovement);
+                        BAI_pTile.canCityTileAddImprovementClassAdjacent(BAI_pCity, pImprovementInfo.meBonusAdjacentImprovementClass, bImprovementSpreadsBorders, out eBonusImprovement);
                     }
 
                     if (eBonusImprovement != ImprovementType.NONE && BAI_pCity.canCityHaveImprovement(eBonusImprovement, bForceImprovement: true))
@@ -1776,7 +1777,7 @@ namespace BetterAI
                             {
                                 if (pAdjacentTile.getImprovement() == ImprovementType.NONE
                                     && (!pAdjacentTile.hasResource() || infos.Helpers.isImprovementResourceValid(eBonusImprovement, pAdjacentTile.getResource()))
-                                    && pAdjacentTile.cityTerritory() == pTile.cityTerritory() || (pImprovementInfo.mbSpreadsBorders && pAdjacentTile.cityTerritory() == null)
+                                    && pAdjacentTile.cityTerritory() == pTile.cityTerritory() || (bImprovementSpreadsBorders && pAdjacentTile.cityTerritory() == null)
                                     && pAdjacentTile.canGeneralTileHaveImprovement(eBonusImprovement, bForceImprovement: true)
                                     && pAdjacentTile.canCityTileHaveImprovement(BAI_pCity, eBonusImprovement, bForceImprovement: true))
                                 {
@@ -1850,7 +1851,7 @@ namespace BetterAI
                                 if (pAdjacentTile.isLand() && !(pAdjacentTile.impassable())
                                     && pAdjacentTile.getImprovement() == ImprovementType.NONE
                                     && (!pAdjacentTile.hasResource() || infos.Helpers.isImprovementResourceValid(eBonusImprovement, pAdjacentTile.getResource()))
-                                    && pAdjacentTile.cityTerritory() == pTile.cityTerritory() || (pImprovementInfo.mbSpreadsBorders && pAdjacentTile.cityTerritory() == null)
+                                    && pAdjacentTile.cityTerritory() == pTile.cityTerritory() || (bImprovementSpreadsBorders && pAdjacentTile.cityTerritory() == null)
                                     && pAdjacentTile.canGeneralTileHaveImprovement(eBonusImprovement, bForceImprovement: true)
                                     && pAdjacentTile.canCityTileHaveImprovement(BAI_pCity, eBonusImprovement, bForceImprovement: true))
                                 {
@@ -2806,11 +2807,11 @@ namespace BetterAI
                 iValue -= (effectCity.miBuildTurnChange * AI_WORKER_BUILD_VALUE);
                 iValue -= (effectCity.miUrbanBuildTurnChange * AI_WORKER_BUILD_VALUE / 2);
 
-                if (effectCity.mbAutoBuild || effectCity.mbAutoBuildUnits)
+                if (effectCity.mbNoBuildUnits)
                 {
-                    if (pCity.isAutoBuild() != pCity.isAutoBuild(iExtraCount))
+                    if (pCity.isNoBuildUnits() != pCity.isNoBuildUnits(iExtraCount))
                     {
-                        iValue += AI_CITY_AUTOBUILD_VALUE; // XXX
+                        iValue += AI_CITY_NO_UNIT_VALUE; // XXX
                     }
                 }
 
@@ -3196,13 +3197,9 @@ namespace BetterAI
                     }
                 }
 
+                foreach (ResourceType eLuxuryResource in effectCity.maeLuxuryResources)
                 {
-                    ResourceType eLuxuryResource = effectCity.meLuxuryResource;
-
-                    if (eLuxuryResource != ResourceType.NONE)
-                    {
-                        iValue += calculateLuxuryValue(eLuxuryResource);
-                    }
+                    iValue += calculateLuxuryValue(eLuxuryResource);
                 }
 
                 for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
@@ -3632,6 +3629,7 @@ namespace BetterAI
             //copy-paste START
             //lines 17008-17183
             // Chance that we will declare war on them
+            //I should do Peace and Truce too
             public override int getWarOfferPercent(PlayerType eOtherPlayer, bool bDeclare = true, bool bPreparedOnly = false, bool bCurrentPlayer = true)
             {
                 //using var profileScope = new UnityProfileScope("PlayerAI.getWarOfferPercent");
@@ -3668,7 +3666,7 @@ namespace BetterAI
                 }
 
                 ProximityType eProximity = pOtherPlayer.calculateProximityPlayer(eThisPlayer);
-                PowerType eStrength = pOtherPlayer.calculatePowerOf(eThisPlayer);
+                PowerType eStrength = pOtherPlayer.calculateWarStrengthOf(eThisPlayer);
 
                 bool bPlayToWin = game.isPlayToWinVs(eOtherPlayer);
 
@@ -3754,23 +3752,23 @@ namespace BetterAI
                 {
                     if (pOtherPlayer.isCloseToWinning(5))
                     {
-                        iPercent = infos.utils().modify(iPercent, 50);
+                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_5);
                     }
                     else if (pOtherPlayer.isCloseToWinning(10))
                     {
-                        iPercent = infos.utils().modify(iPercent, 40);
+                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_10);
                     }
                     else if (pOtherPlayer.isCloseToWinning(15))
                     {
-                        iPercent = infos.utils().modify(iPercent, 30);
+                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_15);
                     }
                     else if (pOtherPlayer.isCloseToWinning(20))
                     {
-                        iPercent = infos.utils().modify(iPercent, 20);
+                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_20);
                     }
                     else
                     {
-                        iPercent = infos.utils().modify(iPercent, 10);
+                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_OTHER);
                     }
                 }
 

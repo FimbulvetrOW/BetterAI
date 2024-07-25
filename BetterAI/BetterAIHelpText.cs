@@ -1284,6 +1284,32 @@ namespace BetterAI
                                     }
                                 }
                             }
+                            if (infos().improvementClass(eImprovementClass).maeResourceCityEffect.Count > 0 && pPlayer != null && pTile != null)
+                            {
+                                for (ResourceType eLoopResource = 0; eLoopResource < infos().resourcesNum(); eLoopResource++)
+                                {
+                                    if (pTile.getResource() == eLoopResource)
+                                    {
+                                        for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < infos().effectCitiesNum(); eLoopEffectCity++)
+                                        {
+                                            using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
+                                            {
+                                                if (infos().improvementClass(eImprovementClass).maeResourceCityEffect[eLoopResource] == eLoopEffectCity)
+                                                {
+                                                    for (EffectCityType eOtherEffectCity = 0; eOtherEffectCity < infos().effectCitiesNum(); eOtherEffectCity++)
+                                                    {
+                                                        EffectCityType eEffectCity = infos().effectCity(eOtherEffectCity).maeEffectCityEffectCity[eLoopEffectCity];
+                                                        if (eEffectCity != EffectCityType.NONE && infos().effectCity(eOtherEffectCity).meSourceNation == pPlayer.getNation())
+                                                        {
+                                                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_CITY_HELP_NO_YIELDS_EFFECT_CITY_EFFECT_CITY", buildEffectCityLinkVariable(eLoopEffectCity, null, null), buildEffectCityLinkVariable(eEffectCity, null, null));
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         if ((pTile == null) || (pTile.getImprovement() != eImprovement))
@@ -1755,6 +1781,33 @@ namespace BetterAI
                                         }
                                     }
                                 }
+                                if (infos().improvementClass(eImprovementClass).maeResourceCityEffect.Count > 0)
+                                {
+                                    if (((pPlayer != null) ? pPlayer.isNationImprovement(eImprovement) : true))
+                                    {
+                                        using (TextBuilder effectCityBuilder = TextBuilder.GetTextBuilder(TextManager))
+                                        {
+                                            for (ResourceType eLoopResource = 0; eLoopResource < infos().resourcesNum(); eLoopResource++)
+                                            {
+                                                for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < infos().effectCitiesNum(); eLoopEffectCity++)
+                                                {
+                                                    if (infos().improvementClass(eImprovementClass).maeResourceCityEffect[eLoopResource] == eLoopEffectCity)
+                                                    {
+                                                        for (EffectCityType eOtherEffectCity = 0; eOtherEffectCity < infos().effectCitiesNum(); eOtherEffectCity++)
+                                                        {
+                                                            EffectCityType eEffectCity = infos().effectCity(eOtherEffectCity).maeEffectCityEffectCity[eLoopEffectCity];
+                                                            if (eEffectCity != EffectCityType.NONE)
+                                                            {
+                                                                effectCityBuilder.AddTEXT("TEXT_HELPTEXT_EFFECT_CITY_HELP_NO_YIELDS_EFFECT_CITY_EFFECT_CITY", buildEffectCityLinkVariable(eLoopEffectCity, null, null), buildEffectCityLinkVariable(eEffectCity, null, null));
+                                                                subText.Add(buildColonSpaceOne(buildEffectCityLinkVariable(eOtherEffectCity, null, null), effectCityBuilder.ToTextVariable()));
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -2094,7 +2147,7 @@ namespace BetterAI
                             {
                                 if (pGame.isCharacters())
                                 {
-                                    lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_FAMILY", buildFamilyLinkVariable(eFamilyPrereq, pGame), ((pCityTerritory != null) ? (pCityTerritory.getFamily() != eFamilyPrereq) : false))));
+                                    lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_FAMILY", buildFamilyLinkVariable(eFamilyPrereq, pGame)), (pCityTerritory != null) && (pCityTerritory.getFamily() != eFamilyPrereq)));
                                 }
                             }
                             else
@@ -2302,35 +2355,6 @@ namespace BetterAI
 
                                 req.AddItem(reqItem);
                             }
-
-/*####### Better Old World AI - Base DLL #######
-  ### City Biome                       START ###
-  ### not directy related but used for Baths ###
-  ##############################################*/
-                            //new: Class too
-                            if (eImprovementClass != ImprovementClassType.NONE)
-                            {
-                                int iCountClass = ((pCityTerritory != null) ? pCityTerritory.getImprovementClassCount(eImprovementClass) : 0);
-                                int iValueClass = ((BetterAIInfoImprovementClass)infos().improvementClass(eImprovementClass)).miMaxCityCount;
-                                if (iValueClass == 0 || (iValue > 0 && iValue <= iValueClass && iCount >= iCountClass))
-                                {
-                                    //skip
-                                }
-                                else
-                                {
-                                    TextVariable reqItem = buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_CITY_IMPROVEMENT_CLASS_COUNT", TEXTVAR(iValueClass)), (iCountClass >= iValueClass));
-
-                                    if (pCityTerritory != null)
-                                    {
-                                        reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS_FRACTION", reqItem, TEXTVAR(iCountClass), TEXTVAR(iValueClass));
-                                    }
-
-                                    req.AddItem(reqItem);
-                                }
-                            }
-/*####### Better Old World AI - Base DLL #######
-  ### City Biome                         END ###
-  ##############################################*/
                         }
 
                         {
@@ -2383,6 +2407,24 @@ namespace BetterAI
                                     if (pCityTerritory != null)
                                     {
                                         reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS_FRACTION", reqItem, TEXTVAR(pCityTerritory.getImprovementClassCount(eImprovementClass)), TEXTVAR(maxImprovements));
+                                    }
+
+                                    req.AddItem(reqItem);
+                                }
+                            }
+
+                            iValue = infos().improvementClass(eImprovementClass).miMaxCityCount;
+                            if (iValue > 0)
+                            {
+                                if (pCityTerritory != null)
+                                {
+                                    //TextVariable reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_CITY_IMPROVEMENT_COUNT", TEXTVAR(iValue), buildImprovementClassLinkVariable(eImprovementClass));
+                                    TextVariable reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_CITY_IMPROVEMENT_CLASS_COUNT", TEXTVAR(iValue), buildImprovementClassLinkVariable(eImprovementClass));
+                                    reqItem = buildWarningTextVariable(reqItem, ((pCityTerritory != null) && iValue <= pCityTerritory.getImprovementClassCount(eImprovementClass)));
+
+                                    if (pCityTerritory != null)
+                                    {
+                                        reqItem = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS_FRACTION", reqItem, TEXTVAR(pCityTerritory.getImprovementClassCount(eImprovementClass)), TEXTVAR(iValue));
                                     }
 
                                     req.AddItem(reqItem);
@@ -2705,6 +2747,21 @@ namespace BetterAI
                                 if (iValue != 0)
                                 {
                                     builder.Add(buildYieldValueIconLinkVariable(eLoopYield, -(iValue), bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                }
+                            }
+                        }
+
+                        for (ImprovementClassType eLoopImprovementClass = 0; eLoopImprovementClass < infos().improvementClassesNum(); eLoopImprovementClass++)
+                        {
+                            using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_UNIT_TYPE_IMPROVEMENT_YIELD", buildImprovementClassLinkVariable(eLoopImprovementClass), pGame?.turnScaleName() ?? TEXTVAR("y")))) //TODO: needs to be changed when mzScaleShort localization is added
+                            {
+                                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                                {
+                                    int iValue = infos().unit(eUnit).maaiImprovementClassYieldRate[eLoopImprovementClass, eLoopYield];
+                                    if (iValue != 0)
+                                    {
+                                        builder.Add(buildYieldValueIconLinkVariable(eLoopYield, iValue, bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                    }
                                 }
                             }
                         }
@@ -3356,6 +3413,24 @@ namespace BetterAI
   ### show abNoBaseOutput                END ###
   ##############################################*/
 
+                        if (pPlayer != null)
+                        {
+                            for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < infos().effectCitiesNum(); eLoopEffectCity++)
+                            {
+                                if (infos().improvementClass(eLoopImprovementClass).maeResourceCityEffect[eResource] == eLoopEffectCity)
+                                {
+                                    for (EffectCityType eOtherEffectCity = 0; eOtherEffectCity < infos().effectCitiesNum(); eOtherEffectCity++)
+                                    {
+                                        EffectCityType eEffectCity = infos().effectCity(eOtherEffectCity).maeEffectCityEffectCity[eLoopEffectCity];
+                                        if (eEffectCity != EffectCityType.NONE && infos().effectCity(eOtherEffectCity).meSourceNation == pPlayer.getNation())
+                                        {
+                                            builder.Add(buildEffectCityLinkVariable(eEffectCity, null, null));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         {
                             EffectCityType eEffectCity = infos().improvementClass(eLoopImprovementClass).maeResourceCityEffect[eResource];
                             if (eEffectCity != EffectCityType.NONE)
@@ -3401,19 +3476,11 @@ namespace BetterAI
                     }
                 }
 
-                using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < infos().effectCitiesNum(); eLoopEffectCity++)
                 {
-                    for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < infos().effectCitiesNum(); eLoopEffectCity++)
+                    if (infos().effectCity(eLoopEffectCity).maeLuxuryResources.Contains(eResource))
                     {
-                        if (infos().effectCity(eLoopEffectCity).meLuxuryResource == eResource)
-                        {
-                            subText.Add(buildEffectCitySourceLinkVariable(eLoopEffectCity, null, null, pGame, pActivePlayer));
-                        }
-                    }
-
-                    if (subText.HasContent)
-                    {
-                        builder.AddTEXT("TEXT_HELPTEXT_RESOURCE_FROM", subText.ToTextVariable());
+                        builder.AddTEXT("TEXT_HELPTEXT_RESOURCE_FROM", buildEffectCitySourceLinkVariable(eLoopEffectCity, null, null, pGame, pActivePlayer));
                     }
                 }
 

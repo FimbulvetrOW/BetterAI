@@ -1641,19 +1641,9 @@ namespace BetterAI
                         return false;
                     }
                 }
-                //check new class maxcity
+
                 ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
-                if (eImprovementClass != ImprovementClassType.NONE)
-                {
-                    int iMaxCityCount = ((BetterAIInfoImprovementClass)infos().improvementClass(eImprovementClass)).miMaxCityCount;
-                    if (iMaxCityCount > 0)
-                    {
-                        if (getImprovementClassCount(eImprovementClass) >= iMaxCityCount)
-                        {
-                            return false;
-                        }
-                    }
-                }
+                //Class city max is now in base game, code moved below
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                       END ###
   ##############################################*/
@@ -1747,18 +1737,6 @@ namespace BetterAI
                     //}
 
                     {
-                        FamilyType eFamilyPrereq = pImprovementInfo.meFamilyPrereq;
-
-                        if (eFamilyPrereq != FamilyType.NONE && game().isCharacters())
-                        {
-                            if (getFamily() != eFamilyPrereq)
-                            {
-                                return false;
-                            }
-                        }
-                    }
-
-                    {
                         ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
 
                         if (eImprovementPrereq != ImprovementType.NONE)
@@ -1783,6 +1761,18 @@ namespace BetterAI
                             //        return false;
                             //    }
                             //}
+                        }
+                    }
+
+                    {
+                        FamilyType eFamilyPrereq = infos().improvement(eImprovement).meFamilyPrereq;
+
+                        if (eFamilyPrereq != FamilyType.NONE && game().isCharacters())
+                        {
+                            if (getFamily() != eFamilyPrereq)
+                            {
+                                return false;
+                            }
                         }
                     }
 
@@ -1981,6 +1971,15 @@ namespace BetterAI
                             if (iMaxPerCulture > 0)
                             {
                                 if (getImprovementClassCount(eImprovementClass) >= (iMaxPerCulture * (int)(getCulture() + getCultureStep() + 1)))
+                                {
+                                    return false;
+                                }
+                            }
+
+                            int iMaxCity = infos().improvementClass(eImprovementClass).miMaxCityCount;
+                            if (iMaxCity > 0)
+                            {
+                                if (getImprovementClassCount(eImprovementClass) >= iMaxCity)
                                 {
                                     return false;
                                 }

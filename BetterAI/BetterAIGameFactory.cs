@@ -90,5 +90,9 @@ namespace BetterAI
         {
             return new BetterAIClientManager(gameInterfaces);
         }
+        public override MapBuilder CreateMapBuilder()
+        {
+            return new BetterAIMapBuilder();
+        }
     }
 }

@@ -25,12 +25,131 @@ namespace BetterAI
 {
     public class BetterAIInfos : Infos
     {
-        //line 382
+        //line 437
         public BetterAIInfos(ModSettings pModSettings) : base(pModSettings)
         {
         }
 
-        //line 1249-1274
+        //lines 775-868
+        protected override void ReadInfoListData(List<XmlDataListItemBase> items, bool deferredPass)
+        {
+            //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData");
+
+            bool isThreadSafe(XmlDataListItemBase item)
+            {
+                if (deferredPass) return false;
+                return !item.GetFlags().HasFlag(XmlDataListFlags.NonThreadSafe);
+            }
+
+            bool thisPass(XmlDataListItemBase item)
+            {
+                if (!mModSettings.ModPath.IsStrictMode()) return !deferredPass;
+                return item.GetFlags().HasFlag(XmlDataListFlags.StrictModeDeferred) ? deferredPass : !deferredPass;
+            }
+
+            void read(XmlDataListItemBase item)
+            {
+                //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData.Thread." + item.GetFileName());
+                Type currentType = item.GetType().GenericTypeArguments[1];
+
+                List<XmlNodeList> validationNodes = new List<XmlNodeList>();
+                ReadContext ctx = new ReadContext(currentType, null);
+
+                //base xml
+                foreach (XmlDocument xmlDoc in getModdableBaseXML(item.GetFileName()))
+                {
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, ctx);
+                    validationNodes.Add(nodes);
+                }
+
+                ctx.IsAddedData = true;
+
+                //added xml
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD))
+                {
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, ctx);
+                    validationNodes.Add(nodes);
+                }
+
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD_ALWAYS))
+                {
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, ctx);
+                }
+
+                //change xml
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetChangedXML(item.GetFileName()))
+                {
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, ctx);
+                }
+
+                /*####### Better Old World AI - Base DLL #######
+                  ### modmod fix                       START ###
+                  ##############################################*/
+                //make mod load order the only significant factor for change and append
+                //with this, you can -change, then a modmod can -append to that same item
+
+                ////append xml
+                //ctx.AppendLists = true;
+                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND))
+                //{
+                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                //    item.ReadData(nodes, this, ctx);
+                //    validationNodes.Add(nodes);
+                //}
+
+                //ctx.AppendLists = false;
+
+                ////change xml
+                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.CHANGE))
+                //{
+                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                //    item.ReadData(nodes, this, ctx);
+                //}
+
+                //append+change xml
+                List<XmlDocument> appends = mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND);
+                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND | ModdedXMLType.CHANGE))
+                {
+                    ctx.AppendLists = appends.Contains(xmlDoc);
+                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
+                    item.ReadData(nodes, this, ctx);
+                    validationNodes.Add(nodes);
+                }
+
+                ctx.AppendLists = false;
+                /*####### Better Old World AI - Base DLL #######
+                  ### modmod fix                         END ###
+                  ##############################################*/
+
+                mModSettings.XMLLoader.GetValidator().EndReadValidation(validationNodes, item.GetFileName(), currentType, mTypeDictionary, mRemovedXMLTypes.Keys);
+            }
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            foreach (XmlDataListItemBase item in items)
+            {
+                if (!isThreadSafe(item) && thisPass(item))
+                {
+                    read(item);
+                }
+            }
+            Parallel.ForEach(items, item =>
+            {
+                if (isThreadSafe(item) && thisPass(item))
+                {
+                    read(item);
+                }
+            });
+            stopwatch.Stop();
+            Debug.Log($"Infos.ReadInfoListData complete in {stopwatch.ElapsedMilliseconds} ms");
+        }
+
+
+        //line 1196-1218
         protected override void init(bool resetDefaultXMLCache)
         {
             base.init(resetDefaultXMLCache);
@@ -194,123 +313,9 @@ namespace BetterAI
 
         }
 
-        protected override void ReadInfoListData(List<XmlDataListItemBase> items, bool deferredPass)
-        {
-            //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData");
 
-            bool isThreadSafe(XmlDataListItemBase item)
-            {
-                if (deferredPass) return false;
-                return !item.GetFlags().HasFlag(XmlDataListFlags.NonThreadSafe);
-            }
-
-            bool thisPass(XmlDataListItemBase item)
-            {
-                if (!mModSettings.ModPath.IsStrictMode()) return !deferredPass;
-                return item.GetFlags().HasFlag(XmlDataListFlags.StrictModeDeferred) ? deferredPass : !deferredPass;
-            }
-
-            void read(XmlDataListItemBase item)
-            {
-                //using var profileScope = new UnityProfileScope("Infos.ReadInfoListData.Thread." + item.GetFileName());
-                Type currentType = item.GetType().GenericTypeArguments[1];
-
-                List<XmlNodeList> validationNodes = new List<XmlNodeList>();
-                ReadContext ctx = new ReadContext(currentType, null);
-
-                //base xml
-                foreach (XmlDocument xmlDoc in getModdableBaseXML(item.GetFileName()))
-                {
-                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, ctx);
-                    validationNodes.Add(nodes);
-                }
-
-                ctx.IsAddedData = true;
-
-                //added xml
-                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD))
-                {
-                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, ctx);
-                    validationNodes.Add(nodes);
-                }
-                
-                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.ADD_ALWAYS))
-                {
-                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, ctx);
-                }
-
-                //change xml
-                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetChangedXML(item.GetFileName()))
-                {
-                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, ctx);
-                }
-
-/*####### Better Old World AI - Base DLL #######
-  ### modmod fix                       START ###
-  ##############################################*/
-                //make mod load order the only significant factor for change and append
-                //with this, you can -change, then a modmod can -append to that same item
-
-                ////append xml
-                //ctx.AppendLists = true;
-                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND))
-                //{
-                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                //    item.ReadData(nodes, this, ctx);
-                //    validationNodes.Add(nodes);
-                //}
-
-                //ctx.AppendLists = false;
-
-                ////change xml
-                //foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.CHANGE))
-                //{
-                //    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                //    item.ReadData(nodes, this, ctx);
-                //}
-
-                //append+change xml
-                List<XmlDocument> appends = mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND);
-                foreach (XmlDocument xmlDoc in mModSettings.XMLLoader.GetModdedXML(item.GetFileName(), ModdedXMLType.APPEND | ModdedXMLType.CHANGE))
-                {
-                    ctx.AppendLists = appends.Contains(xmlDoc);
-                    XmlNodeList nodes = xmlDoc.SelectNodes("Root/Entry");
-                    item.ReadData(nodes, this, ctx);
-                    validationNodes.Add(nodes);
-                }
-
-                ctx.AppendLists = false;
-/*####### Better Old World AI - Base DLL #######
-  ### modmod fix                         END ###
-  ##############################################*/
-
-                mModSettings.XMLLoader.GetValidator().EndReadValidation(validationNodes, item.GetFileName(), currentType, mTypeDictionary, mRemovedXMLTypes.Keys);
-            }
-
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-            foreach (XmlDataListItemBase item in items)
-            {
-                if (!isThreadSafe(item) && thisPass(item))
-                {
-                    read(item);
-                }
-            }
-            Parallel.ForEach(items, item =>
-            {
-                if (isThreadSafe(item) && thisPass(item))
-                {
-                    read(item);
-                }
-            });
-            stopwatch.Stop();
-            Debug.Log($"Infos.ReadInfoListData complete in {stopwatch.ElapsedMilliseconds} ms");
-        }
-
+        //compare line 1805-1866 readTypeIntListByType<T, U>(ReadContext ctx, string zText, ref SparseList2D<T, U, int> lliValues)
+        // and line 1729-1769 readTypesByType<U, T>(ReadContext ctx, string zText, ref SparseList<U, T> leValues, T defaultVal)
         public virtual void readTypeTypeListByType<T, U, V>(ReadContext ctx, string zText, ref SparseList2D<T, U, V> lleValues, V defaultVal)
         {
             if (AddFieldType(zText, ctx, typeof(List<Tuple<T, Tuple<U, V>>>), false))
@@ -377,10 +382,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
   ##############################################*/
-        //line 231
+        //line 283
         protected List<BetterAIInfoCourtier> maBetterAICourtiers;
 
-        //line 2464
+        //line 2522
         public override InfoCourtier courtier(CourtierType eIndex) => maBetterAICourtiers.GetOrDefault((int)eIndex);
         public override CourtierType courtiersNum() => (CourtierType)maBetterAICourtiers.Count;
         public override List<InfoCourtier> courtiers() => new List<InfoCourtier>(maBetterAICourtiers);
@@ -393,9 +398,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
   ##############################################*/
+        //line 294
         protected List<BetterAIInfoEffectPlayer> maBetterAIEffectPlayers;
 
-
+        //line 2566
         public override InfoEffectPlayer effectPlayer(EffectPlayerType eIndex) => maBetterAIEffectPlayers.GetOrDefault((int)eIndex);
         public override EffectPlayerType effectPlayersNum() => (EffectPlayerType)maBetterAIEffectPlayers.Count;
         public override List<InfoEffectPlayer> effectPlayers() => new List<InfoEffectPlayer>(maBetterAIEffectPlayers);
@@ -410,10 +416,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-        //line 243
+        //line 295
         protected List<BetterAIInfoEffectUnit> maBetterAIEffectUnits;
 
-        //line 2512
+        //line 2574
         public override InfoEffectUnit effectUnit(EffectUnitType eIndex) => maBetterAIEffectUnits.GetOrDefault((int)eIndex);
         public override EffectUnitType effectUnitsNum() => (EffectUnitType)maBetterAIEffectUnits.Count;
         public override List<InfoEffectUnit> effectUnits() => new List<InfoEffectUnit>(maBetterAIEffectUnits);
@@ -425,19 +431,19 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
   ##############################################*/
-        //line 264
+        //line 316
         protected List<BetterAIInfoImprovement> maBetterAIImprovements;
 
-        //line 2596
+        //line 2654
         public override InfoImprovement improvement(ImprovementType eIndex) => maBetterAIImprovements.GetOrDefault((int)eIndex);
         public override ImprovementType improvementsNum() => (ImprovementType)maBetterAIImprovements.Count;
         public override List<InfoImprovement> improvements() => new List<InfoImprovement>(maBetterAIImprovements);
         public virtual List<BetterAIInfoImprovement> BetterAIimprovements() => maBetterAIImprovements;
 
-        //line 265
+        //line 317
         protected List<BetterAIInfoImprovementClass> maBetterAIImprovementClasses;
 
-        //line 2600
+        //line 2658
         public override InfoImprovementClass improvementClass(ImprovementClassType eIndex) => maBetterAIImprovementClasses.GetOrDefault((int)eIndex);
         public override ImprovementClassType improvementClassesNum() => (ImprovementClassType)maBetterAIImprovementClasses.Count;
         public override List<InfoImprovementClass> improvementClasses() => new List<InfoImprovementClass>(maBetterAIImprovementClasses);
@@ -449,9 +455,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
   ##############################################*/
-
+        //line 318
         protected List<BetterAIInfoJob> maBetterAIJobs;
 
+        //line 2670
         public override InfoJob job(JobType eJob) => maBetterAIJobs.GetOrDefault((int)eJob);
         public override JobType jobsNum() => (JobType)maBetterAIJobs.Count;
         public override List<InfoJob> jobs() => new List<InfoJob>(maBetterAIJobs);
@@ -463,10 +470,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
-        //line 329
+        //line 383
         protected List<BetterAIInfoTerrain> maBetterAITerrains;
 
-        //line 2856
+        //line 2922
         public override InfoTerrain terrain(TerrainType eIndex) => maBetterAITerrains.GetOrDefault((int)eIndex);
         public override TerrainType terrainsNum() => (TerrainType)maBetterAITerrains.Count;
         public override List<InfoTerrain> terrains() => new List<InfoTerrain>(maBetterAITerrains);
@@ -478,10 +485,10 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
   ##############################################*/
-        //line 
+        //line 391
         protected List<BetterAIInfoTrait> maBetterAITraits;
 
-        //line 
+        //line 2954
         public override InfoTrait trait(TraitType eIndex) => maBetterAITraits.GetOrDefault((int)eIndex);
         public override TraitType traitsNum() => (TraitType)maBetterAITraits.Count;
         public override List<InfoTrait> traits() => new List<InfoTrait>(maBetterAITraits);
@@ -490,13 +497,31 @@ namespace BetterAI
   ### Alternative GV bonuses             END ###
   ##############################################*/
 
+
+/*####### Better Old World AI - Base DLL #######
+  ### Empty Sites Override             START ###
+  ##############################################*/
+        //line 393
+        protected List<BetterAIInfoTribeLevel> maBetterAITribeLevels;
+
+        //line 2962
+        public override InfoTribeLevel tribeLevel(TribeLevelType eIndex) => maBetterAITribeLevels.GetOrDefault((int)eIndex);
+        public override TribeLevelType tribeLevelsNum() => (TribeLevelType)maBetterAITribeLevels.Count;
+        public override List<InfoTribeLevel> tribeLevels() => new List<InfoTribeLevel>(maBetterAITribeLevels);
+        public virtual List<BetterAIInfoTribeLevel> BetterAItribeLevels() => maBetterAITribeLevels;
+
+/*####### Better Old World AI - Base DLL #######
+  ### Empty Sites Override               END ###
+  ##############################################*/
+
+
 /*####### Better Old World AI - Base DLL #######
   ### Fix ZOC display                  START ###
   ##############################################*/
-        //line 345
+        //line 399
         protected List<BetterAIInfoUnit> maBetterAIUnits;
 
-        //line 2920
+        //line 2986
         public override InfoUnit unit(UnitType eIndex) => maBetterAIUnits.GetOrDefault((int)eIndex);
         public override UnitType unitsNum() => (UnitType)maBetterAIUnits.Count;
         public override List<InfoUnit> units() => new List<InfoUnit>(maBetterAIUnits);
@@ -531,6 +556,7 @@ namespace BetterAI
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/improvementClass"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/terrain"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/trait"));
+            mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/tribeLevel"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/unit"));
 
             mInfoList.Add(new XmlDataListItem<BetterAIInfoCourtier, CourtierType>("Infos/courtier", readInfoTypes<BetterAIInfoCourtier, CourtierType>, ref maBetterAICourtiers));
@@ -540,6 +566,7 @@ namespace BetterAI
             mInfoList.Add(new XmlDataListItem<BetterAIInfoImprovementClass, ImprovementClassType>("Infos/improvementClass", readInfoTypes<BetterAIInfoImprovementClass, ImprovementClassType>, ref maBetterAIImprovementClasses));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTerrain, TerrainType>("Infos/terrain", readInfoTypes<BetterAIInfoTerrain, TerrainType>, ref maBetterAITerrains));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTrait, TraitType>("Infos/trait", readInfoTypes<BetterAIInfoTrait, TraitType>, ref maBetterAITraits));
+            mInfoList.Add(new XmlDataListItem<BetterAIInfoTribeLevel, TribeLevelType>("Infos/tribeLevel", readInfoTypes<BetterAIInfoTribeLevel, TribeLevelType>, ref maBetterAITribeLevels));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoUnit, UnitType>("Infos/unit", readInfoTypes<BetterAIInfoUnit, UnitType>, ref maBetterAIUnits));
 
             mInfoList.Add(new XmlDataListItem<InfoCityBiome, CityBiomeType>("Infos/cityBiome", readInfoTypes<InfoCityBiome, CityBiomeType>, ref maCityBiomes));
@@ -585,7 +612,7 @@ namespace BetterAI
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
-            infos.readTypesByType(ctx, "aeEffectPlayerEffectPlayer", ref maeEffectPlayerEffectPlayer, EffectPlayerType.NONE);
+            infos.readTypesByType(ctx, "aeEffectPlayerEffectPlayer", ref maeEffectPlayerEffectPlayer, EffectPlayerType.NONE); //not implemented
         }
     }
 /*####### Better Old World AI - Base DLL #######
@@ -708,6 +735,7 @@ namespace BetterAI
                 meTertiaryUnlockCulturePrereq != CultureType.NONE ||
                 meTertiaryUnlockEffectCityPrereq != EffectCityType.NONE);
         }
+        //public BonusType meBonusCitiesExtra = BonusType.NONE;
         public ImprovementType meBonusAdjacentImprovement = ImprovementType.NONE;
         public ImprovementClassType meBonusAdjacentImprovementClass = ImprovementClassType.NONE;
         public bool mbMakesAdjacentPassableLandTileValidForBonusImprovement = false;
@@ -726,6 +754,7 @@ namespace BetterAI
             infos.readType(ctx, "TertiaryUnlockTechPrereq", ref meTertiaryUnlockTechPrereq);
             infos.readType(ctx, "TertiaryUnlockCulturePrereq", ref meTertiaryUnlockCulturePrereq);
             infos.readType(ctx, "TertiaryUnlockEffectCityPrereq", ref meTertiaryUnlockEffectCityPrereq);
+            //infos.readType(ctx, "BonusCitiesExtra", ref meBonusCitiesExtra);
             infos.readType(ctx, "BonusAdjacentImprovement", ref meBonusAdjacentImprovement);
             infos.readType(ctx, "BonusAdjacentImprovementClass", ref meBonusAdjacentImprovementClass);
             infos.readBool(ctx, "bMakesAdjacentPassableLandTileValidForBonusImprovement", ref mbMakesAdjacentPassableLandTileValidForBonusImprovement);
@@ -735,13 +764,10 @@ namespace BetterAI
     //InfoBase.cs, line 2963
     public class BetterAIInfoImprovementClass : InfoImprovementClass
     {
-        //new stuff here
-        public int miMaxCityCount = 0;
         public List<ImprovementType> maeImprovementTypes = new List<ImprovementType>();
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
-            infos.readInt(ctx, "iMaxCityCount", ref miMaxCityCount);
 
         }
     }
@@ -792,14 +818,31 @@ namespace BetterAI
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
-            infos.readTypesByType(ctx, "aeJobEffectPlayer", ref maeJobEffectPlayer, EffectPlayerType.NONE);
-            infos.readTypesByType(ctx, "aeTraitEffectPlayer", ref maeTraitEffectPlayer, EffectPlayerType.NONE);
+            infos.readTypesByType(ctx, "aeJobEffectPlayer", ref maeJobEffectPlayer, EffectPlayerType.NONE);     //not implemented //Trait + Job = Player Effect
+            infos.readTypesByType(ctx, "aeTraitEffectPlayer", ref maeTraitEffectPlayer, EffectPlayerType.NONE); //ToDo: HelpText //for non-job positions like Clergy: Trait + Trait = Player Effect
         }
     }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
   ##############################################*/
 
+
+/*####### Better Old World AI - Base DLL #######
+  ### Empty Sites Override             START ###
+  ##############################################*/
+    public class BetterAIInfoTribeLevel : InfoTribeLevel
+    {
+        public int miEmptySites = -1;
+
+        public override void Read(Infos infos, Infos.ReadContext ctx)
+        {
+            base.Read(infos, ctx);
+            infos.readInt(ctx, "iEmptySites", ref miEmptySites);
+        }
+    }
+/*####### Better Old World AI - Base DLL #######
+  ### Empty Sites Override               END ###
+  ##############################################*/
 
     //InfoBase.cs, line 6106
     public class BetterAIInfoUnit : InfoUnit
@@ -835,7 +878,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### [multiple]                       START ###
   ##############################################*/
-    //InfoBase.cs, line 6556
+    //InfoBase.cs, line 7360
     public class BetterAIInfoGlobals : InfoGlobals
     {
         public int BAI_WORKERLIST_EXTRA = 0; //for Worker Improvement Valid List Mod
@@ -848,7 +891,6 @@ namespace BetterAI
         public int BAI_SHOW_RESOURCE_TILE_TOTAL_COUNT = 0;
         public int BAI_SHOW_RESOURCE_TILE_COUNT = 0;
         public int BAI_SHOW_RESOURCE_TILE_COORDINATES = 0;
-        public int BAI_SWAP_UNIT_FATIGUE_COST = 0;
         public int BAI_ENLIST_NO_FAMILY = 0;
         public int BAI_DISCONTENT_LEVEL_ZERO = 0;
         public int BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS = 0;
@@ -862,6 +904,9 @@ namespace BetterAI
         public int BAI_COMPETITIVE_COURT_YIELD_MODIFIER = 0;
         public int BAI_BETTER_BOUNCE = 0;
         public int BAI_PLAYEREVENT_STAT_BONUS_GOES_TO_PRIMARY_STAT_PERCENT = 0;
+        public int BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT = 100;
+        public int BAI_NUM_IMPROVEMENT_FINISHED_UNITS = 1;
+
 
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
@@ -884,7 +929,6 @@ namespace BetterAI
             BAI_SHOW_RESOURCE_TILE_COUNT = infos.getGlobalInt("BAI_SHOW_RESOURCE_TILE_COUNT");
             BAI_SHOW_RESOURCE_TILE_COORDINATES = infos.getGlobalInt("BAI_SHOW_RESOURCE_TILE_COORDINATES");
 
-            BAI_SWAP_UNIT_FATIGUE_COST = infos.getGlobalInt("BAI_SWAP_UNIT_FATIGUE_COST");
             BAI_ENLIST_NO_FAMILY = infos.getGlobalInt("BAI_ENLIST_NO_FAMILY");
             BAI_DISCONTENT_LEVEL_ZERO = infos.getGlobalInt("BAI_DISCONTENT_LEVEL_ZERO");
             BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS = infos.getGlobalInt("BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS");
@@ -901,6 +945,9 @@ namespace BetterAI
 
             BAI_BETTER_BOUNCE = infos.getGlobalInt("BAI_BETTER_BOUNCE");
             BAI_PLAYEREVENT_STAT_BONUS_GOES_TO_PRIMARY_STAT_PERCENT = infos.getGlobalInt("BAI_PLAYEREVENT_STAT_BONUS_GOES_TO_PRIMARY_STAT_PERCENT");
+            BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT = infos.getGlobalInt("BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT");
+            BAI_NUM_IMPROVEMENT_FINISHED_UNITS = infos.getGlobalInt("BAI_NUM_IMPROVEMENT_FINISHED_UNITS");
+
         }
     }
 /*####### Better Old World AI - Base DLL #######

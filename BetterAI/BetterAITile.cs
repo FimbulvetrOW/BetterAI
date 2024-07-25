@@ -19,15 +19,16 @@ using static TenCrowns.ClientCore.ClientUI;
 using static BetterAI.BetterAIInfos;
 using BetterAI;
 using Random = Mohawk.SystemCore.Random;
+using System.Diagnostics;
 
 namespace BetterAI
 {
     public class BetterAITile : Tile
     {
 
-/*####### Better Old World AI - Base DLL #######
-  ### Better bounce tile search        START ###
-  ##############################################*/
+        /*####### Better Old World AI - Base DLL #######
+          ### Better bounce tile search        START ###
+          ##############################################*/
         public virtual bool isDistanceCloserToOtherTiles(Tile pStartTile, HashSet<Tile> otherTiles)
         {
             if (otherTiles == null || otherTiles.Count == 0)
@@ -91,14 +92,14 @@ namespace BetterAI
 
             return false;
         }
-/*####### Better Old World AI - Base DLL #######
-  ### Better bounce tile search          END ###
-  ##############################################*/
+        /*####### Better Old World AI - Base DLL #######
+          ### Better bounce tile search          END ###
+          ##############################################*/
 
 
-/*####### Better Old World AI - Base DLL #######
-  ### City Biome                       START ###
-  ##############################################*/
+        /*####### Better Old World AI - Base DLL #######
+          ### City Biome                       START ###
+          ##############################################*/
         public virtual CityBiomeType getCityBiome()
         {
             BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
@@ -121,13 +122,13 @@ namespace BetterAI
                 pCityTerritory?.setTerrainChanged();
             }
         }
-/*####### Better Old World AI - Base DLL #######
-  ### City Biome                         END ###
-  ##############################################*/
+        /*####### Better Old World AI - Base DLL #######
+          ### City Biome                         END ###
+          ##############################################*/
 
-/*####### Better Old World AI - Base DLL #######
-  ### Bonus adjacent Improvement       START ###
-  ##############################################*/
+        /*####### Better Old World AI - Base DLL #######
+          ### Bonus adjacent Improvement       START ###
+          ##############################################*/
         public virtual bool canCityTileAddImprovementAdjacent(BetterAICity pCityTerritory, ImprovementType eImprovement, bool bSourceSpreadsBorders)
         {
             for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
@@ -182,9 +183,9 @@ namespace BetterAI
 
             return false;
         }
-/*####### Better Old World AI - Base DLL #######
-  ### Bonus adjacent Improvement         END ###
-  ##############################################*/
+        /*####### Better Old World AI - Base DLL #######
+          ### Bonus adjacent Improvement         END ###
+          ##############################################*/
 
         public virtual bool isBorder(TeamType eTeam)
         {
@@ -228,9 +229,70 @@ namespace BetterAI
         //canHaveImprovement: lines 4805-5098
         public override bool canCityHaveImprovement(City pCityTerritory, ImprovementType eImprovement, bool bForceImprovement)
         {
-            if (pCityTerritory == null) return false;
+            if (pCityTerritory == null) return canUnownedTileHaveImprovement(eImprovement, eTeamTerritory: TeamType.NONE, bTestTerritory: false, bTestEnabled: true, bTestAdjacent: true, bTestReligion: true, bUpgradeImprovement: false, bForceImprovement);
             return ((BetterAICity)pCityTerritory).canCityHaveImprovement(eImprovement, bForceImprovement: bForceImprovement);
         }
+
+        public virtual bool canUnownedTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        {
+            BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+
+            ReligionType eReligionPrereq = pImprovementInfo.meReligionPrereq;
+            if (eReligionPrereq != ReligionType.NONE)
+            {
+                return false;
+            }
+
+            if (pImprovementInfo.mbHolyCity)
+            {
+                return false;
+            }
+
+            if (pImprovementInfo.miMaxCityCount > 0)
+            {
+                return false;
+            }
+
+            if (!bForceImprovement)
+            {
+                if (pImprovementInfo.meCulturePrereq != CultureType.NONE)
+                {
+                    return false;
+                }
+
+                if (pImprovementInfo.meImprovementPrereq != ImprovementType.NONE)
+                {
+                    return false;
+                }
+
+                if (pImprovementInfo.meFamilyPrereq != FamilyType.NONE && game().isCharacters())
+                {
+                    return false;
+                }
+
+                if (pImprovementInfo.meEffectCityPrereq != EffectCityType.NONE)
+                {
+                    return false;
+                }
+
+                if (pImprovementInfo.maeEffectCityAnyPrereq.Count > 0)
+                {
+                    return false;
+                }
+
+            }
+
+            if (bTestTerritory)
+            {
+                if (pImprovementInfo.mbTerritoryOnly)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         public virtual bool canCityTileHaveImprovement(BetterAICity pCity, ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
         {
             if (!isImprovementValid(eImprovement, pCity, bTestEnabled))
@@ -388,12 +450,13 @@ namespace BetterAI
             //{
             //    UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement start");
             //}
+            bool bImprovementSpreadsBorders = improvementSpreadsBorders(eImprovement, (pCity != null) ? pCity.getPlayer() : PlayerType.NONE);
 
             if (!(pImprovementInfo.mbMakesAdjacentPassableLandTileValidForBonusImprovement))
             {
                 if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
                 {
-                    if (!canCityTileAddImprovementAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovement, pImprovementInfo.mbSpreadsBorders))
+                    if (!canCityTileAddImprovementAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovement, bImprovementSpreadsBorders))
                     {
                         //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 1");
                         return false;
@@ -401,7 +464,7 @@ namespace BetterAI
                 }
                 else if (pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
                 {
-                    if (!canCityTileAddImprovementClassAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovementClass, pImprovementInfo.mbSpreadsBorders, out _))
+                    if (!canCityTileAddImprovementClassAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovementClass, bImprovementSpreadsBorders, out _))
                     {
                         //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 2");
                         return false;
@@ -444,7 +507,7 @@ namespace BetterAI
                     }
                 }
 
-                if (!adjacentToPassableLandSameCityWithoutImprovement(infos().improvement(eImprovement).mbSpreadsBorders, eTestImprovement))
+                if (!adjacentToPassableLandSameCityWithoutImprovement(bImprovementSpreadsBorders, eTestImprovement))
                 {
                     //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 5");
                     return false;
@@ -482,6 +545,9 @@ namespace BetterAI
             }
 
             BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
+
+            if (!bForceImprovement && getCityTerritory() == -1)
+
             if (isUrban() && !(pImprovementInfo.mbUrban))
             {
                 return false;
@@ -638,6 +704,13 @@ namespace BetterAI
                     return false;
                 }
             }
+            else
+            {
+                if (!canUnownedTileHaveImprovement(eImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestAdjacent, bTestReligion, bUpgradeImprovement, bForceImprovement))
+                {
+                    return false;
+                }
+            }
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                       END ###
   ##############################################*/
@@ -764,12 +837,289 @@ namespace BetterAI
             return false;
         }
 
+
+        public override bool hasImprovementWithBorderSpread()
+        {
+            if (hasImprovement())
+            {
+                return ((BetterAIInfoHelpers)(infos().Helpers)).improvementSpreadsBorders(getImprovement(), game(), owner(), this);
+            }
+
+            return false;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
+  ##############################################*/
+
+        public virtual bool improvementSpreadsBorders(ImprovementType eImprovement, PlayerType ePlayer)
+        {
+            if (eImprovement != ImprovementType.NONE)
+            {
+                InfoImprovement pImprovementInfo = infos().improvement(eImprovement);
+
+                return (pImprovementInfo.mbUrban || pImprovementInfo.mbSpreadsBorders || getFreeSpecialist(eImprovement) != SpecialistType.NONE || ((ePlayer != PlayerType.NONE) && game().player(ePlayer).isSpreadBordersUnlock(eImprovement)));
+            }
+
+            return false;
+        }
+
+
         //lines 5588-5784
         public override void doImprovementFinished()
         {
-            base.doImprovementFinished();
+            //START base.doImprovementFinished()
+            ImprovementClassType eImprovementClass = getImprovementClass();
             City pCityTerritory = cityTerritory();
 
+            if (hasImprovementWithBorderSpread())
+            {
+                spreadBorders();
+            }
+
+            resetImprovementUnitTurns();
+
+            if (improvement().mbUrban)
+            {
+                List<TileText> azTileTexts = null;
+                makeUrban(getOwner(), ref azTileTexts);
+                if (azTileTexts != null)
+                {
+                    foreach (TileText tileText in azTileTexts)
+                    {
+                        game().sendTileText(tileText);
+                    }
+                }
+            }
+
+            if (improvement().mbWonder)
+            {
+                for (TeamType eLoopTeam = 0; eLoopTeam < game().getNumTeams(); eLoopTeam++)
+                {
+                    doTileReveal(eLoopTeam, PlayerType.NONE);
+
+                    if (hasCityTerritory())
+                    {
+                        cityTerritory().tile().doTileReveal(eLoopTeam, PlayerType.NONE);
+                    }
+                }
+            }
+
+            {
+                ImprovementType eDevelopImprovement = game().getDevelopImprovement(getImprovement());
+
+                if (eDevelopImprovement != ImprovementType.NONE)
+                {
+                    if ((pCityTerritory != null) && (eImprovementClass != ImprovementClassType.NONE))
+                    {
+                        changeImprovementDevelopTurns(pCityTerritory.getImprovementClassDevelopChange(eImprovementClass));
+                    }
+
+                    {
+                        int iRand = improvement().miDevelopRand;
+
+                        if (improvement().mbTribe)
+                        {
+                            iRand = infos().utils().modify(iRand, game().tribeLevel().miImprovementDevelopModifier);
+                        }
+
+                        if (iRand > 0)
+                        {
+                            changeImprovementDevelopTurns(game().randomNext(iRand));
+                        }
+                    }
+                }
+            }
+
+            if (improvement().mbTribe)
+            {
+                TribeType eTribe = getTribeSite();
+
+                if (eTribe == TribeType.NONE)
+                {
+                    eTribe = game().findNearestSettlementTribe(this, 12);
+                }
+
+                if (eTribe == TribeType.NONE)
+                {
+                    eTribe = infos().Globals.BARBARIANS_TRIBE;
+                }
+
+                if (eTribe != TribeType.NONE)
+                {
+                    UnitType eUnitDefendNew = getImprovementUnitDefend(getImprovement());
+
+                    if (eUnitDefendNew != UnitType.NONE)
+                    {
+                        bounceUnits();
+
+                        addImprovementUnit(eUnitDefendNew);
+                    }
+                }
+            }
+
+            if (hasOwner())
+            {
+                {
+                    BonusType eBonus = improvement().meBonus;
+
+                    if (eBonus != BonusType.NONE)
+                    {
+                        owner().doBonus(eBonus, pTile: this, logPrefix: () => HelpText.buildImprovementLinkVariable(getImprovement(), game(), this));
+                    }
+                }
+
+                {
+                    BonusType eBonusCities = improvement().meBonusCities;
+
+                    if (eBonusCities != BonusType.NONE)
+                    {
+                        foreach (int iLoopCity in owner().getCities())
+                        {
+/*####### Better Old World AI - Base DLL #######
+  ### Do Bonus only in valid cities    START ###
+  ##############################################*/
+                            //do only valid bonuses
+                            if (owner().canDoBonus(eBonusCities, pCity: game().city(iLoopCity)))
+/*####### Better Old World AI - Base DLL #######
+  ### Do Bonus only in valid cities      END ###
+  ##############################################*/
+                            {
+                                owner().doBonus(eBonusCities, pCity: game().city(iLoopCity), logPrefix: () => HelpText.buildImprovementLinkVariable(getImprovement(), game(), this));
+                            }
+                        }
+                    }
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Extra Bonus for all cities       START ###
+  ##############################################*/
+                //{
+                //    BonusType eBonusCities = ((BetterAIInfoImprovement)improvement()).meBonusCitiesExtra;
+
+                //    if (eBonusCities != BonusType.NONE)
+                //    {
+                //        foreach (int iLoopCity in owner().getCities())
+                //        {
+
+                //            //do only valid bonuses
+                //            if (owner().canDoBonus(eBonusCities, pCity: game().city(iLoopCity)))
+                //            {
+                //                owner().doBonus(eBonusCities, pCity: game().city(iLoopCity), logPrefix: () => HelpText.buildImprovementLinkVariable(getImprovement(), game(), this));
+                //            }
+                //        }
+                //    }
+                //}
+/*####### Better Old World AI - Base DLL #######
+  ### Extra Bonus for all cities         END ###
+  ##############################################*/
+
+                {
+                    ReligionType eReligionSpread = game().getImprovementReligionSpread(getImprovement());
+
+                    if (eReligionSpread != ReligionType.NONE)
+                    {
+                        if (pCityTerritory != null)
+                        {
+                            pCityTerritory.spreadReligion(eReligionSpread, pSpreadPlayer: owner());
+                        }
+                    }
+                }
+
+                if (improvement().mbHolyCity)
+                {
+                    if (!(owner().isHuman()))
+                    {
+                        owner().doBonus(infos().Globals.FINISHED_HOLY_SITE_BONUS);
+                    }
+                }
+
+                if (improvement().mbWonder)
+                {
+                    if (!owner().canDoEvents() || game().isGameOption(infos().Globals.GAMEOPTION_NO_EVENTS))
+                    {
+                        BonusType eBonus = infos().Helpers.getWonderCompletionBonus(getImprovement());
+
+                        if (eBonus != BonusType.NONE)
+                        {
+                            owner().doBonus(eBonus);
+                        }
+                    }
+
+                    {
+                        Func<string> textFunc = () => TextManager.TEXT("TEXT_GAME_IMPROVEMENT_COMPLETED", HelpText.buildImprovementLinkVariable(getImprovement(), game(), this), HelpText.buildPlayerLinkVariable(owner()));
+
+                        game().addTurnSummary(textFunc, TurnLogType.WONDER, bGameLog: false);
+
+                        game().pushLogData(textFunc, GameLogType.WONDER_ACTIVITY, TeamType.NONE, getID(), improvement());
+
+                        for (TeamType eLoopTeam = 0; eLoopTeam < game().getNumTeams(); eLoopTeam++)
+                        {
+                            doTileReveal(eLoopTeam, PlayerType.NONE);
+                        }
+                    }
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Units from improvement completion START ##
+  ##############################################*/
+                //BAI_NUM_IMPROVEMENT_FINISHED_UNITS
+                //addImprovementUnit();
+                if (((BetterAIInfoGlobals)infos().Globals).BAI_NUM_IMPROVEMENT_FINISHED_UNITS > 0)
+                {
+                    for (int i = 0; i < ((BetterAIInfoGlobals)infos().Globals).BAI_NUM_IMPROVEMENT_FINISHED_UNITS; i++)
+                    {
+                        addImprovementUnit();
+                    }
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Units from improvement completion  END ###
+  ##############################################*/
+
+                owner().doEventTrigger(infos().Globals.IMPROVEMENT_FINISHED_EVENTTRIGGER, cityTerritory(), this, (int)getImprovement());
+
+                owner().incrementLeaderStat(infos().Globals.IMPROVEMENT_FINISHED_STAT);
+
+                if (improvement().mbWonder)
+                {
+                    owner().incrementLeaderStat(infos().Globals.WONDER_FINISHED_STAT);
+                }
+
+                {
+                    AchievementType eAchievement = improvement().meAchievement;
+
+                    if (eAchievement != AchievementType.NONE)
+                    {
+                        game().doAchievement(eAchievement, owner());
+                    }
+                }
+
+                if (!owner().isAIAutoPlay())
+                {
+                    if (improvement().mbWonder)
+                    {
+                        game().sendAnalytics(AnalyticsEventType.WONDER_BUILT, "wonder", improvement().mzType);
+                    }
+                    else
+                    {
+                        game().sendAnalytics(AnalyticsEventType.IMPROVEMENT_BUILT, "improvement", improvement().mzType);
+                    }
+                }
+
+
+                game().markDirtyGoalsAll(); // mark all dirty because of Wonder goals
+
+                if (improvement().miVP != 0)
+                {
+                    game().doVictory();
+                }
+            }
+
+            //END base.doImprovementFinished();
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
             if (pCityTerritory == null || pCityTerritory.player() == null)
             {
                 //just choose randomly
@@ -826,6 +1176,25 @@ namespace BetterAI
         }
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
+  ##############################################*/
+
+/*####### Better Old World AI - Base DLL #######
+  ### No immediate unit from improvement START #
+  ##############################################*/
+        //not a priority
+        //public override Unit addImprovementUnit(UnitType eUnit = UnitType.NONE)
+        //{
+        //    MethodBase MB_doImprovementFinished = typeof(BetterAITile).GetMethod("doImprovementFinished", BindingFlags.Instance | BindingFlags.Public);
+        //    MethodBase caller = (new StackFrame(skipFrames: 1, fNeedFileInfo: false).GetMethod());
+            
+        //    if (caller.GetHashCode() != MB_doImprovementFinished.GetHashCode())
+        //    {
+        //        return base.addImprovementUnit(eUnit);
+        //    }
+        //    else return null;
+        //}
+/*####### Better Old World AI - Base DLL #######
+  ### No immediate unit from improvement END ###
   ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
