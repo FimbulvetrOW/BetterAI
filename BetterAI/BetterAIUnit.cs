@@ -586,7 +586,6 @@ namespace BetterAI
                             if (pPushTile != null)
                             {
                                 pLoopUnit.setTileID(pPushTile.getID(), true, true, pActingPlayer, ref azTileTexts);
-                                player()?.AI.clearLastSeenUnitState();
 
                                 if ((pLoopUnit.getCooldown() == infos().Globals.UNLIMBERED_COOLDOWN) ||
                                     (pLoopUnit.getCooldown() == infos().Globals.ANCHORED_COOLDOWN))
@@ -670,7 +669,7 @@ namespace BetterAI
 
             if (hasPlayer())
             {
-                pToTile.incrementRecentAttacks(getPlayer());
+                player().setRecentAttacks(pToTile.getID(), player().getRecentAttacks(pToTile.getID()) + 1);
 
                 if (pDefendingUnit != null)
                 {

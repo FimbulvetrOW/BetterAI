@@ -37,9 +37,9 @@ namespace BetterAI
             return new BetterAIInfoHelpers(pInfos);
         }
 
-        public override HelpText CreateHelpText(ModSettings pModSettings)
+        public override HelpText CreateHelpText(TextManager txtMgr)
         {
-            return new BetterAIHelpText(pModSettings);
+            return new BetterAIHelpText(txtMgr);
         }
         public override Game CreateGame(ModSettings pModSettings, IApplication pApp, bool bShowGame)
         {

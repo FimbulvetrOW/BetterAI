@@ -838,31 +838,21 @@ namespace BetterAI
         }
 
 
+        public override bool isImprovementBorderSpread(ImprovementType eImprovement)
+        {
+            return ((BetterAIInfoHelpers)(infos().Helpers)).improvementSpreadsBorders(eImprovement, game(), owner(), this);
+        }
         public override bool hasImprovementWithBorderSpread()
         {
-            if (hasImprovement())
-            {
-                return ((BetterAIInfoHelpers)(infos().Helpers)).improvementSpreadsBorders(getImprovement(), game(), owner(), this);
-            }
-
-            return false;
+            return ((BetterAIInfoHelpers)(infos().Helpers)).improvementSpreadsBorders(getImprovement(), game(), owner(), this);
+        }
+        public virtual bool improvementSpreadsBorders(ImprovementType eImprovement, PlayerType ePlayer)
+        {
+            return ((BetterAIInfoHelpers)(infos().Helpers)).improvementSpreadsBorders(eImprovement, game(), game().player(ePlayer), this);
         }
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
-
-        public virtual bool improvementSpreadsBorders(ImprovementType eImprovement, PlayerType ePlayer)
-        {
-            if (eImprovement != ImprovementType.NONE)
-            {
-                InfoImprovement pImprovementInfo = infos().improvement(eImprovement);
-
-                return (pImprovementInfo.mbUrban || pImprovementInfo.mbSpreadsBorders || getFreeSpecialist(eImprovement) != SpecialistType.NONE || ((ePlayer != PlayerType.NONE) && game().player(ePlayer).isSpreadBordersUnlock(eImprovement)));
-            }
-
-            return false;
-        }
-
 
         //lines 5588-5784
         public override void doImprovementFinished()
@@ -1035,7 +1025,7 @@ namespace BetterAI
 
                 if (improvement().mbWonder)
                 {
-                    if (!owner().canDoEvents() || game().isGameOption(infos().Globals.GAMEOPTION_NO_EVENTS))
+                    if (!owner().canDoEvents() || game().isNoEvents())
                     {
                         BonusType eBonus = infos().Helpers.getWonderCompletionBonus(getImprovement());
 
@@ -1201,13 +1191,13 @@ namespace BetterAI
   ### AI: Improvement Value            START ###
   ##############################################*/
         //lines 12161-12258 (Test v1.0.70827) but with added dEffectCityExtraCounts
-        public virtual int yieldOutputForGovernor(ImprovementType eImprovement, SpecialistType eSpecialist, YieldType eYield, City pCity, bool bCityEffects, bool bBaseOnly, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
+        public virtual int yieldOutputForGovernor(ImprovementType eImprovement, SpecialistType eSpecialist, YieldType eYield, City pCity, bool bCityEffects, bool bBaseOnly, bool bCost, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
             //using var profileScope = new UnityProfileScope("Game.tileYieldOutput");
 
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
-                return base.yieldOutputForGovernor(eImprovement, eSpecialist, eYield, pCity, bCityEffects, bBaseOnly, pGovernor);
+                return base.yieldOutputForGovernor(eImprovement, eSpecialist, eYield, pCity, bCityEffects, bBaseOnly, bCost, pGovernor);
             }
 
             int iOutput = yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor, dEffectCityExtraCounts);
@@ -1231,7 +1221,7 @@ namespace BetterAI
                     }
                 }
 
-                if (!bBaseOnly)
+                if (!bBaseOnly && bCost)
                 {
                     iOutput += infos().improvement(eImprovement).maiYieldConsumption[eYield];
                 }
@@ -1247,7 +1237,7 @@ namespace BetterAI
                 for (int i = 0; i < game().getNumOccurrences(); ++i)
                 {
                     OccurrenceData pLoopData = game().getOccurrenceDataAt(i);
-                    if (game().isOccurrenceActive(pLoopData.meType, getOwner()))
+                    if (game().isOccurrenceActive(pLoopData.miID))
                     {
                         if (infos().occurrence(pLoopData.meType).mbNoYieldsOnCoast)
                         {

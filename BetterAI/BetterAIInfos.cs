@@ -37,14 +37,20 @@ namespace BetterAI
 
             bool isThreadSafe(XmlDataListItemBase item)
             {
-                if (deferredPass) return false;
+                if (deferredPass)
+                {
+                    return false;
+                }
                 return !item.GetFlags().HasFlag(XmlDataListFlags.NonThreadSafe);
             }
 
             bool thisPass(XmlDataListItemBase item)
             {
-                if (!mModSettings.ModPath.IsStrictMode()) return !deferredPass;
-                return item.GetFlags().HasFlag(XmlDataListFlags.StrictModeDeferred) ? deferredPass : !deferredPass;
+                if (!mModSettings.ModPath.IsStrictMode())
+                {
+                    return !deferredPass;
+                }
+                return item.GetFlags().HasFlag(XmlDataListFlags.StrictModeDeferred) == deferredPass;
             }
 
             void read(XmlDataListItemBase item)
@@ -554,6 +560,7 @@ namespace BetterAI
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/effectUnit"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/improvement"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/improvementClass"));
+            mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/job"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/terrain"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/trait"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/tribeLevel"));
@@ -564,6 +571,7 @@ namespace BetterAI
             mInfoList.Add(new XmlDataListItem<BetterAIInfoEffectUnit, EffectUnitType>("Infos/effectUnit", readInfoTypes<BetterAIInfoEffectUnit, EffectUnitType>, ref maBetterAIEffectUnits));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoImprovement, ImprovementType>("Infos/improvement", readInfoTypes<BetterAIInfoImprovement, ImprovementType>, ref maBetterAIImprovements));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoImprovementClass, ImprovementClassType>("Infos/improvementClass", readInfoTypes<BetterAIInfoImprovementClass, ImprovementClassType>, ref maBetterAIImprovementClasses));
+            mInfoList.Add(new XmlDataListItem<BetterAIInfoJob, JobType>("Infos/job", readInfoTypes<BetterAIInfoJob, JobType>, ref maBetterAIJobs));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTerrain, TerrainType>("Infos/terrain", readInfoTypes<BetterAIInfoTerrain, TerrainType>, ref maBetterAITerrains));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTrait, TraitType>("Infos/trait", readInfoTypes<BetterAIInfoTrait, TraitType>, ref maBetterAITraits));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTribeLevel, TribeLevelType>("Infos/tribeLevel", readInfoTypes<BetterAIInfoTribeLevel, TribeLevelType>, ref maBetterAITribeLevels));
@@ -907,6 +915,11 @@ namespace BetterAI
         public int BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT = 100;
         public int BAI_NUM_IMPROVEMENT_FINISHED_UNITS = 1;
 
+        public int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 0;
+        public int AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = 0;
+        public int AI_TRAINING_CITY_SPECIALIZATION_MODIFIER = 0;
+        public int AI_FAMILY_OPINION_VALUE_PER = 0;
+        public int AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE = 0;
 
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
@@ -948,6 +961,11 @@ namespace BetterAI
             BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT = infos.getGlobalInt("BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT");
             BAI_NUM_IMPROVEMENT_FINISHED_UNITS = infos.getGlobalInt("BAI_NUM_IMPROVEMENT_FINISHED_UNITS");
 
+            AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");
+            AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_CIVICS_CITY_SPECIALIZATION_MODIFIER");
+            AI_TRAINING_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_TRAINING_CITY_SPECIALIZATION_MODIFIER");
+            AI_FAMILY_OPINION_VALUE_PER = infos.getGlobalAI("AI_FAMILY_OPINION_VALUE_PER");
+            AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE = infos.getGlobalAI("AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE");
         }
     }
 /*####### Better Old World AI - Base DLL #######

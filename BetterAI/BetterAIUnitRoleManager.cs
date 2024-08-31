@@ -83,7 +83,7 @@ namespace BetterAI
                 }
 
                 //lines 1016-1153
-                protected override void assignAttackUnits(AttackTactics eTactics, AttackThreat eMinThreat, bool bExpansionOnly = false, bool bAllowFatigue = false, bool bPlayerOnly = false, bool bInPlaceOnly = false, int iMinPowerPercent = 0, int iMaxPowerPercent = int.MaxValue)
+                protected override bool assignAttackUnits(AttackTactics eTactics, AttackThreat eMinThreat, bool bExpansionOnly = false, bool bAllowFatigue = false, bool bPlayerOnly = false, bool bInPlaceOnly = false, int iMinPowerPercent = 0, int iMaxPowerPercent = int.MaxValue)
                 {
                     //using var profileScope = new UnityProfileScope("UnitRoleManager.assignAttackUnits");
 
@@ -93,13 +93,7 @@ namespace BetterAI
                     for (int iTargetIndex = 0; iTargetIndex < maTargetUnitValues.Count; ++iTargetIndex)
                     {
                         TargetUnitValue val = maTargetUnitValues[iTargetIndex];
-                        if (eTactics != AttackTactics.Approach && eTactics != AttackTactics.Individual)
-                        {
-                            if (msiAttackTargetsDone.Contains(val.miTargetID))
-                            {
-                                continue;
-                            }
-                        }
+
                         if (!msiAvailableUnits.Contains(val.miUnitID))
                         {
                             continue;
@@ -157,10 +151,18 @@ namespace BetterAI
                                 continue;
                             }
                         }
-                        if (eTactics == AttackTactics.Stun || eTactics == AttackTactics.Kill)
+                        if (eTactics == AttackTactics.Stun)
                         {
                             Unit pTargetUnit = pTargetTile.defendingUnit();
                             if (pTargetUnit != null && !pTargetUnit.AI.canAttackNextTurn(pTargetTile))
+                            {
+                                continue;
+                            }
+                        }
+                        if (eTactics == AttackTactics.Kill)
+                        {
+                            Unit pTargetUnit = pTargetTile.defendingUnit();
+                            if (pTargetUnit != null && pTargetUnit.getCooldown() == Infos.Globals.STUNNED_COOLDOWN)
                             {
                                 continue;
                             }
@@ -279,12 +281,20 @@ namespace BetterAI
                             }
                         }
 
+                        targetsChecked.Add(iTargetTile);
+
                         if (assignUnitstoTarget(eTactics, pTargetTile, eMinThreat, !bAllowFatigue, iMinPowerPercent))
                         {
                             --iTargetIndex;
+
+                            if (eTactics == AttackTactics.Capture || eTactics == AttackTactics.Kill || eTactics == AttackTactics.Push)
+                            {
+                                return true;
+                            }
                         }
-                        targetsChecked.Add(iTargetTile);
                     }
+
+                    return false;
                 }
 
                 //line 5081-5189

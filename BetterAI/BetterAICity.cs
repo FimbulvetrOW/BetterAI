@@ -1977,7 +1977,7 @@ namespace BetterAI
                             }
 
                             int iMaxCity = infos().improvementClass(eImprovementClass).miMaxCityCount;
-                            if (iMaxCity > 0)
+                            if (iMaxCity > 0 && !isNoImprovementClassMaxUnlock(eImprovementClass))
                             {
                                 if (getImprovementClassCount(eImprovementClass) >= iMaxCity)
                                 {

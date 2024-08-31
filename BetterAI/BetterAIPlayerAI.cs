@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,233 +25,233 @@ namespace BetterAI
     {
         public partial class BetterAIPlayerAI : BetterAIPlayer.PlayerAI
         {
-            protected int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 30;
-            protected int AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = 100;
-            protected int AI_TRAINING_CITY_SPECIALIZATION_MODIFIER = 100;
-            protected int AI_FAMILY_OPINION_VALUE_PER = 0;
+            protected int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER => ((BetterAIInfoGlobals)infos.Globals).AI_GROWTH_CITY_SPECIALIZATION_MODIFIER;
+            protected int AI_CIVICS_CITY_SPECIALIZATION_MODIFIER => ((BetterAIInfoGlobals)infos.Globals).AI_CIVICS_CITY_SPECIALIZATION_MODIFIER;
+            protected int AI_TRAINING_CITY_SPECIALIZATION_MODIFIER => ((BetterAIInfoGlobals)infos.Globals).AI_TRAINING_CITY_SPECIALIZATION_MODIFIER;
+            protected int AI_FAMILY_OPINION_VALUE_PER => ((BetterAIInfoGlobals)infos.Globals).AI_FAMILY_OPINION_VALUE_PER;
+
+            protected int AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE => ((BetterAIInfoGlobals)infos.Globals).AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE;
 
             //[SkipCheckSaveConsistency] protected BetterAIPlayerCache BAI_mpAICache = new BetterAIPlayerCache();
 
-            public override void init(Game pGame, Player pPlayer, Tribe pTribe)
-            {
-                if (pGame != null)
-                {
-                    if (pGame.infos() != null)
-                    {
-                        loadAIValues(pGame.infos());
-                    }
-                    else
-                    {
-                        Debug.Log("PlayerAI init (pGame.infos() == null)");
-                    }
-                }
-                else
-                {
-                    Debug.Log("PlayerAI init (pGame == null)");
-                }
+            //public override void init(Game pGame, Player pPlayer, Tribe pTribe)
+            //{
+            //    if (pGame != null)
+            //    {
+            //        if (pGame.infos() != null)
+            //        {
+            //            loadAIValues(pGame.infos());
+            //        }
+            //        else
+            //        {
+            //            Debug.Log("PlayerAI init (pGame.infos() == null)");
+            //        }
+            //    }
+            //    else
+            //    {
+            //        Debug.Log("PlayerAI init (pGame == null)");
+            //    }
+            //    base.init(pGame, pPlayer, pTribe);
+            //    //BAI_mpAICache = new BetterAIPlayerCache();
+            //}
 
-                base.init(pGame, pPlayer, pTribe);
-                //BAI_mpAICache = new BetterAIPlayerCache();
-            }
-
-            public override void initClient(Game pGame, Player pPlayer, Tribe pTribe)
-            {
-                if (pGame != null)
-                {
-                    if (pGame.infos() != null)
-                    {
-                        loadAIValues(pGame.infos());
-                    }
-                    else
-                    {
-                        Debug.Log("PlayerAI initClient (pGame.infos() == null)");
-                    }
-                }
-                else
-                {
-                    Debug.Log("PlayerAI initClient (pGame == null)");
-                }
-
-                base.initClient(pGame, pPlayer, pTribe);
-                //BAI_mpAICache = new BetterAIPlayerCache();
-            }
+            //public override void initClient(Game pGame, Player pPlayer, Tribe pTribe)
+            //{
+            //    if (pGame != null)
+            //    {
+            //        if (pGame.infos() != null)
+            //        {
+            //            loadAIValues(pGame.infos());
+            //        }
+            //        else
+            //        {
+            //            Debug.Log("PlayerAI initClient (pGame.infos() == null)");
+            //        }
+            //    }
+            //    else
+            //    {
+            //        Debug.Log("PlayerAI initClient (pGame == null)");
+            //    }
+            //    base.initClient(pGame, pPlayer, pTribe);
+            //    //BAI_mpAICache = new BetterAIPlayerCache();
+            //}
 
 
-            public virtual void loadAIValues(Infos pInfos)
-            {
-                AI_MAX_WATER_CONTROL_DISTANCE = pInfos.getGlobalInt("AI_MAX_WATER_CONTROL_DISTANCE");
-                AI_GROWTH_VALUE = pInfos.getGlobalInt("AI_GROWTH_VALUE");
-                AI_CIVICS_VALUE = pInfos.getGlobalInt("AI_CIVICS_VALUE");
-                AI_TRAINING_VALUE = pInfos.getGlobalInt("AI_TRAINING_VALUE");
-                AI_CULTURE_VALUE = pInfos.getGlobalInt("AI_CULTURE_VALUE");
-                AI_HAPPINESS_VALUE = pInfos.getGlobalInt("AI_HAPPINESS_VALUE");
-                AI_SCIENCE_VALUE = pInfos.getGlobalInt("AI_SCIENCE_VALUE");
-                AI_MONEY_VALUE = pInfos.getGlobalInt("AI_MONEY_VALUE");
-                AI_ORDERS_VALUE = pInfos.getGlobalInt("AI_ORDERS_VALUE");
-                AI_GOODS_VALUE = pInfos.getGlobalInt("AI_GOODS_VALUE");
-                AI_NUM_GOODS_TARGET = pInfos.getGlobalInt("AI_NUM_GOODS_TARGET");
-                AI_TILE_VALUE = pInfos.getGlobalInt("AI_TILE_VALUE");
-                AI_GROWTH_CITY_MODIFIER = pInfos.getGlobalInt("AI_GROWTH_CITY_MODIFIER");
-                AI_CIVICS_CITY_MODIFIER = pInfos.getGlobalInt("AI_CIVICS_CITY_MODIFIER");
-                AI_TRAINING_CITY_MODIFIER = pInfos.getGlobalInt("AI_TRAINING_CITY_MODIFIER");
-                AI_CITY_UNITS_BUILT_PER_TRAINING = pInfos.getGlobalInt("AI_CITY_UNITS_BUILT_PER_TRAINING");
-                AI_UNIT_TRAITS = pInfos.getGlobalInt("AI_UNIT_TRAITS");
-                AI_YIELD_TURNS = pInfos.getGlobalInt("AI_YIELD_TURNS");
-                AI_TURNS_BETWEEN_KILLS = pInfos.getGlobalInt("AI_TURNS_BETWEEN_KILLS");
-                AI_MIN_UNIT_BUILD_TURNS = pInfos.getGlobalInt("AI_MIN_UNIT_BUILD_TURNS");
-                AI_HALF_VALUE_UNIT_BUILD_TURNS = pInfos.getGlobalInt("AI_HALF_VALUE_UNIT_BUILD_TURNS");
-                AI_MIN_SPECIALIST_BUILD_TURNS = pInfos.getGlobalInt("AI_MIN_SPECIALIST_BUILD_TURNS");
-                AI_HALF_VALUE_SPECIALIST_BUILD_TURNS = pInfos.getGlobalInt("AI_HALF_VALUE_SPECIALIST_BUILD_TURNS");
-                AI_MIN_PROJECT_BUILD_TURNS = pInfos.getGlobalInt("AI_MIN_PROJECT_BUILD_TURNS");
-                AI_HALF_VALUE_PROJECT_BUILD_TURNS = pInfos.getGlobalInt("AI_HALF_VALUE_PROJECT_BUILD_TURNS");
-                AI_NO_WONDER_TURNS = pInfos.getGlobalInt("AI_NO_WONDER_TURNS");
-                AI_GRACE_TURNS = pInfos.getGlobalInt("AI_GRACE_TURNS");
-                AI_PLAY_TO_WIN_GRACE_TURNS = pInfos.getGlobalInt("AI_PLAY_TO_WIN_GRACE_TURNS");
-                AI_CHARACTER_OPINION_VALUE = pInfos.getGlobalInt("AI_CHARACTER_OPINION_VALUE");
-                AI_FAMILY_OPINION_VALUE = pInfos.getGlobalInt("AI_FAMILY_OPINION_VALUE");
-                AI_FAMILY_OPINION_VALUE_PER = pInfos.getGlobalInt("AI_FAMILY_OPINION_VALUE_PER");
-                AI_RELIGION_OPINION_VALUE = pInfos.getGlobalInt("AI_RELIGION_OPINION_VALUE");
-                AI_PLAYER_OPINION_VALUE = pInfos.getGlobalInt("AI_PLAYER_OPINION_VALUE");
-                AI_TRIBE_OPINION_VALUE = pInfos.getGlobalInt("AI_TRIBE_OPINION_VALUE");
-                AI_UNIT_ABILITIES_MULTIPLIER = pInfos.getGlobalInt("AI_UNIT_ABILITIES_MULTIPLIER");
-                AI_SHIP_ABILITIES_MULTIPLIER = pInfos.getGlobalInt("AI_SHIP_ABILITIES_MULTIPLIER");
-                AI_BUILD_TURNS_FOR_HELP = pInfos.getGlobalInt("AI_BUILD_TURNS_FOR_HELP");
-                AI_SENTRY_MAX_DISTANCE = pInfos.getGlobalInt("AI_SENTRY_MAX_DISTANCE");
-                AI_MIN_YIELD_STOCKPILE = pInfos.getGlobalInt("AI_MIN_YIELD_STOCKPILE");
-                AI_MONEY_STOCKPILE_TURNS = pInfos.getGlobalInt("AI_MONEY_STOCKPILE_TURNS");
-                AI_CITY_MIN_DANGER = pInfos.getGlobalInt("AI_CITY_MIN_DANGER");
-                AI_STOCKPILE_TURN_BUFFER = pInfos.getGlobalInt("AI_STOCKPILE_TURN_BUFFER");
-                AI_YIELD_SHORTAGE_PER_TURN_MODIFIER = pInfos.getGlobalInt("AI_YIELD_SHORTAGE_PER_TURN_MODIFIER");
-                AI_ORDER_SHORTAGE_PER_TURN_MODIFIER = pInfos.getGlobalInt("AI_ORDER_SHORTAGE_PER_TURN_MODIFIER");
-                AI_UNIT_STRENGTH_VALUE = pInfos.getGlobalInt("AI_UNIT_STRENGTH_VALUE");
-                AI_UNIT_STRENGTH_MODIFIER_VALUE = pInfos.getGlobalInt("AI_UNIT_STRENGTH_MODIFIER_VALUE");
-                AI_UNIT_ATTACK_MODIFIER_VALUE = pInfos.getGlobalInt("AI_UNIT_ATTACK_MODIFIER_VALUE");
-                AI_UNIT_DEFENSE_MODIFIER_VALUE = pInfos.getGlobalInt("AI_UNIT_DEFENSE_MODIFIER_VALUE");
-                AI_UNIT_CRITICAL_CHANCE_VALUE = pInfos.getGlobalInt("AI_UNIT_CRITICAL_CHANCE_VALUE");
-                AI_UNIT_XP_VALUE = pInfos.getGlobalInt("AI_UNIT_XP_VALUE");
-                AI_UNIT_HP_VALUE = pInfos.getGlobalInt("AI_UNIT_HP_VALUE");
-                AI_UNIT_LEVEL_VALUE = pInfos.getGlobalInt("AI_UNIT_LEVEL_VALUE");
-                AI_UNIT_WATER_CONTROL_VALUE = pInfos.getGlobalInt("AI_UNIT_WATER_CONTROL_VALUE");
-                AI_UNIT_MOVEMENT_VALUE = pInfos.getGlobalInt("AI_UNIT_MOVEMENT_VALUE");
-                AI_UNIT_VISION_VALUE = pInfos.getGlobalInt("AI_UNIT_VISION_VALUE");
-                AI_UNIT_REVEAL_VALUE = pInfos.getGlobalInt("AI_UNIT_REVEAL_VALUE");
-                AI_UNIT_FATIGUE_VALUE = pInfos.getGlobalInt("AI_UNIT_FATIGUE_VALUE");
-                AI_UNIT_RANGE_VALUE = pInfos.getGlobalInt("AI_UNIT_RANGE_VALUE");
-                AI_UNIT_MELEE_VALUE = pInfos.getGlobalInt("AI_UNIT_MELEE_VALUE");
-                AI_UNIT_ROAD_MOVEMENT_VALUE = pInfos.getGlobalInt("AI_UNIT_ROAD_MOVEMENT_VALUE");
-                AI_UNIT_PILLAGE_YIELD_VALUE = pInfos.getGlobalInt("AI_UNIT_PILLAGE_YIELD_VALUE");
-                AI_UNIT_RIVER_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_RIVER_ATTACK_VALUE");
-                AI_UNIT_WATER_LAND_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_WATER_LAND_ATTACK_VALUE");
-                AI_UNIT_HOME_VALUE = pInfos.getGlobalInt("AI_UNIT_HOME_VALUE");
-                AI_UNIT_SETTLEMENT_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_SETTLEMENT_ATTACK_VALUE");
-                AI_UNIT_CONNECTED_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_CONNECTED_ATTACK_VALUE");
-                AI_UNIT_CONNECTED_DEFENSE_VALUE = pInfos.getGlobalInt("AI_UNIT_CONNECTED_DEFENSE_VALUE");
-                AI_UNIT_URBAN_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_URBAN_ATTACK_VALUE");
-                AI_UNIT_URBAN_DEFENSE_VALUE = pInfos.getGlobalInt("AI_UNIT_URBAN_DEFENSE_VALUE");
-                AI_UNIT_DAMAGED_US_VALUE = pInfos.getGlobalInt("AI_UNIT_DAMAGED_US_VALUE");
-                AI_UNIT_DAMAGED_THEM_VALUE = pInfos.getGlobalInt("AI_UNIT_DAMAGED_THEM_VALUE");
-                AI_UNIT_GENERAL_VALUE = pInfos.getGlobalInt("AI_UNIT_GENERAL_VALUE");
-                AI_UNIT_FLANKING_VALUE = pInfos.getGlobalInt("AI_UNIT_FLANKING_VALUE");
-                AI_UNIT_ADJACENT_SAME_VALUE = pInfos.getGlobalInt("AI_UNIT_ADJACENT_SAME_VALUE");
-                AI_UNIT_HEAL_VALUE = pInfos.getGlobalInt("AI_UNIT_HEAL_VALUE");
-                AI_UNIT_ROUT_VALUE = pInfos.getGlobalInt("AI_UNIT_ROUT_VALUE");
-                AI_UNIT_PUSH_VALUE = pInfos.getGlobalInt("AI_UNIT_PUSH_VALUE");
-                AI_UNIT_STUN_VALUE = pInfos.getGlobalInt("AI_UNIT_STUN_VALUE");
-                AI_ENLIST_ON_KILL_VALUE = pInfos.getGlobalInt("AI_ENLIST_ON_KILL_VALUE");
-                AI_UNIT_LAST_STAND_VALUE = pInfos.getGlobalInt("AI_UNIT_LAST_STAND_VALUE");
-                AI_UNIT_IGNORE_DISTANCE_VALUE = pInfos.getGlobalInt("AI_UNIT_IGNORE_DISTANCE_VALUE");
-                AI_UNIT_MELEE_COUNTER_VALUE = pInfos.getGlobalInt("AI_UNIT_MELEE_COUNTER_VALUE");
-                AI_UNIT_CRITICAL_IMMUNE_VALUE = pInfos.getGlobalInt("AI_UNIT_CRITICAL_IMMUNE_VALUE");
-                AI_UNIT_HEAL_NEUTRAL_VALUE = pInfos.getGlobalInt("AI_UNIT_HEAL_NEUTRAL_VALUE");
-                AI_UNIT_HEAL_PILLAGE_VALUE = pInfos.getGlobalInt("AI_UNIT_HEAL_PILLAGE_VALUE");
-                AI_UNIT_LAUNCH_OFFENSIVE_VALUE = pInfos.getGlobalInt("AI_UNIT_LAUNCH_OFFENSIVE_VALUE");
-                AI_UNIT_ENLIST_NEXT_VALUE = pInfos.getGlobalInt("AI_UNIT_ENLIST_NEXT_VALUE");
-                AI_UNIT_NO_ROAD_COOLDOWN_VALUE = pInfos.getGlobalInt("AI_UNIT_NO_ROAD_COOLDOWN_VALUE");
-                AI_UNIT_REMOVE_VEGETATION_VALUE = pInfos.getGlobalInt("AI_UNIT_REMOVE_VEGETATION_VALUE");
-                AI_UNIT_STRENGTH_TILE_VALUE = pInfos.getGlobalInt("AI_UNIT_STRENGTH_TILE_VALUE");
-                AI_UNIT_HIDE_VEGETATION_VALUE = pInfos.getGlobalInt("AI_UNIT_HIDE_VEGETATION_VALUE");
-                AI_UNIT_IGNORES_HEIGHT_COST_VALUE = pInfos.getGlobalInt("AI_UNIT_IGNORES_HEIGHT_COST_VALUE");
-                AI_UNIT_ZOC_VALUE = pInfos.getGlobalInt("AI_UNIT_ZOC_VALUE");
-                AI_UNIT_FORTIFY_VALUE = pInfos.getGlobalInt("AI_UNIT_FORTIFY_VALUE");
-                AI_UNIT_PILLAGE_VALUE = pInfos.getGlobalInt("AI_UNIT_PILLAGE_VALUE");
-                AI_UNIT_UNLIMBER_VALUE = pInfos.getGlobalInt("AI_UNIT_UNLIMBER_VALUE");
-                AI_UNIT_ANCHOR_VALUE = pInfos.getGlobalInt("AI_UNIT_ANCHOR_VALUE");
-                AI_UNIT_SETTLER_VALUE = pInfos.getGlobalInt("AI_UNIT_SETTLER_VALUE");
-                AI_UNIT_SCOUT_VALUE = pInfos.getGlobalInt("AI_UNIT_SCOUT_VALUE");
-                AI_UNIT_WORKER_VALUE = pInfos.getGlobalInt("AI_UNIT_WORKER_VALUE");
-                AI_UNIT_PROMOTE_VALUE = pInfos.getGlobalInt("AI_UNIT_PROMOTE_VALUE");
-                AI_UNIT_RANDOM_PROMOTION_VALUE = pInfos.getGlobalInt("AI_UNIT_RANDOM_PROMOTION_VALUE");
-                AI_UNIT_COST_VALUE = pInfos.getGlobalInt("AI_UNIT_COST_VALUE");
-                AI_UNIT_TARGET_NUMBER_WEIGHT = pInfos.getGlobalInt("AI_UNIT_TARGET_NUMBER_WEIGHT");
-                AI_UNIT_TRAIT_TARGET_NUMBER_WEIGHT = pInfos.getGlobalInt("AI_UNIT_TRAIT_TARGET_NUMBER_WEIGHT");
-                AI_WATER_UNIT_EXTRA_VALUE = pInfos.getGlobalInt("AI_WATER_UNIT_EXTRA_VALUE");
-                AI_INVISIBLE_UNIT_EXTRA_VALUE = pInfos.getGlobalInt("AI_INVISIBLE_UNIT_EXTRA_VALUE");
-                AI_RESOURCE_EXTRA_VALUE = pInfos.getGlobalInt("AI_RESOURCE_EXTRA_VALUE");
-                AI_TRADE_NETWORK_VALUE_ESTIMATE = pInfos.getGlobalInt("AI_TRADE_NETWORK_VALUE_ESTIMATE");
-                AI_SPECIALIST_FOUND_RELIGION_VALUE = pInfos.getGlobalInt("AI_SPECIALIST_FOUND_RELIGION_VALUE");
-                AI_VP_VALUE = pInfos.getGlobalInt("AI_VP_VALUE");
-                AI_MAX_ORDER_VALUE = pInfos.getGlobalInt("AI_MAX_ORDER_VALUE");
-                AI_ALL_XP_VALUE = pInfos.getGlobalInt("AI_ALL_XP_VALUE");
-                AI_IDLE_XP_VALUE = pInfos.getGlobalInt("AI_IDLE_XP_VALUE");
-                AI_HARVEST_VALUE = pInfos.getGlobalInt("AI_HARVEST_VALUE");
-                AI_WONDER_VALUE = pInfos.getGlobalInt("AI_WONDER_VALUE");
-                AI_WORKER_BUILD_VALUE = pInfos.getGlobalInt("AI_WORKER_BUILD_VALUE");
-                AI_TECHS_AVAILABLE_VALUE = pInfos.getGlobalInt("AI_TECHS_AVAILABLE_VALUE");
-                AI_BUILD_URBAN_VALUE = pInfos.getGlobalInt("AI_BUILD_URBAN_VALUE");
-                AI_IMPROVEMENT_UPGRADE_VALUE = pInfos.getGlobalInt("AI_IMPROVEMENT_UPGRADE_VALUE");
-                AI_EXISTING_IMPROVEMENT_VALUE = pInfos.getGlobalInt("AI_EXISTING_IMPROVEMENT_VALUE");
-                AI_RELIGION_VALUE = pInfos.getGlobalInt("AI_RELIGION_VALUE");
-                AI_RELIGION_SPREAD_VALUE = pInfos.getGlobalInt("AI_RELIGION_SPREAD_VALUE");
-                AI_FOUND_RELIGION_VALUE = pInfos.getGlobalInt("AI_FOUND_RELIGION_VALUE");
-                AI_MULTIPLE_WORKERS_VALUE = pInfos.getGlobalInt("AI_MULTIPLE_WORKERS_VALUE");
-                AI_AGENT_VALUE = pInfos.getGlobalInt("AI_AGENT_VALUE");
-                AI_MERCENARY_VALUE = pInfos.getGlobalInt("AI_MERCENARY_VALUE");
-                AI_CITY_HP_VALUE = pInfos.getGlobalInt("AI_CITY_HP_VALUE");
-                AI_CITY_IMPROVEMENT_COST_VALUE = pInfos.getGlobalInt("AI_CITY_IMPROVEMENT_COST_VALUE");
-                AI_CITY_ADJACENT_CLASS_COST_VALUE = pInfos.getGlobalInt("AI_CITY_ADJACENT_CLASS_COST_VALUE");
-                AI_CITY_SPECIALIST_COST_VALUE = pInfos.getGlobalInt("AI_CITY_SPECIALIST_COST_VALUE");
-                AI_CITY_SPECIALIST_TRAIN_VALUE = pInfos.getGlobalInt("AI_CITY_SPECIALIST_TRAIN_VALUE");
-                AI_CITY_PROJECT_COST_VALUE = pInfos.getGlobalInt("AI_CITY_PROJECT_COST_VALUE");
-                AI_CITY_HURRY_DISCONTENT_VALUE = pInfos.getGlobalInt("AI_CITY_HURRY_DISCONTENT_VALUE");
-                AI_CITY_REBEL_VALUE = pInfos.getGlobalInt("AI_CITY_REBEL_VALUE");
-                AI_CITY_NO_UNIT_VALUE = pInfos.getGlobalInt("AI_CITY_NO_UNIT_VALUE");
-                AI_CITY_HURRY_VALUE = pInfos.getGlobalInt("AI_CITY_HURRY_VALUE");
-                AI_CITY_GOVERNOR_VALUE = pInfos.getGlobalInt("AI_CITY_GOVERNOR_VALUE");
-                AI_CITY_IMPROVEMENT_VALUE = pInfos.getGlobalInt("AI_CITY_IMPROVEMENT_VALUE");
-                AI_ALLIANCE_VALUE = pInfos.getGlobalInt("AI_ALLIANCE_VALUE");
-                AI_DIPLOMACY_VALUE = pInfos.getGlobalInt("AI_DIPLOMACY_VALUE");
-                AI_INVASION_VALUE = pInfos.getGlobalInt("AI_INVASION_VALUE");
-                AI_COURTIER_VALUE = pInfos.getGlobalInt("AI_COURTIER_VALUE");
-                AI_HOLY_CITY_AGENT_VALUE = pInfos.getGlobalInt("AI_HOLY_CITY_AGENT_VALUE");
-                AI_CHARACTER_XP_VALUE = pInfos.getGlobalInt("AI_CHARACTER_XP_VALUE");
-                AI_WAR_DEFEND_STRENGTH_PERCENT = pInfos.getGlobalInt("AI_WAR_DEFEND_STRENGTH_PERCENT");
-                AI_SUCCESSION_CHANGE_MODIFIER = pInfos.getGlobalInt("AI_SUCCESSION_CHANGE_MODIFIER");
-                AI_TRIBUTE_NO_WAR_TURNS = pInfos.getGlobalInt("AI_TRIBUTE_NO_WAR_TURNS");
-                AI_NO_UNIT_BUILD_PERCENT = pInfos.getGlobalInt("AI_NO_UNIT_BUILD_PERCENT");
-                AI_MAX_NUM_WORKERS_PER_HUNDRED_CITIES = pInfos.getGlobalInt("AI_MAX_NUM_WORKERS_PER_HUNDRED_CITIES");
-                AI_MAX_NUM_WORKERS_PER_HUNDRED_ORDERS = pInfos.getGlobalInt("AI_MAX_NUM_WORKERS_PER_HUNDRED_ORDERS");
-                AI_MAX_NUM_DISCIPLES_PER_HUNDRED_CITIES = pInfos.getGlobalInt("AI_MAX_NUM_DISCIPLES_PER_HUNDRED_CITIES");
-                AI_MAX_NUM_DISCIPLES_PER_HUNDRED_ORDERS = pInfos.getGlobalInt("AI_MAX_NUM_DISCIPLES_PER_HUNDRED_ORDERS");
-                AI_HEIR_TUTOR_MODIFIER = pInfos.getGlobalInt("AI_HEIR_TUTOR_MODIFIER");
-                AI_COURTIER_JOB_MODIFIER = pInfos.getGlobalInt("AI_COURTIER_JOB_MODIFIER");
-                AI_WASTED_EFFECT_VALUE = pInfos.getGlobalInt("AI_WASTED_EFFECT_VALUE");
-                AI_MAX_FORT_BORDER_DISTANCE_OUTSIDE = pInfos.getGlobalInt("AI_MAX_FORT_BORDER_DISTANCE_OUTSIDE");
-                AI_MAX_FORT_BORDER_DISTANCE_INSIDE = pInfos.getGlobalInt("AI_MAX_FORT_BORDER_DISTANCE_INSIDE");
-                AI_MAX_FORT_RIVAL_BORDER_DISTANCE = pInfos.getGlobalInt("AI_MAX_FORT_RIVAL_BORDER_DISTANCE");
-                AI_NUM_PRIORITY_EXPANSION_TARGETS = pInfos.getGlobalInt("AI_NUM_PRIORITY_EXPANSION_TARGETS");
-                AI_WAR_PREPARING_TURNS = pInfos.getGlobalInt("AI_WAR_PREPARING_TURNS");
-                AI_TRASHED_TECH_VALUE_MODIFIER = pInfos.getGlobalInt("AI_TRASHED_TECH_VALUE_MODIFIER");
-                AI_HAPPINESS_LEVEL_HAPPINESS_MODIFIER = pInfos.getGlobalInt("AI_HAPPINESS_LEVEL_HAPPINESS_MODIFIER");
-                AI_WORKER_ORDER_SURPLUS_MODIFIER = pInfos.getGlobalInt("AI_WORKER_ORDER_SURPLUS_MODIFIER");
-                AI_TECH_VALUE_TURN_MODIFIER = pInfos.getGlobalInt("AI_TECH_VALUE_TURN_MODIFIER");
-                AI_BORDER_EXPANSION_VALUE_MODIFIER = pInfos.getGlobalInt("AI_BORDER_EXPANSION_VALUE_MODIFIER");
-                AI_MAX_ALLOWED_EXPENSE_IN_SHORTAGE = pInfos.getGlobalInt("AI_MAX_ALLOWED_EXPENSE_IN_SHORTAGE");
-                AI_AVG_CULTURE_ESTIMATE = pInfos.getGlobalInt("AI_AVG_CULTURE_ESTIMATE");
+            //public virtual void loadAIValues(Infos pInfos)
+            //{
+            //    AI_MAX_WATER_CONTROL_DISTANCE = pInfos.getGlobalInt("AI_MAX_WATER_CONTROL_DISTANCE");
+            //    AI_GROWTH_VALUE = pInfos.getGlobalInt("AI_GROWTH_VALUE");
+            //    AI_CIVICS_VALUE = pInfos.getGlobalInt("AI_CIVICS_VALUE");
+            //    AI_TRAINING_VALUE = pInfos.getGlobalInt("AI_TRAINING_VALUE");
+            //    AI_CULTURE_VALUE = pInfos.getGlobalInt("AI_CULTURE_VALUE");
+            //    AI_HAPPINESS_VALUE = pInfos.getGlobalInt("AI_HAPPINESS_VALUE");
+            //    AI_SCIENCE_VALUE = pInfos.getGlobalInt("AI_SCIENCE_VALUE");
+            //    AI_MONEY_VALUE = pInfos.getGlobalInt("AI_MONEY_VALUE");
+            //    AI_ORDERS_VALUE = pInfos.getGlobalInt("AI_ORDERS_VALUE");
+            //    AI_GOODS_VALUE = pInfos.getGlobalInt("AI_GOODS_VALUE");
+            //    AI_NUM_GOODS_TARGET = pInfos.getGlobalInt("AI_NUM_GOODS_TARGET");
+            //    AI_TILE_VALUE = pInfos.getGlobalInt("AI_TILE_VALUE");
+            //    AI_GROWTH_CITY_MODIFIER = pInfos.getGlobalInt("AI_GROWTH_CITY_MODIFIER");
+            //    AI_CIVICS_CITY_MODIFIER = pInfos.getGlobalInt("AI_CIVICS_CITY_MODIFIER");
+            //    AI_TRAINING_CITY_MODIFIER = pInfos.getGlobalInt("AI_TRAINING_CITY_MODIFIER");
+            //    AI_CITY_UNITS_BUILT_PER_TRAINING = pInfos.getGlobalInt("AI_CITY_UNITS_BUILT_PER_TRAINING");
+            //    AI_UNIT_TRAITS = pInfos.getGlobalInt("AI_UNIT_TRAITS");
+            //    AI_YIELD_TURNS = pInfos.getGlobalInt("AI_YIELD_TURNS");
+            //    AI_TURNS_BETWEEN_KILLS = pInfos.getGlobalInt("AI_TURNS_BETWEEN_KILLS");
+            //    AI_MIN_UNIT_BUILD_TURNS = pInfos.getGlobalInt("AI_MIN_UNIT_BUILD_TURNS");
+            //    AI_HALF_VALUE_UNIT_BUILD_TURNS = pInfos.getGlobalInt("AI_HALF_VALUE_UNIT_BUILD_TURNS");
+            //    AI_MIN_SPECIALIST_BUILD_TURNS = pInfos.getGlobalInt("AI_MIN_SPECIALIST_BUILD_TURNS");
+            //    AI_HALF_VALUE_SPECIALIST_BUILD_TURNS = pInfos.getGlobalInt("AI_HALF_VALUE_SPECIALIST_BUILD_TURNS");
+            //    AI_MIN_PROJECT_BUILD_TURNS = pInfos.getGlobalInt("AI_MIN_PROJECT_BUILD_TURNS");
+            //    AI_HALF_VALUE_PROJECT_BUILD_TURNS = pInfos.getGlobalInt("AI_HALF_VALUE_PROJECT_BUILD_TURNS");
+            //    AI_NO_WONDER_TURNS = pInfos.getGlobalInt("AI_NO_WONDER_TURNS");
+            //    AI_GRACE_TURNS = pInfos.getGlobalInt("AI_GRACE_TURNS");
+            //    AI_PLAY_TO_WIN_GRACE_TURNS = pInfos.getGlobalInt("AI_PLAY_TO_WIN_GRACE_TURNS");
+            //    AI_CHARACTER_OPINION_VALUE = pInfos.getGlobalInt("AI_CHARACTER_OPINION_VALUE");
+            //    AI_FAMILY_OPINION_VALUE = pInfos.getGlobalInt("AI_FAMILY_OPINION_VALUE");
+            //    AI_FAMILY_OPINION_VALUE_PER = pInfos.getGlobalInt("AI_FAMILY_OPINION_VALUE_PER");
+            //    AI_RELIGION_OPINION_VALUE = pInfos.getGlobalInt("AI_RELIGION_OPINION_VALUE");
+            //    AI_PLAYER_OPINION_VALUE = pInfos.getGlobalInt("AI_PLAYER_OPINION_VALUE");
+            //    AI_TRIBE_OPINION_VALUE = pInfos.getGlobalInt("AI_TRIBE_OPINION_VALUE");
+            //    AI_UNIT_ABILITIES_MULTIPLIER = pInfos.getGlobalInt("AI_UNIT_ABILITIES_MULTIPLIER");
+            //    AI_SHIP_ABILITIES_MULTIPLIER = pInfos.getGlobalInt("AI_SHIP_ABILITIES_MULTIPLIER");
+            //    AI_BUILD_TURNS_FOR_HELP = pInfos.getGlobalInt("AI_BUILD_TURNS_FOR_HELP");
+            //    AI_SENTRY_MAX_DISTANCE = pInfos.getGlobalInt("AI_SENTRY_MAX_DISTANCE");
+            //    AI_MIN_YIELD_STOCKPILE = pInfos.getGlobalInt("AI_MIN_YIELD_STOCKPILE");
+            //    AI_MONEY_STOCKPILE_TURNS = pInfos.getGlobalInt("AI_MONEY_STOCKPILE_TURNS");
+            //    AI_CITY_MIN_DANGER = pInfos.getGlobalInt("AI_CITY_MIN_DANGER");
+            //    AI_STOCKPILE_TURN_BUFFER = pInfos.getGlobalInt("AI_STOCKPILE_TURN_BUFFER");
+            //    AI_YIELD_SHORTAGE_PER_TURN_MODIFIER = pInfos.getGlobalInt("AI_YIELD_SHORTAGE_PER_TURN_MODIFIER");
+            //    AI_ORDER_SHORTAGE_PER_TURN_MODIFIER = pInfos.getGlobalInt("AI_ORDER_SHORTAGE_PER_TURN_MODIFIER");
+            //    AI_UNIT_STRENGTH_VALUE = pInfos.getGlobalInt("AI_UNIT_STRENGTH_VALUE");
+            //    AI_UNIT_STRENGTH_MODIFIER_VALUE = pInfos.getGlobalInt("AI_UNIT_STRENGTH_MODIFIER_VALUE");
+            //    AI_UNIT_ATTACK_MODIFIER_VALUE = pInfos.getGlobalInt("AI_UNIT_ATTACK_MODIFIER_VALUE");
+            //    AI_UNIT_DEFENSE_MODIFIER_VALUE = pInfos.getGlobalInt("AI_UNIT_DEFENSE_MODIFIER_VALUE");
+            //    AI_UNIT_CRITICAL_CHANCE_VALUE = pInfos.getGlobalInt("AI_UNIT_CRITICAL_CHANCE_VALUE");
+            //    AI_UNIT_XP_VALUE = pInfos.getGlobalInt("AI_UNIT_XP_VALUE");
+            //    AI_UNIT_HP_VALUE = pInfos.getGlobalInt("AI_UNIT_HP_VALUE");
+            //    AI_UNIT_LEVEL_VALUE = pInfos.getGlobalInt("AI_UNIT_LEVEL_VALUE");
+            //    AI_UNIT_WATER_CONTROL_VALUE = pInfos.getGlobalInt("AI_UNIT_WATER_CONTROL_VALUE");
+            //    AI_UNIT_MOVEMENT_VALUE = pInfos.getGlobalInt("AI_UNIT_MOVEMENT_VALUE");
+            //    AI_UNIT_VISION_VALUE = pInfos.getGlobalInt("AI_UNIT_VISION_VALUE");
+            //    AI_UNIT_REVEAL_VALUE = pInfos.getGlobalInt("AI_UNIT_REVEAL_VALUE");
+            //    AI_UNIT_FATIGUE_VALUE = pInfos.getGlobalInt("AI_UNIT_FATIGUE_VALUE");
+            //    AI_UNIT_RANGE_VALUE = pInfos.getGlobalInt("AI_UNIT_RANGE_VALUE");
+            //    AI_UNIT_MELEE_VALUE = pInfos.getGlobalInt("AI_UNIT_MELEE_VALUE");
+            //    AI_UNIT_ROAD_MOVEMENT_VALUE = pInfos.getGlobalInt("AI_UNIT_ROAD_MOVEMENT_VALUE");
+            //    AI_UNIT_PILLAGE_YIELD_VALUE = pInfos.getGlobalInt("AI_UNIT_PILLAGE_YIELD_VALUE");
+            //    AI_UNIT_RIVER_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_RIVER_ATTACK_VALUE");
+            //    AI_UNIT_WATER_LAND_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_WATER_LAND_ATTACK_VALUE");
+            //    AI_UNIT_HOME_VALUE = pInfos.getGlobalInt("AI_UNIT_HOME_VALUE");
+            //    AI_UNIT_SETTLEMENT_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_SETTLEMENT_ATTACK_VALUE");
+            //    AI_UNIT_CONNECTED_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_CONNECTED_ATTACK_VALUE");
+            //    AI_UNIT_CONNECTED_DEFENSE_VALUE = pInfos.getGlobalInt("AI_UNIT_CONNECTED_DEFENSE_VALUE");
+            //    AI_UNIT_URBAN_ATTACK_VALUE = pInfos.getGlobalInt("AI_UNIT_URBAN_ATTACK_VALUE");
+            //    AI_UNIT_URBAN_DEFENSE_VALUE = pInfos.getGlobalInt("AI_UNIT_URBAN_DEFENSE_VALUE");
+            //    AI_UNIT_DAMAGED_US_VALUE = pInfos.getGlobalInt("AI_UNIT_DAMAGED_US_VALUE");
+            //    AI_UNIT_DAMAGED_THEM_VALUE = pInfos.getGlobalInt("AI_UNIT_DAMAGED_THEM_VALUE");
+            //    AI_UNIT_GENERAL_VALUE = pInfos.getGlobalInt("AI_UNIT_GENERAL_VALUE");
+            //    AI_UNIT_FLANKING_VALUE = pInfos.getGlobalInt("AI_UNIT_FLANKING_VALUE");
+            //    AI_UNIT_ADJACENT_SAME_VALUE = pInfos.getGlobalInt("AI_UNIT_ADJACENT_SAME_VALUE");
+            //    AI_UNIT_HEAL_VALUE = pInfos.getGlobalInt("AI_UNIT_HEAL_VALUE");
+            //    AI_UNIT_ROUT_VALUE = pInfos.getGlobalInt("AI_UNIT_ROUT_VALUE");
+            //    AI_UNIT_PUSH_VALUE = pInfos.getGlobalInt("AI_UNIT_PUSH_VALUE");
+            //    AI_UNIT_STUN_VALUE = pInfos.getGlobalInt("AI_UNIT_STUN_VALUE");
+            //    AI_ENLIST_ON_KILL_VALUE = pInfos.getGlobalInt("AI_ENLIST_ON_KILL_VALUE");
+            //    AI_UNIT_LAST_STAND_VALUE = pInfos.getGlobalInt("AI_UNIT_LAST_STAND_VALUE");
+            //    AI_UNIT_IGNORE_DISTANCE_VALUE = pInfos.getGlobalInt("AI_UNIT_IGNORE_DISTANCE_VALUE");
+            //    AI_UNIT_MELEE_COUNTER_VALUE = pInfos.getGlobalInt("AI_UNIT_MELEE_COUNTER_VALUE");
+            //    AI_UNIT_CRITICAL_IMMUNE_VALUE = pInfos.getGlobalInt("AI_UNIT_CRITICAL_IMMUNE_VALUE");
+            //    AI_UNIT_HEAL_NEUTRAL_VALUE = pInfos.getGlobalInt("AI_UNIT_HEAL_NEUTRAL_VALUE");
+            //    AI_UNIT_HEAL_PILLAGE_VALUE = pInfos.getGlobalInt("AI_UNIT_HEAL_PILLAGE_VALUE");
+            //    AI_UNIT_LAUNCH_OFFENSIVE_VALUE = pInfos.getGlobalInt("AI_UNIT_LAUNCH_OFFENSIVE_VALUE");
+            //    AI_UNIT_ENLIST_NEXT_VALUE = pInfos.getGlobalInt("AI_UNIT_ENLIST_NEXT_VALUE");
+            //    AI_UNIT_NO_ROAD_COOLDOWN_VALUE = pInfos.getGlobalInt("AI_UNIT_NO_ROAD_COOLDOWN_VALUE");
+            //    AI_UNIT_REMOVE_VEGETATION_VALUE = pInfos.getGlobalInt("AI_UNIT_REMOVE_VEGETATION_VALUE");
+            //    AI_UNIT_STRENGTH_TILE_VALUE = pInfos.getGlobalInt("AI_UNIT_STRENGTH_TILE_VALUE");
+            //    AI_UNIT_HIDE_VEGETATION_VALUE = pInfos.getGlobalInt("AI_UNIT_HIDE_VEGETATION_VALUE");
+            //    AI_UNIT_IGNORES_HEIGHT_COST_VALUE = pInfos.getGlobalInt("AI_UNIT_IGNORES_HEIGHT_COST_VALUE");
+            //    AI_UNIT_ZOC_VALUE = pInfos.getGlobalInt("AI_UNIT_ZOC_VALUE");
+            //    AI_UNIT_FORTIFY_VALUE = pInfos.getGlobalInt("AI_UNIT_FORTIFY_VALUE");
+            //    AI_UNIT_PILLAGE_VALUE = pInfos.getGlobalInt("AI_UNIT_PILLAGE_VALUE");
+            //    AI_UNIT_UNLIMBER_VALUE = pInfos.getGlobalInt("AI_UNIT_UNLIMBER_VALUE");
+            //    AI_UNIT_ANCHOR_VALUE = pInfos.getGlobalInt("AI_UNIT_ANCHOR_VALUE");
+            //    AI_UNIT_SETTLER_VALUE = pInfos.getGlobalInt("AI_UNIT_SETTLER_VALUE");
+            //    AI_UNIT_SCOUT_VALUE = pInfos.getGlobalInt("AI_UNIT_SCOUT_VALUE");
+            //    AI_UNIT_WORKER_VALUE = pInfos.getGlobalInt("AI_UNIT_WORKER_VALUE");
+            //    AI_UNIT_PROMOTE_VALUE = pInfos.getGlobalInt("AI_UNIT_PROMOTE_VALUE");
+            //    AI_UNIT_RANDOM_PROMOTION_VALUE = pInfos.getGlobalInt("AI_UNIT_RANDOM_PROMOTION_VALUE");
+            //    AI_UNIT_COST_VALUE = pInfos.getGlobalInt("AI_UNIT_COST_VALUE");
+            //    AI_UNIT_TARGET_NUMBER_WEIGHT = pInfos.getGlobalInt("AI_UNIT_TARGET_NUMBER_WEIGHT");
+            //    AI_UNIT_TRAIT_TARGET_NUMBER_WEIGHT = pInfos.getGlobalInt("AI_UNIT_TRAIT_TARGET_NUMBER_WEIGHT");
+            //    AI_WATER_UNIT_EXTRA_VALUE = pInfos.getGlobalInt("AI_WATER_UNIT_EXTRA_VALUE");
+            //    AI_INVISIBLE_UNIT_EXTRA_VALUE = pInfos.getGlobalInt("AI_INVISIBLE_UNIT_EXTRA_VALUE");
+            //    AI_RESOURCE_EXTRA_VALUE = pInfos.getGlobalInt("AI_RESOURCE_EXTRA_VALUE");
+            //    AI_TRADE_NETWORK_VALUE_ESTIMATE = pInfos.getGlobalInt("AI_TRADE_NETWORK_VALUE_ESTIMATE");
+            //    AI_SPECIALIST_FOUND_RELIGION_VALUE = pInfos.getGlobalInt("AI_SPECIALIST_FOUND_RELIGION_VALUE");
+            //    AI_VP_VALUE = pInfos.getGlobalInt("AI_VP_VALUE");
+            //    AI_MAX_ORDER_VALUE = pInfos.getGlobalInt("AI_MAX_ORDER_VALUE");
+            //    AI_ALL_XP_VALUE = pInfos.getGlobalInt("AI_ALL_XP_VALUE");
+            //    AI_IDLE_XP_VALUE = pInfos.getGlobalInt("AI_IDLE_XP_VALUE");
+            //    AI_HARVEST_VALUE = pInfos.getGlobalInt("AI_HARVEST_VALUE");
+            //    AI_WONDER_VALUE = pInfos.getGlobalInt("AI_WONDER_VALUE");
+            //    AI_WORKER_BUILD_VALUE = pInfos.getGlobalInt("AI_WORKER_BUILD_VALUE");
+            //    AI_TECHS_AVAILABLE_VALUE = pInfos.getGlobalInt("AI_TECHS_AVAILABLE_VALUE");
+            //    AI_BUILD_URBAN_VALUE = pInfos.getGlobalInt("AI_BUILD_URBAN_VALUE");
+            //    AI_IMPROVEMENT_UPGRADE_VALUE = pInfos.getGlobalInt("AI_IMPROVEMENT_UPGRADE_VALUE");
+            //    AI_EXISTING_IMPROVEMENT_VALUE = pInfos.getGlobalInt("AI_EXISTING_IMPROVEMENT_VALUE");
+            //    AI_RELIGION_VALUE = pInfos.getGlobalInt("AI_RELIGION_VALUE");
+            //    AI_RELIGION_SPREAD_VALUE = pInfos.getGlobalInt("AI_RELIGION_SPREAD_VALUE");
+            //    AI_FOUND_RELIGION_VALUE = pInfos.getGlobalInt("AI_FOUND_RELIGION_VALUE");
+            //    AI_MULTIPLE_WORKERS_VALUE = pInfos.getGlobalInt("AI_MULTIPLE_WORKERS_VALUE");
+            //    AI_AGENT_VALUE = pInfos.getGlobalInt("AI_AGENT_VALUE");
+            //    AI_MERCENARY_VALUE = pInfos.getGlobalInt("AI_MERCENARY_VALUE");
+            //    AI_CITY_HP_VALUE = pInfos.getGlobalInt("AI_CITY_HP_VALUE");
+            //    AI_CITY_IMPROVEMENT_COST_VALUE = pInfos.getGlobalInt("AI_CITY_IMPROVEMENT_COST_VALUE");
+            //    AI_CITY_ADJACENT_CLASS_COST_VALUE = pInfos.getGlobalInt("AI_CITY_ADJACENT_CLASS_COST_VALUE");
+            //    AI_CITY_SPECIALIST_COST_VALUE = pInfos.getGlobalInt("AI_CITY_SPECIALIST_COST_VALUE");
+            //    AI_CITY_SPECIALIST_TRAIN_VALUE = pInfos.getGlobalInt("AI_CITY_SPECIALIST_TRAIN_VALUE");
+            //    AI_CITY_PROJECT_COST_VALUE = pInfos.getGlobalInt("AI_CITY_PROJECT_COST_VALUE");
+            //    AI_CITY_HURRY_DISCONTENT_VALUE = pInfos.getGlobalInt("AI_CITY_HURRY_DISCONTENT_VALUE");
+            //    AI_CITY_REBEL_VALUE = pInfos.getGlobalInt("AI_CITY_REBEL_VALUE");
+            //    AI_CITY_NO_UNIT_VALUE = pInfos.getGlobalInt("AI_CITY_NO_UNIT_VALUE");
+            //    AI_CITY_HURRY_VALUE = pInfos.getGlobalInt("AI_CITY_HURRY_VALUE");
+            //    AI_CITY_GOVERNOR_VALUE = pInfos.getGlobalInt("AI_CITY_GOVERNOR_VALUE");
+            //    AI_CITY_IMPROVEMENT_VALUE = pInfos.getGlobalInt("AI_CITY_IMPROVEMENT_VALUE");
+            //    AI_ALLIANCE_VALUE = pInfos.getGlobalInt("AI_ALLIANCE_VALUE");
+            //    AI_DIPLOMACY_VALUE = pInfos.getGlobalInt("AI_DIPLOMACY_VALUE");
+            //    AI_INVASION_VALUE = pInfos.getGlobalInt("AI_INVASION_VALUE");
+            //    AI_COURTIER_VALUE = pInfos.getGlobalInt("AI_COURTIER_VALUE");
+            //    AI_HOLY_CITY_AGENT_VALUE = pInfos.getGlobalInt("AI_HOLY_CITY_AGENT_VALUE");
+            //    AI_CHARACTER_XP_VALUE = pInfos.getGlobalInt("AI_CHARACTER_XP_VALUE");
+            //    AI_WAR_DEFEND_STRENGTH_PERCENT = pInfos.getGlobalInt("AI_WAR_DEFEND_STRENGTH_PERCENT");
+            //    AI_SUCCESSION_CHANGE_MODIFIER = pInfos.getGlobalInt("AI_SUCCESSION_CHANGE_MODIFIER");
+            //    AI_TRIBUTE_NO_WAR_TURNS = pInfos.getGlobalInt("AI_TRIBUTE_NO_WAR_TURNS");
+            //    AI_NO_UNIT_BUILD_PERCENT = pInfos.getGlobalInt("AI_NO_UNIT_BUILD_PERCENT");
+            //    AI_MAX_NUM_WORKERS_PER_HUNDRED_CITIES = pInfos.getGlobalInt("AI_MAX_NUM_WORKERS_PER_HUNDRED_CITIES");
+            //    AI_MAX_NUM_WORKERS_PER_HUNDRED_ORDERS = pInfos.getGlobalInt("AI_MAX_NUM_WORKERS_PER_HUNDRED_ORDERS");
+            //    AI_MAX_NUM_DISCIPLES_PER_HUNDRED_CITIES = pInfos.getGlobalInt("AI_MAX_NUM_DISCIPLES_PER_HUNDRED_CITIES");
+            //    AI_MAX_NUM_DISCIPLES_PER_HUNDRED_ORDERS = pInfos.getGlobalInt("AI_MAX_NUM_DISCIPLES_PER_HUNDRED_ORDERS");
+            //    AI_HEIR_TUTOR_MODIFIER = pInfos.getGlobalInt("AI_HEIR_TUTOR_MODIFIER");
+            //    AI_COURTIER_JOB_MODIFIER = pInfos.getGlobalInt("AI_COURTIER_JOB_MODIFIER");
+            //    AI_WASTED_EFFECT_VALUE = pInfos.getGlobalInt("AI_WASTED_EFFECT_VALUE");
+            //    AI_MAX_FORT_BORDER_DISTANCE_OUTSIDE = pInfos.getGlobalInt("AI_MAX_FORT_BORDER_DISTANCE_OUTSIDE");
+            //    AI_MAX_FORT_BORDER_DISTANCE_INSIDE = pInfos.getGlobalInt("AI_MAX_FORT_BORDER_DISTANCE_INSIDE");
+            //    AI_MAX_FORT_RIVAL_BORDER_DISTANCE = pInfos.getGlobalInt("AI_MAX_FORT_RIVAL_BORDER_DISTANCE");
+            //    AI_NUM_PRIORITY_EXPANSION_TARGETS = pInfos.getGlobalInt("AI_NUM_PRIORITY_EXPANSION_TARGETS");
+            //    AI_WAR_PREPARING_TURNS = pInfos.getGlobalInt("AI_WAR_PREPARING_TURNS");
+            //    AI_TRASHED_TECH_VALUE_MODIFIER = pInfos.getGlobalInt("AI_TRASHED_TECH_VALUE_MODIFIER");
+            //    AI_HAPPINESS_LEVEL_HAPPINESS_MODIFIER = pInfos.getGlobalInt("AI_HAPPINESS_LEVEL_HAPPINESS_MODIFIER");
+            //    AI_WORKER_ORDER_SURPLUS_MODIFIER = pInfos.getGlobalInt("AI_WORKER_ORDER_SURPLUS_MODIFIER");
+            //    AI_TECH_VALUE_TURN_MODIFIER = pInfos.getGlobalInt("AI_TECH_VALUE_TURN_MODIFIER");
+            //    AI_BORDER_EXPANSION_VALUE_MODIFIER = pInfos.getGlobalInt("AI_BORDER_EXPANSION_VALUE_MODIFIER");
+            //    AI_MAX_ALLOWED_EXPENSE_IN_SHORTAGE = pInfos.getGlobalInt("AI_MAX_ALLOWED_EXPENSE_IN_SHORTAGE");
+            //    AI_AVG_CULTURE_ESTIMATE = pInfos.getGlobalInt("AI_AVG_CULTURE_ESTIMATE");
 
-                AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = pInfos.getGlobalInt("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");
-                AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = pInfos.getGlobalInt("AI_CIVICS_CITY_SPECIALIZATION_MODIFIER");
-                AI_TRAINING_CITY_SPECIALIZATION_MODIFIER = pInfos.getGlobalInt("AI_TRAINING_CITY_SPECIALIZATION_MODIFIER");
-            }
+            //    AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = pInfos.getGlobalInt("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");
+            //    AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = pInfos.getGlobalInt("AI_CIVICS_CITY_SPECIALIZATION_MODIFIER");
+            //    AI_TRAINING_CITY_SPECIALIZATION_MODIFIER = pInfos.getGlobalInt("AI_TRAINING_CITY_SPECIALIZATION_MODIFIER");
+            //}
 
             //lines 8034-8058
             protected override long getHurryCostValue(City pCity, CityBuildHurryType eHurry)
@@ -520,6 +521,245 @@ namespace BetterAI
                 return iSpecializationModifier;
 
             }
+
+            //lines 2715-2927
+
+            protected override void doExpansionTargets(bool bCanDeclareWar, int iPriorityTargets)
+            {
+                //using var profileScope = new UnityProfileScope("PlayerAI.doExpansionTargets");
+
+                bool bDeclareWarToExpand = (getExpansionTargets().Count == 0 && getValidCitySites().Count == 0 && areAllCitiesDefended() && bCanDeclareWar);
+
+                if (player != null)
+                {
+                    foreach (int iExpansionTarget in getExpansionTargets())
+                    {
+                        Tile pTile = game.tile(iExpansionTarget);
+                        if (pTile != null && pTile.isVisible(Team))
+                        {
+                            Player pStealingPlayer = null;
+
+                            if (pTile.isCitySiteActive(Team))
+                            {
+                                Unit pBlockUnit = pTile.connectedNoFoundUnit(Team);
+                                if (pBlockUnit != null)
+                                {
+                                    pStealingPlayer = pBlockUnit.player();
+                                }
+                            }
+                            else if (pTile.hasRevealedCityTerritory(Team))
+                            {
+                                City pCity = pTile.revealedCityTerritory(Team);
+                                if (game.getTurn() - pCity.getFoundedTurn() <= 1)
+                                {
+                                    pStealingPlayer = pCity.player();
+                                }
+                            }
+
+                            if ((pStealingPlayer != null) &&
+                                (pStealingPlayer.getTeam() != Team) &&
+                                !(game.isHostile(Team, Tribe, pStealingPlayer.getTeam(), TribeType.NONE)))
+                            {
+                                if (pTile.getRecentAttacks(pStealingPlayer.getTeam()) < (pTile.getRecentAttacks(Team) / 2))
+                                {
+                                    pStealingPlayer.doEventTrigger(infos.Globals.PLAYER_STOLE_CITY_SITE_EVENTTRIGGER, getPlayer(), pTile);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                using (var valueListScoped = CollectionCache.GetListScoped<(Tile, ExpansionValue)>())
+                {
+                    List<(Tile, ExpansionValue)> azExpansionValues = valueListScoped.Value;
+                    bool bFoundWarPreparingTarget = false;
+
+                    for (int iI = 0; iI < game.getNumTiles(); ++iI)
+                    {
+                        Tile pLoopTile = game.tile(iI);
+                        if (pLoopTile != null)
+                        {
+                            (PlayerType eTilePlayer, TribeType eTileTribe) = getTileTargetTerritory(pLoopTile);
+                            Player pTilePlayer = eTilePlayer != PlayerType.NONE ? game.player(eTilePlayer) : null;
+                            TeamType eTileTeam = pTilePlayer != null ? pTilePlayer.getTeam() : TeamType.NONE;
+
+                            long iValue = tileExpansionValue(pLoopTile, bDeclareWarToExpand || isWarPreparing(eTilePlayer));
+                            if (iValue > 0)
+                            {
+                                if (game.isPeace(eTileTeam, eTileTribe, Team, Tribe))
+                                {
+                                    continue; // don't break peace, just to expand - only diplomacy AI does this
+                                }
+                                if (!game.isHostile(eTileTeam, eTileTribe, Team, Tribe))
+                                {
+                                    if (player == null)
+                                    {
+                                        continue;
+                                    }
+
+                                    if (!bDeclareWarToExpand && !isWarPreparing(eTilePlayer))
+                                    {
+                                        continue;
+                                    }
+
+/*####### Better Old World AI - Base DLL #######
+  ### AI expansion even with 0 war chance START#
+  ##############################################*/
+                                    if (eTilePlayer != PlayerType.NONE)
+                                    {
+                                        if (player.canDeclareWar(pTilePlayer))
+                                        {
+                                            if (getWarOfferPercent(eTilePlayer) + AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE == 0)
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                    }
+
+                                    if (eTileTribe != TribeType.NONE)
+                                    {
+                                        if (player.canDeclareWarTribe(eTileTribe))
+                                        {
+                                            if (getWarOfferPercent(eTileTribe) + AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE == 0)
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                    }
+/*####### Better Old World AI - Base DLL #######
+  ### AI expansion even with 0 war chance END ##
+  ##############################################*/
+
+                                }
+
+                                if (player != null)
+                                {
+                                    if (isAtWarWithPlayer() && !getEnemyPlayers().Contains(eTilePlayer)) // only target major enemies, if they exist
+                                    {
+                                        continue;
+                                    }
+                                }
+
+                                ExpansionValue zNewValue = new ExpansionValue();
+                                zNewValue.iFoundValue = iValue;
+                                zNewValue.iAttackPercent = getDiplomacyAttackPercentPerTurn(eTileTeam, eTilePlayer, eTileTribe);
+                                zNewValue.iPriority = 0;
+                                if (pLoopTile.hasCityTerritory())
+                                {
+                                    zNewValue.iPriority += getPriorityCityTiles(pLoopTile.cityTerritory());
+                                }
+                                else if (pLoopTile.isCitySiteActive())
+                                {
+                                    zNewValue.iPriority += isPriorityTarget(iI) ? 1 : 0;
+                                }
+
+                                azExpansionValues.Add((pLoopTile, zNewValue));
+
+                                if (eTilePlayer != PlayerType.NONE && getWarPreparingPlayer() == eTilePlayer)
+                                {
+                                    bFoundWarPreparingTarget = true;
+                                }
+                            }
+                        }
+                    }
+
+                    azExpansionValues.Sort(ExpansionValue.Compare);
+
+                    if (getWarPreparingPlayer() != PlayerType.NONE)
+                    {
+                        if (!bFoundWarPreparingTarget)
+                        {
+                            clearWarPreparingPlayer();
+                        }
+                        else
+                        {
+                            setWarPreparingTurns(getWarPreparingTurns() - 1);
+                        }
+                    }
+
+                    using (var teamsChecked = CollectionCache.GetHashSetScoped<TeamType>())
+                    using (var tribesChecked = CollectionCache.GetHashSetScoped<TribeType>())
+                    using (var expansionTargetsScoped = CollectionCache.GetHashSetScoped<int>())
+                    {
+                        HashSet<TeamType> seTeamsChecked = teamsChecked.Value;
+                        HashSet<TribeType> seTribesChecked = tribesChecked.Value;
+
+                        for (int iExpansionIndex = 0; iExpansionIndex < azExpansionValues.Count; ++iExpansionIndex)
+                        {
+                            Tile pLoopTile = azExpansionValues[iExpansionIndex].Item1;
+
+                            (PlayerType eTilePlayer, TribeType eTileTribe) = getTileTargetTerritory(pLoopTile);
+                            TeamType eTileTeam = eTilePlayer != PlayerType.NONE ? game.player(eTilePlayer).getTeam() : TeamType.NONE;
+
+                            bool bValid = game.isHostile(Team, Tribe, eTileTeam, eTileTribe) || isWarPreparing(eTilePlayer);
+                            if (!bValid && iExpansionIndex < iPriorityTargets)
+                            {
+                                if (!seTeamsChecked.Contains(eTileTeam) || !seTribesChecked.Contains(eTileTribe))
+                                {
+                                    seTeamsChecked.Add(eTileTeam);
+                                    seTribesChecked.Add(eTileTribe);
+                                    bValid = game.randomNext(100) < azExpansionValues[iExpansionIndex].Item2.iAttackPercent;
+                                }
+                            }
+
+                            if (bValid)
+                            {
+                                expansionTargetsScoped.Value.Add(pLoopTile.getID());
+
+                                if (!getExpansionTargets().Contains(pLoopTile.getID()))
+                                {
+                                    if (player != null)
+                                    {
+                                        if (pLoopTile.isRevealedCity(Team))
+                                        {
+                                            player.pushDebugLogData(new GameLogData("New target: " + pLoopTile.city().getName(), GameLogType.AI_DEBUG, "", "", "", game.getTurn(), game.getTeamTurn()));
+                                        }
+                                        else if (pLoopTile.hasImprovementTribeSite(Team))
+                                        {
+                                            player.pushDebugLogData(new GameLogData("New target: " + game.textManager().TEXT(pLoopTile.revealedImprovement(Team).mName) + " at " + pLoopTile.ToString(), GameLogType.AI_DEBUG, "", "", "", game.getTurn(), game.getTeamTurn()));
+                                        }
+                                        else
+                                        {
+                                            player.pushDebugLogData(new GameLogData("New target: Tile at " + pLoopTile.ToString(), GameLogType.AI_DEBUG, "", "", "", game.getTurn(), game.getTeamTurn()));
+                                        }
+                                    }
+
+                                    if (!game.isHostile(Team, Tribe, eTileTeam, eTileTribe))
+                                    {
+                                        if (eTileTribe != TribeType.NONE)
+                                        {
+                                            if (player != null)
+                                            {
+                                                player.declareWarTribe(eTileTribe);
+                                            }
+                                            if (Tribe != TribeType.NONE)
+                                            {
+                                                MohawkAssert.Assert(false, "tribe war declarations should be made in doPlayerDiplomacy");
+                                            }
+                                        }
+                                        else if (eTilePlayer != PlayerType.NONE && getWarPreparingPlayer() == PlayerType.NONE)
+                                        {
+                                            setWarPreparingPlayer(eTilePlayer);
+                                            setWarPreparingTurns(AI_WAR_PREPARING_TURNS);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        setExpansionTargets(expansionTargetsScoped.Value);
+                    }
+                }
+            }
+
+
 
             //lines 4141-4240
             public override long calculateCityYieldValue(YieldType eYield, City pCity)
@@ -1611,7 +1851,7 @@ namespace BetterAI
   ##############################################*/
                         //long iTileOutputValue = pTile.yieldOutput(eImprovement, eImprovementSpecialist, eLoopYield, pCityEffects: null, bBaseOnly: false);
                         //long iTileOutputValue = pTile.yieldOutput(eImprovement, SpecialistType.NONE, eLoopYield, pCityEffects: null, bBaseOnly: false);
-                        long iTileOutputValue = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), dEffectCityExtraCounts);
+                        long iTileOutputValue = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, bCost: true, pCity.governor(), dEffectCityExtraCounts);
 
                         //if (infos.yield(eLoopYield).miPerImprovement != 0)
                         //{
@@ -1637,7 +1877,7 @@ namespace BetterAI
                             {
                                 if (eImprovementSpecialist != SpecialistType.NONE)
                                 {
-                                    iExtraCivicsProduction = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, eImprovementSpecialist, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), dEffectCityExtraCounts);
+                                    iExtraCivicsProduction = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, eImprovementSpecialist, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, bCost: true, pCity.governor(), dEffectCityExtraCounts);
                                     iExtraCivicsProduction += infos.yield(eLoopYield).miPerImprovement;
                                     iExtraCivicsProduction = infos.utils().modify((iExtraCivicsProduction + extraYields[(int)eLoopYield]), (pCity?.calculateTotalYieldModifier(eLoopYield) ?? 0) + iExtraModifier);
                                 }
@@ -2292,8 +2532,8 @@ namespace BetterAI
                         {
                             //int iOutput = (pTile.yieldOutput(pTile.getImprovement(), eSpecialist, eLoopYield, null, false) - pTile.yieldOutput(pTile.getImprovement(), SpecialistType.NONE, eLoopYield, null, false));
                             //int iOutput = (pTile.yieldOutput(eImprovement, eSpecialist, eLoopYield, null, false) - pTile.yieldOutput(eImprovement, SpecialistType.NONE, eLoopYield, null, false));
-                            int iOutput = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, eSpecialist, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), !bRemove ? dEffectCityExtraCounts : null);
-                            iOutput -= ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, pCity.governor(), bRemove ? dEffectCityExtraCounts : dEffectCityImprovementOnlyExtraCounts); //output without the specialist and without the city effect from that specialist
+                            int iOutput = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, eSpecialist, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, bCost: true, pCity.governor(), !bRemove ? dEffectCityExtraCounts : null);
+                            iOutput -= ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, bCost: true, pCity.governor(), bRemove ? dEffectCityExtraCounts : dEffectCityImprovementOnlyExtraCounts); //output without the specialist and without the city effect from that specialist
 
                             int iExtraModifier = 0;
                             foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
@@ -2723,6 +2963,11 @@ namespace BetterAI
                 //using var profileScope = new UnityProfileScope("PlayerAI.calculateEffectCityValue");
 
                 if (player == null)
+                {
+                    return 0;
+                }
+
+                if (!player.canEverHaveEffectCity(eEffectCity))
                 {
                     return 0;
                 }
@@ -3420,6 +3665,52 @@ namespace BetterAI
 
                 return iValue;
             }
+
+            public override long upgradeValue(UnitType eUnit, Unit pUnit)
+            {
+                long iNewValue = getUnitValue(eUnit);
+
+                int iModifier = pUnit.getLevelPromotion() * 100 / infos.Globals.MAX_LEVELS;
+
+                if (player.isUnitObsolete(pUnit.getType()))
+                {
+                    iModifier += 50;
+                }
+
+                // upgrade at a higher priority, if we're less likely to build new units
+                if (isMilitaryLandUnit(eUnit) && getTargetMilitaryUnitNumber() > 0)
+                {
+                    iModifier += Math.Min(50, 50 * getCurrentMilitaryUnitNumber() / getTargetMilitaryUnitNumber());
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Water unit upgrade value: Area   START ###
+  ##############################################*/
+                //else if (isWarship(eUnit) && getWaterUnitTargetNumber(-1) > 0)
+                //{
+                //    if (getWaterUnitCurrentNumber(-1) >= getWaterUnitTargetNumber(-1))
+                //    {
+                //        iModifier += Math.Min(50, 50 * getWaterUnitCurrentNumber(-1) / getWaterUnitTargetNumber(-1));
+                //    }
+                //}
+                else if (isWarship(eUnit))
+                {
+                    int iArea = pUnit.tile()?.getArea() ?? -1;
+                    if (iArea != -1 && getWaterUnitTargetNumber(iArea) > 0)
+                    {
+                        if (getWaterUnitCurrentNumber(iArea) >= getWaterUnitTargetNumber(iArea))
+                        {
+                            iModifier += Math.Min(50, 50 * getWaterUnitCurrentNumber(iArea) / getWaterUnitTargetNumber(-1));
+                        }
+                    }
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Water unit upgrade value: Area     END ###
+  ##############################################*/
+
+                return Math.Max(0, infos.utils().modify(iNewValue, iModifier) - getUnitValue(pUnit.getType()) - getUnitCostValue(eUnit, null));
+            }
+
 
             public virtual int CompareUnitValue(UnitType x, UnitType y, City pCity)
             {
