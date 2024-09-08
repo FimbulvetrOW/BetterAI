@@ -15,9 +15,6 @@ using Mohawk.SystemCore;
 using Mohawk.UIInterfaces;
 using UnityEngine;
 using UnityEngine.UI;
-using static TenCrowns.ClientCore.ClientUI;
-using static BetterAI.BetterAIInfos;
-using System.Runtime.Remoting.Channels;
 
 namespace BetterAI
 {

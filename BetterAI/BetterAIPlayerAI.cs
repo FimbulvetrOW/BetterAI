@@ -3089,7 +3089,6 @@ namespace BetterAI
                             BetterAICharacter pCharacter = (BetterAICharacter)player.councilCharacter(infos.job(pEffectPlayer.meSourceTraitJob).meCouncil);
                             if (pCharacter != null)
                             {
-                                
                                 return Math.Min(getJobTurnsLeftEstimate(pCharacter, pEffectPlayer.meSourceTraitJob), getTraitTurnsLeftEstimate(pCharacter, pEffectPlayer.meSourceTrait));
                             }
                         }
@@ -3129,8 +3128,6 @@ namespace BetterAI
                             }
                         }
 
-                        iRemainingEffectTurns = infos.utils().range((CharactersTurnsLeftEstimate.Sum()) / CharactersTurnsLeftEstimate.Count, 0, AI_YIELD_TURNS);
-
                     }
                     else if (pEffectPlayer.meSourceTraitTrait != TraitType.NONE)
                     {
@@ -3161,6 +3158,12 @@ namespace BetterAI
                             }
                         }
                     }
+
+                    if (iFoundCharacters > 0)
+                    {
+                        iRemainingEffectTurns = infos.utils().range((CharactersTurnsLeftEstimate.Sum()) / CharactersTurnsLeftEstimate.Count, 0, AI_YIELD_TURNS);
+                    }
+
                     return iRemainingEffectTurns;
                 }
             }
