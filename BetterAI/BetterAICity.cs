@@ -457,6 +457,44 @@ namespace BetterAI
         }
         //copy-paste END
 
+        //lines 1928-1948
+        protected override void setGovernorID(int iNewValue)
+        {
+            if (getGovernorID() != iNewValue)
+            {
+                Character pOldGovernor = governor();
+                Character pNewGovernor = game().character(iNewValue);
+
+                if (pOldGovernor != null)
+                {
+                    pOldGovernor.setCityGovernorID(-1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+                    ((BetterAICharacter)pOldGovernor).resetJobTraitEffectPlayer(infos().Globals.GOVERNOR_JOB, -1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+                }
+
+                updateLastData(DirtyType.miGovernorID, mpCurrentData.miGovernorID, ref mpLastUpdateData.miGovernorID);
+                mpCurrentData.miGovernorID = iNewValue;
+
+                if (pNewGovernor != null)
+                {
+                    pNewGovernor.setCityGovernorID(getID());
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+                    ((BetterAICharacter)pNewGovernor).resetJobTraitEffectPlayer(infos().Globals.GOVERNOR_JOB, 1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+                }
+            }
+        }
+
+
         public virtual int getImprovementModifierForGovernor(ImprovementType eIndex, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
@@ -893,6 +931,66 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Disconent Level 0                  END ###
   ##############################################*/
+
+        public override void loadAgentCharacterID(PlayerType eIndex, int iNewValue)
+        {
+            if (getAgentCharacterID(eIndex) != iNewValue)
+            {
+                resetVisibilty(eIndex, -1);
+
+                if (hasAgentCharacter(eIndex))
+                {
+                    agentCharacter(eIndex).setCityAgentID(-1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+                    ((BetterAICharacter)agentCharacter(eIndex)).resetJobTraitEffectPlayer(infos().Globals.AGENT_JOB, -1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+                }
+
+                updateLastData(DirtyType.maiAgentCharacterID, mpCurrentData.maiAgentCharacterID, ref mpLastUpdateData.maiAgentCharacterID);
+                mpCurrentData.maiAgentCharacterID[(int)eIndex] = iNewValue;
+
+                if (hasAgentCharacter(eIndex))
+                {
+                    agentCharacter(eIndex).setCityAgentID(getID());
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+                    ((BetterAICharacter)agentCharacter(eIndex)).resetJobTraitEffectPlayer(infos().Globals.AGENT_JOB, 1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+                }
+
+                resetVisibilty(eIndex, 1);
+            }
+        }
+
+        //lines 7097-7110
+        protected override bool verifyBuildSpecialist(CityQueueData pBuild)
+        {
+            SpecialistType eSpecialist = (SpecialistType)(pBuild.miType);
+            Tile pTile = game().tile(pBuild.miData);
+
+/*####### Better Old World AI - Base DLL #######
+  ### Continue specialist on pillaged  START ###
+  ##############################################*/
+            //if (!(pTile.isSpecialistValid(eSpecialist, pTile.getImprovementFinished())) ||
+            if (!(pTile.isSpecialistValid(eSpecialist, ((BetterAITile)pTile).getImprovementFinishedorPillaged())) ||
+/*####### Better Old World AI - Base DLL #######
+  ### Continue specialist on pillaged    END ###
+  ##############################################*/
+                (pTile.getSpecialist() == eSpecialist) ||
+                (game().isSpecialistAncestor(eSpecialist, pTile.getSpecialist())))
+            {
+                return false;
+            }
+
+            return true;
+        }
 
 /*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###

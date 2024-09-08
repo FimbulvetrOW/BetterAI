@@ -164,21 +164,78 @@ namespace BetterAI
 
         public virtual void addAllUpgrades(UnitType eUnit)
         {
-            BetterAIInfoUnit pUnitInfo = (BetterAIInfoUnit)unit(eUnit);
+            BetterAIInfoUnit pInfoUnit = (BetterAIInfoUnit)unit(eUnit);
 
-            foreach (UnitType eUpgradeUnit in (pUnitInfo.maeUpgradeUnit))
+            foreach (UnitType eUpgradeUnit in (pInfoUnit.maeUpgradeUnit))
             {
-                if (pUnitInfo.mseUpgradeUnitAccumulated.Add(eUpgradeUnit))
+                if (pInfoUnit.mseUpgradeUnitAccumulated.Add(eUpgradeUnit))
                 {
                     //recursion
                     addAllUpgrades(eUpgradeUnit);
 
-                    pUnitInfo.mseUpgradeUnitAccumulated.UnionWith(((BetterAIInfoUnit)unit(eUpgradeUnit)).mseUpgradeUnitAccumulated);
+                    pInfoUnit.mseUpgradeUnitAccumulated.UnionWith(((BetterAIInfoUnit)unit(eUpgradeUnit)).mseUpgradeUnitAccumulated);
                 }
             }
 
             return;
         }
+
+        public virtual bool removeUnlockerEffectPlayerLoops(EffectPlayerType eEffectPlayer, ref HashSet<EffectPlayerType> previousUnlockers)
+        {
+            BetterAIInfoEffectPlayer pInfoEffectPlayer = (BetterAIInfoEffectPlayer)effectPlayer(eEffectPlayer);
+
+            if (pInfoEffectPlayer.meEffectPlayer != EffectPlayerType.NONE)
+            {
+                if (previousUnlockers.Contains(pInfoEffectPlayer.meEffectPlayer))
+                {
+                    pInfoEffectPlayer.meEffectPlayer = EffectPlayerType.NONE;
+                    return true;
+                }
+                else
+                {
+                    return removeUnlockerEffectPlayerLoops(pInfoEffectPlayer.meEffectPlayer, ref previousUnlockers);
+                }
+            }
+
+            return false;
+        }
+
+        public virtual bool addAllUnlockerEffectPlayers(EffectPlayerType eEffectPlayer)
+        {
+            BetterAIInfoEffectPlayer pInfoEffectPlayer = (BetterAIInfoEffectPlayer)effectPlayer(eEffectPlayer);
+
+            if (pInfoEffectPlayer.meEffectPlayer != EffectPlayerType.NONE)
+            {
+                BetterAIInfoEffectPlayer pInfoEffectPlayerUnlocked = (BetterAIInfoEffectPlayer)effectPlayer(pInfoEffectPlayer.meEffectPlayer);
+                pInfoEffectPlayerUnlocked.mseGetsUnlockedByEffectPlayers.Add(eEffectPlayer);
+                pInfoEffectPlayerUnlocked.mseGetsUnlockedByEffectPlayers.UnionWith(pInfoEffectPlayer.mseGetsUnlockedByEffectPlayers);
+
+                addAllUnlockerEffectPlayers(pInfoEffectPlayer.meEffectPlayer);
+            }
+
+            return true;
+        }
+
+        public virtual void setAllAnyEffectPlayerEffectPlayers(EffectPlayerType eEffectPlayer)
+        {
+            BetterAIInfoEffectPlayer pInfoEffectPlayer = (BetterAIInfoEffectPlayer)effectPlayer(eEffectPlayer);
+
+            pInfoEffectPlayer.bAnyEffectPlayerEffectPlayer = true;
+
+            foreach (EffectPlayerType eUnlockedByEffectPlayer in pInfoEffectPlayer.mseGetsUnlockedByEffectPlayers)
+            {
+                //this should never happen. I expect things would get weird here - so I choose not to support it at all.
+                BetterAIInfoEffectPlayer pUnlockedByInfoEffectPlayer = (BetterAIInfoEffectPlayer)effectPlayer(eUnlockedByEffectPlayer);
+
+                if (pUnlockedByInfoEffectPlayer.meEffectPlayer == eEffectPlayer)
+                {
+                    UnityEngine.Debug.Log("A player effect unlocks another player effect, which together with yet another can add yet another player effect. A -> B; B + C -> D. All unlocks leading to this player effect will be removed: player effect unlocks (EffectPlayer) are allowed to cascade (A -> B -> C -> D) but may never branch out (EffectPlayerEffectPlayer). Avoid this by using 2x EffectPlayerEffectPlayer in the first place instead of 1x EffectPlayer and 1x EffectPlayerEffectPlayer: A + C -> D, B + C -> D. meEffectPlayer ("+ pInfoEffectPlayer.mzType + ") removed from " + pUnlockedByInfoEffectPlayer.mzType);
+
+                    pUnlockedByInfoEffectPlayer.meEffectPlayer = EffectPlayerType.NONE;
+                }
+            }
+        }
+
 
         protected virtual void calculateDerivativeInfo()
         {
@@ -294,9 +351,26 @@ namespace BetterAI
 
             for (TraitType eOuterLoopTrait = 0; eOuterLoopTrait < traitsNum(); eOuterLoopTrait++)
             {
-                for (TraitType eInnerLoopTrait = 0; eInnerLoopTrait < traitsNum(); eInnerLoopTrait++)
+                for (TraitType eInnerLoopTrait = eOuterLoopTrait; eInnerLoopTrait < traitsNum(); eInnerLoopTrait++)
                 {
                     if (((BetterAIInfoTrait)trait(eOuterLoopTrait)).maeTraitEffectPlayer[eInnerLoopTrait] != EffectPlayerType.NONE)
+                    {
+                        if (eOuterLoopTrait == eInnerLoopTrait) //no trait can create a player effect by itself
+                        {
+                            ((BetterAIInfoTrait)trait(eOuterLoopTrait)).maeTraitEffectPlayer[eInnerLoopTrait] = EffectPlayerType.NONE;
+                        }
+                        else
+                        {
+                            if (((BetterAIInfoTrait)trait(eInnerLoopTrait)).maeTraitEffectPlayer[eOuterLoopTrait] != EffectPlayerType.NONE)
+                            {
+                                ((BetterAIInfoTrait)trait(eInnerLoopTrait)).maeTraitEffectPlayer[eOuterLoopTrait] = EffectPlayerType.NONE;  //one direction only
+                            }
+                            ((BetterAIInfoTrait)trait(eOuterLoopTrait)).bAnyTraitEffectPlayer = true;
+                            ((BetterAIInfoTrait)trait(eInnerLoopTrait)).bAnyTraitEffectPlayer = true;
+                        }
+                    }
+                    
+                    if (((BetterAIInfoTrait)trait(eInnerLoopTrait)).maeTraitEffectPlayer[eOuterLoopTrait] != EffectPlayerType.NONE)
                     {
                         ((BetterAIInfoTrait)trait(eOuterLoopTrait)).bAnyTraitEffectPlayer = true;
                         ((BetterAIInfoTrait)trait(eInnerLoopTrait)).bAnyTraitEffectPlayer = true;
@@ -304,14 +378,48 @@ namespace BetterAI
                 }
             }
 
+            HashSet<EffectPlayerType> previousUnlockers = new HashSet<EffectPlayerType>();
+            for (EffectPlayerType eLoopEffectPlayer = 0; eLoopEffectPlayer < effectPlayersNum(); eLoopEffectPlayer++)
+            {
+                if (effectPlayer(eLoopEffectPlayer).meEffectPlayer != EffectPlayerType.NONE)
+                {
+                    if (removeUnlockerEffectPlayerLoops(eLoopEffectPlayer, ref previousUnlockers))
+                    {
+                        previousUnlockers.Clear();
+                    }
+                }
+            }
+
+            for (EffectPlayerType eLoopEffectPlayer = 0; eLoopEffectPlayer < effectPlayersNum(); eLoopEffectPlayer++)
+            {
+                addAllUnlockerEffectPlayers(eLoopEffectPlayer);
+            }
+
             for (EffectPlayerType eOuterLoopEffectPlayer = 0; eOuterLoopEffectPlayer < effectPlayersNum(); eOuterLoopEffectPlayer++)
             {
-                for (EffectPlayerType eInnerLoopEffectPlayer = 0; eInnerLoopEffectPlayer < effectPlayersNum(); eInnerLoopEffectPlayer++)
+                for (EffectPlayerType eInnerLoopEffectPlayer = eOuterLoopEffectPlayer; eInnerLoopEffectPlayer < effectPlayersNum(); eInnerLoopEffectPlayer++)
                 {
                     if (((BetterAIInfoEffectPlayer)effectPlayer(eOuterLoopEffectPlayer)).maeEffectPlayerEffectPlayer[eInnerLoopEffectPlayer] != EffectPlayerType.NONE)
                     {
-                        ((BetterAIInfoEffectPlayer)effectPlayer(eOuterLoopEffectPlayer)).bAnyEffectPlayerEffectPlayer = true;
-                        ((BetterAIInfoEffectPlayer)effectPlayer(eInnerLoopEffectPlayer)).bAnyEffectPlayerEffectPlayer = true;
+                        if (eOuterLoopEffectPlayer == eInnerLoopEffectPlayer)
+                        {
+                            ((BetterAIInfoEffectPlayer)effectPlayer(eOuterLoopEffectPlayer)).maeEffectPlayerEffectPlayer[eInnerLoopEffectPlayer] = EffectPlayerType.NONE;
+                        }
+                        else
+                        {
+                            if (((BetterAIInfoEffectPlayer)effectPlayer(eInnerLoopEffectPlayer)).maeEffectPlayerEffectPlayer[eOuterLoopEffectPlayer] != EffectPlayerType.NONE)
+                            {
+                                ((BetterAIInfoEffectPlayer)effectPlayer(eInnerLoopEffectPlayer)).maeEffectPlayerEffectPlayer[eOuterLoopEffectPlayer] = EffectPlayerType.NONE;
+                            }
+                            setAllAnyEffectPlayerEffectPlayers(eOuterLoopEffectPlayer);
+                            setAllAnyEffectPlayerEffectPlayers(eInnerLoopEffectPlayer);
+                        }
+
+                        if (((BetterAIInfoEffectPlayer)effectPlayer(eInnerLoopEffectPlayer)).maeEffectPlayerEffectPlayer[eOuterLoopEffectPlayer] != EffectPlayerType.NONE)
+                        {
+                            setAllAnyEffectPlayerEffectPlayers(eOuterLoopEffectPlayer);
+                            setAllAnyEffectPlayerEffectPlayers(eInnerLoopEffectPlayer);
+                        }
                     }
                 }
             }
@@ -403,6 +511,7 @@ namespace BetterAI
 
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
+  ###  EffectPlayer combinations             ###
   ##############################################*/
         //line 294
         protected List<BetterAIInfoEffectPlayer> maBetterAIEffectPlayers;
@@ -416,6 +525,7 @@ namespace BetterAI
 
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
+  ###  EffectPlayer combinations             ###
   ##############################################*/
 
 
@@ -617,10 +727,15 @@ namespace BetterAI
     {
         public SparseList<EffectPlayerType, EffectPlayerType> maeEffectPlayerEffectPlayer = new SparseList<EffectPlayerType, EffectPlayerType>();
         public bool bAnyEffectPlayerEffectPlayer = false;
+        public HashSet<EffectPlayerType> mseGetsUnlockedByEffectPlayers = new HashSet<EffectPlayerType>();
+        public JobType meSourceTraitJob = JobType.NONE;
+        public TraitType meSourceTraitTrait = TraitType.NONE;
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
             infos.readTypesByType(ctx, "aeEffectPlayerEffectPlayer", ref maeEffectPlayerEffectPlayer, EffectPlayerType.NONE); //not implemented
+            infos.readType(ctx, "SourceTraitJob", ref meSourceTraitJob);
+            infos.readType(ctx, "SourceTraitTrait", ref meSourceTraitTrait);
         }
     }
 /*####### Better Old World AI - Base DLL #######
@@ -826,8 +941,8 @@ namespace BetterAI
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
-            infos.readTypesByType(ctx, "aeJobEffectPlayer", ref maeJobEffectPlayer, EffectPlayerType.NONE);     //not implemented //Trait + Job = Player Effect
-            infos.readTypesByType(ctx, "aeTraitEffectPlayer", ref maeTraitEffectPlayer, EffectPlayerType.NONE); //ToDo: HelpText //for non-job positions like Clergy: Trait + Trait = Player Effect
+            infos.readTypesByType(ctx, "aeJobEffectPlayer", ref maeJobEffectPlayer, EffectPlayerType.NONE);     //Trait + Job = Player Effect
+            infos.readTypesByType(ctx, "aeTraitEffectPlayer", ref maeTraitEffectPlayer, EffectPlayerType.NONE); //for non-job positions like Clergy: Trait + Trait = Player Effect
         }
     }
 /*####### Better Old World AI - Base DLL #######
@@ -894,6 +1009,7 @@ namespace BetterAI
         public int BAI_EMBARKING_COST_EXTRA = 0;
         public int BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT = 0;
         public int BAI_AMPHIBIOUS_RIVER_CROSSING_DISCOUNT = 0;
+        public int BAI_AMPHIBIOUS_ZOC_CROSSES_RIVER = 0;
         public int BAI_TEAM_TERRITORY_ROAD_RIVER_CROSSING_DISCOUNT = 0;
         public int BAI_AGENT_NETWORK_COST_PER_CULTURE_LEVEL = 0;
         public int BAI_SHOW_RESOURCE_TILE_TOTAL_COUNT = 0;
@@ -935,6 +1051,7 @@ namespace BetterAI
             BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT = infos.getGlobalInt("BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT");
             BAI_AMPHIBIOUS_RIVER_CROSSING_DISCOUNT = infos.getGlobalInt("BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT");
             BAI_TEAM_TERRITORY_ROAD_RIVER_CROSSING_DISCOUNT = infos.getGlobalInt("BAI_TEAM_TERRITORY_ROAD_RIVER_CROSSING_DISCOUNT");
+            BAI_AMPHIBIOUS_ZOC_CROSSES_RIVER = infos.getGlobalInt("BAI_AMPHIBIOUS_ZOC_CROSSES_RIVER");
 
             BAI_AGENT_NETWORK_COST_PER_CULTURE_LEVEL = infos.getGlobalInt("BAI_AGENT_NETWORK_COST_PER_CULTURE_LEVEL");
 

@@ -15,6 +15,7 @@ using Mohawk.UIInterfaces;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Xml;
+using static BetterAI.BetterAIHelpText.CommaListVariableGenerator;
 
 namespace BetterAI
 {
@@ -24,6 +25,69 @@ namespace BetterAI
         public BetterAIHelpText(TextManager txtMgr) : base(txtMgr)
         {
         }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Rel. Improvements in City list   START ###
+  ##############################################*/
+        public virtual TextVariable buildCityLinkVariableWithReligiousImprovements(Game pGame, City pCity, Player pActivePlayer, ReligionType eReligion, List<ImprovementType> ImprovementTypes, Dictionary<ImprovementType, string> ImprovementShortNames, bool bCrest = true, bool bAddColor = true, bool bSelect = true)
+        {
+            if (pCity == null)
+            {
+                return TEXTVAR(false);
+            }
+
+            TextVariable returnText = base.buildCityLinkVariable(pCity, pActivePlayer, bCrest, bAddColor, bSelect);
+
+            if (eReligion != ReligionType.NONE && ImprovementTypes != null)
+            {
+                if (ImprovementTypes.Count > 0)
+                {
+                    CommaListVariableGenerator religiousImprovements = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.NONE, EncloseType.PARENTHESIS, TextManager);
+                    foreach (ImprovementType eLoopImprovement in ImprovementTypes)
+                    {
+                        if (pCity.getImprovementCount(eLoopImprovement) > 0)
+                        {
+                            string name = ImprovementShortNames[eLoopImprovement];
+
+                            //counts
+                            if (pCity.getFinishedImprovementCount(eLoopImprovement) > 0)
+                            {
+                                if (pCity.getFinishedImprovementCount(eLoopImprovement) > 1)
+                                {
+                                    name = pCity.getFinishedImprovementCount(eLoopImprovement).ToStringCached() + name;
+                                }
+                                if (pCity.getImprovementCount(eLoopImprovement) > pCity.getFinishedImprovementCount(eLoopImprovement))
+                                {
+                                    int iUnfinishedImprovements = pCity.getImprovementCount(eLoopImprovement) - pCity.getFinishedImprovementCount(eLoopImprovement);
+                                    name = name + "(" + iUnfinishedImprovements.ToStringCached() + ")";
+                                }
+                            }
+                            else
+                            {
+                                if (pCity.getImprovementCount(eLoopImprovement) > 1)
+                                {
+                                    name = pCity.getImprovementCount(eLoopImprovement).ToStringCached() + name;
+                                }
+                                name = "(" + name + ")";
+                            }
+
+                            religiousImprovements.AddItem(buildLinkTextVariable(TEXTVAR(name), ItemType.HELP_LINK, nameof(LinkType.HELP_IMPROVEMENT), infos().improvement(eLoopImprovement).SafeTypeString(), "-1"));
+
+                        }
+                    }
+
+                    if (religiousImprovements.Count > 0)
+                    {
+                        returnText = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", returnText, religiousImprovements.Finalize());
+                    }
+                }            
+            }
+
+            return returnText;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Rel. Improvements in City list     END ###
+  ##############################################*/
 
         //lines 2998-3012
         public override TextVariable buildHappinessLevelLinkVariable(City pCity, bool bShort = false)
@@ -3333,6 +3397,10 @@ namespace BetterAI
                 {
                     builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_AMPHIBIOUS_RIVER_CROSSING");
                 }
+                if (((BetterAIInfoGlobals)infos().Globals).BAI_AMPHIBIOUS_ZOC_CROSSES_RIVER == 1)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_AMPHIBIOUS_ZOC_CROSSES_RIVER");
+                }
                 if (((BetterAIInfoGlobals)infos().Globals).BAI_EMBARKING_COST_EXTRA > 0 && ((BetterAIInfoGlobals)infos().Globals).BAI_HARBOR_OR_AMPHIBIOUS_EMBARKING_DISCOUNT > 0)
                 {
                     builder.AddTEXT("TEXT_HELPTEXT_EFFECT_UNIT_AMPHIBIOUS_EMBARKING");
@@ -3366,7 +3434,7 @@ namespace BetterAI
         //lines 27025-27317
         public override TextBuilder buildEffectCityHelpYieldsPotential(TextBuilder builder, EffectCityType eEffectCity, Game pGame, List<(City, Character, int)> apCities, Player pActivePlayer, bool bSkipImpossible = false)
         {
-            using (new UnityProfileScope("HelpText.buildEffectCityHelpYieldsPotential"))
+            //using (new UnityProfileScope("HelpText.buildEffectCityHelpYieldsPotential"))
             {
                 City pCity = (apCities != null && apCities.Count == 1) ? apCities[0].Item1 : null;
                 Character pGovernor = (apCities != null && apCities.Count == 1) ? apCities[0].Item2 : null;
@@ -3807,6 +3875,978 @@ namespace BetterAI
                         }
                     }
                 }
+
+                return builder;
+            }
+        }
+
+        public override TextBuilder buildEffectPlayerHelp(TextBuilder builder, EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer, Player pActivePlayer, ReligionType eStateReligion = ReligionType.NONE, bool bAllCities = false, TextBuilder.ScopeType effectCityScopeType = TextBuilder.ScopeType.COMMA)
+        {
+            
+            using (var ignoreEffectPlayerListScoped = CollectionCache.GetListScoped<EffectPlayerType>())
+            {
+                List<EffectPlayerType> effectPlayerIgnore = ignoreEffectPlayerListScoped.Value;
+                return buildEffectPlayerHelp(builder, eEffectPlayer, pGame, pPlayer, pActivePlayer, ref effectPlayerIgnore, eStateReligion, bAllCities, effectCityScopeType);
+            }
+        }
+
+        public virtual TextBuilder buildEffectPlayerHelp(TextBuilder builder, EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer, Player pActivePlayer, ref List<EffectPlayerType> effectPlayerIgnore, ReligionType eStateReligion = ReligionType.NONE, bool bAllCities = false, TextBuilder.ScopeType effectCityScopeType = TextBuilder.ScopeType.COMMA)
+
+        {
+            //using (new UnityProfileScope("HelpText.buildEffectPlayerHelp"))
+
+            BetterAIInfoEffectPlayer pInfoEffectPlayer = (BetterAIInfoEffectPlayer)infos().effectPlayer(eEffectPlayer);
+            {
+                City pCapitalCity = pPlayer?.capitalCity();
+
+                {
+                    EffectPlayerType eEffectPlayerUnlock = pInfoEffectPlayer.meEffectPlayer;
+
+                    if (eEffectPlayerUnlock != EffectPlayerType.NONE && !effectPlayerIgnore.Contains(eEffectPlayerUnlock))
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_UNLOCKS_EFFECT", buildEffectPlayerLinkVariable(eEffectPlayerUnlock));
+                    }
+                }
+
+                {
+                    BonusType eStartBonus = pInfoEffectPlayer.meStartBonus;
+
+                    if (eStartBonus != BonusType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildBonusHelp(subText, eStartBonus, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR(""));
+                            }
+
+                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_START_BONUS", subText.ToTextVariable());
+                        }
+                    }
+                }
+
+                {
+                    BonusType eFoundBonus = pInfoEffectPlayer.meFoundBonus;
+
+                    if (eFoundBonus != BonusType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildBonusHelp(subText, eFoundBonus, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR(""));
+                            }
+
+                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_FOUND_BONUS", subText.ToTextVariable());
+                        }
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miVP;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_VPS", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miMaxOrders;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_MAX_ACTIONS", TEXTVAR(iValue), buildTurnScaleNamePlural(pGame));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miMaxCities;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_MAX_CITIES", TEXTVAR(iValue), buildTurnScaleNamePlural(pGame));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miXPAllTurn;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ALL_UNIT_XP", buildSignedTextVariable(iValue), buildTurnScaleName(pGame));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miXPIdleTurn;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_IDLE_UNIT_XP", buildSignedTextVariable(iValue), buildTurnScaleName(pGame), buildIdleLinkVariable());
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miXPModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_XP_COMBAT_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miHarvestModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_HARVEST_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miSellPenaltyModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_SELL_PENALTY_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miConsumptionModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONSUMPTION_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miWonderModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_WONDER_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miRepairModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_REPAIR_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miMissionModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_MISSION_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miStartLawModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_START_LAW_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miSwitchLawModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_SWITCH_LAW_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miSwitchLawMaximum;
+                    if (iValue > 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_SWITCH_LAW_MAXIMUM", buildYieldValueIconLinkVariable(infos().Globals.CIVICS_YIELD, iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miGovernorCostModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_GOVERNOR_COST_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miYieldUpkeepModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_YIELD_UPKEEP_MODIFIER", buildPercentTextValue(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miTrainingOrderModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TRAINING_MODIFIER", buildSignedTextVariable(iValue, true), buildYieldIconLinkVariable(infos().Globals.TRAINING_YIELD), buildYieldTextVariable(1, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miBuildModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_BUILD_TURN_MODIFIER", buildSignedTextVariable(iValue, true), buildTurnScaleName(pGame, iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miBuildTurnChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_BUILD_TURN_CHANGE", buildSignedTextVariable(iValue), buildTurnScaleName(pGame, iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miVisionChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_VISION_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miTribeFatigueChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TRIBE_FATIGUE_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miTechCostModifier;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TECH_COST_MODIFIER", buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miTechsAvailableChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TECH_AVAILABLE_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miStateReligionSpread;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_STATE_RELIGION_SPREAD_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miLeaderOpinionChange;
+                    if (iValue != 0)
+                    {
+                        if ((pGame != null) && pGame.originalAllHumanTeams())
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HEAD_OPINION_CHANGE", buildSignedTextVariable(iValue));
+                        }
+                        else
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_LEADER_OPINION_CHANGE", buildSignedTextVariable(iValue));
+                        }
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miTribeLeaderOpinionChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_TRIBE_LEADER_OPINION_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miReligionOpinionChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_RELIGION_OPINION_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miStateReligionOpinionChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_STATE_RELIGION_OPINION_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miLeaderReligionOpinionChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_LEADER_RELIGION_OPINION_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                {
+                    int iValue = pInfoEffectPlayer.miFamilyOpinionChange;
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_FAMILY_OPINION_CHANGE", buildSignedTextVariable(iValue));
+                    }
+                }
+
+                if (pInfoEffectPlayer.mbStartMusic)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_START_MUSIC");
+                }
+
+                if (pInfoEffectPlayer.mbRedrawTechs)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CAN_REDRAW_TECHS");
+                }
+
+                if (pInfoEffectPlayer.mbAddRoad)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CAN_ADD_ROAD", buildRoadLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbAddUrban)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CAN_ADD_URBAN", buildUrbanLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbRemoveAllVegetation)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CAN_REMOVE_VEGETATION_ALL");
+                }
+
+                if (pInfoEffectPlayer.mbUpgradeImprovement)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CAN_UPGRADE_IMPROVEMENT");
+                }
+
+                if (pInfoEffectPlayer.mbMultipleWorkers)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_MULTIPLER_WORKERS", buildConnectedLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbMoveAlliedUnits)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_MOVE_ALLIED_UNITS");
+                }
+
+                if (pInfoEffectPlayer.mbAgent)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CAN_AGENT", buildAgentNetworkLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbRiverMovement)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_RIVER_MOVEMENT_BONUS", buildRiverLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbRiverBridging)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_RIVER_BRIDGING_BONUS", buildRiverLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbNoSellPenalty)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_NO_SELL_PENALTY");
+                }
+
+                if (pInfoEffectPlayer.mbNoOutsideConsumption)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_NO_OUTSIDE_UNIT_CONSUMPTION", buildUnitConsumptionOutsideLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbPurgeReligions)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_PURGE_RELIGIONS");
+                }
+
+                if (pInfoEffectPlayer.mbBuildAllReligions)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_BUILD_ALL_RELIGIONS");
+                }
+
+                if (pInfoEffectPlayer.mbPaganStateReligion)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_PAGAN_STATE_RELIGION");
+                }
+
+                if (pInfoEffectPlayer.mbLegitimacyOrders)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_LEGITIMACY_ORDERS", buildLegitimacyLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbOrdersScience)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ORDERS_SCIENCE");
+                }
+
+                if (pInfoEffectPlayer.mbRecruitMercenaries)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_RECRUIT_MERCENARIES", buildLegitimacyLinkVariable());
+                }
+
+                if (pInfoEffectPlayer.mbHireMercenaries)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_HIRE_MERCENARIES");
+                }
+
+                if (pInfoEffectPlayer.mbNoStartWars)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_NO_START_WARS");
+                }
+
+                if (pInfoEffectPlayer.mbNoEndWars)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_NO_END_WARS");
+                }
+
+                if (pInfoEffectPlayer.mbAutomateWorkers)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_AUTOMATE_WORKERS");
+                }
+
+                if (pInfoEffectPlayer.mbAutomateScouts)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_AUTOMATE_SCOUTS");
+                }
+
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                {
+                    int iValue = pInfoEffectPlayer.maiWarYield[eLoopYield];
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_WAR_YIELD", buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+                    }
+
+                    foreach ((DiplomacyType eDiplomacy, YieldType eYield, int iAmount) pLoopTriple in pInfoEffectPlayer.mlpTeamDiplomacyYields)
+                    {
+                        if (pLoopTriple.eYield == eLoopYield)
+                        {
+                            if (pLoopTriple.iAmount != 0)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_DIPLOMACY_YIELD", buildYieldValueIconLinkVariable(eLoopYield, pLoopTriple.iAmount, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame), buildDiplomacyLinkVariable(pLoopTriple.eDiplomacy, false));
+                            }
+                        }
+                    }
+
+                    foreach ((DiplomacyType eDiplomacy, YieldType eYield, int iAmount) pLoopTriple in pInfoEffectPlayer.mlpTribeDiplomacyYields)
+                    {
+                        if (pLoopTriple.eYield == eLoopYield)
+                        {
+                            if (pLoopTriple.iAmount != 0)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TRIBE_DIPLOMACY_YIELD", buildYieldValueIconLinkVariable(eLoopYield, pLoopTriple.iAmount, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame), buildDiplomacyLinkVariable(pLoopTriple.eDiplomacy, true));
+                            }
+                        }
+                    }
+                }
+
+                {
+                    CommaListVariableGenerator yieldsList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.NONE, TextManager);
+
+                    for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                    {
+                        int iValue = pInfoEffectPlayer.maiYieldRate[eLoopYield];
+                        if (iValue != 0)
+                        {
+                            yieldsList.AddItem(buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                        }
+                    }
+
+                    if (yieldsList.Count > 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_YIELD_RATE", TEXTVAR(bAllCities), yieldsList.Finalize(), buildTurnScaleName(pGame));
+                    }
+                }
+
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                {
+                    int iValue = pInfoEffectPlayer.maiYieldRateLaws[eLoopYield];
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_YIELD_RATE_LAWS", TEXTVAR(bAllCities), buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+                    }
+                }
+
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                {
+                    int iValue = pInfoEffectPlayer.maiYieldRateGenerals[eLoopYield];
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_YIELD_RATE_GENERALS", TEXTVAR(bAllCities), buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+                    }
+                }
+
+                for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                {
+                    int iValue = pInfoEffectPlayer.maiYieldUpkeep[eLoopYield];
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_YIELD_UPKEEP", buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+                    }
+                }
+
+                for (UnitTraitType eLoopUnitTrait = 0; eLoopUnitTrait < infos().unitTraitsNum(); eLoopUnitTrait++)
+                {
+                    int iValue = pInfoEffectPlayer.maiUnitTraitConsumptionModifier[eLoopUnitTrait];
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_UNIT_TRAIT_CONSUMPTION_MODIFIER", buildUnitTraitLinkVariable(eLoopUnitTrait), buildSignedTextVariable(iValue, true));
+                    }
+                }
+
+                for (JobType eLoopJob = 0; eLoopJob < infos().jobsNum(); eLoopJob++)
+                {
+                    int iValue = pInfoEffectPlayer.maiJobOpinionRate[eLoopJob];
+                    if (iValue != 0)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_OPINION_COLON", buildJobLinkVariable(eLoopJob), buildSignedTextVariable(iValue));
+                    }
+                }
+
+                foreach (YieldType eLoopYield in pInfoEffectPlayer.maeTradeYield)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TRADE_YIELD", buildYieldLinkVariable(eLoopYield));
+                }
+
+                foreach (YieldType eLoopYield in pInfoEffectPlayer.maeNoSellPenaltyYield)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_NO_SELL_PENALTY_YIELD", buildYieldLinkVariable(eLoopYield));
+                }
+
+                foreach (YieldType eLoopYield in pInfoEffectPlayer.maeConnectedForeign)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONNECTED_FOREIGN", buildYieldLinkVariable(eLoopYield));
+                    if (pGame != null)
+                    {
+                        using (TextBuilder subBuilder = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            for (TeamType eLoopTeam = 0; eLoopTeam < pGame.getNumTeams(); eLoopTeam++)
+                            {
+                                int iFromConnection = pPlayer.getConnectedForeignYieldTotal(eLoopYield, eLoopTeam, bPreview: !pPlayer.isConnectedForeignUnlock(eLoopYield));
+                                if (iFromConnection != 0)
+                                {
+                                    TextVariable yieldVariable = buildColorTextOptionalVariable(buildYieldValueIconLinkVariable(eLoopYield, iFromConnection, bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER), !(infos().Helpers.yieldWarning(eLoopYield, iFromConnection)));
+                                    TextVariable previewVariable = pPlayer.isConnectedForeignUnlock(eLoopYield) ? QUICKTEXTVAR("icon(bullet)") : TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONNECTED_FOREIGN_WILL_GAIN");
+                                    buildBonusLine(subBuilder, previewVariable, TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONNECTED_FOREIGN_FROM_TEAM", buildTeamLinkVariable(eLoopTeam, pGame, pActivePlayer, true), yieldVariable));
+                                }
+                            }
+
+                            if (subBuilder.HasContent)
+                            {
+                                builder.Add(subBuilder.ToTextVariable());
+                            }
+                        }
+                    }
+                }
+
+                foreach (YieldType eLoopYield in pInfoEffectPlayer.maeBuyTile)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CAN_BUY_TILES", buildBuyTilesLinkVariable(), buildYieldLinkVariable(eLoopYield));
+                }
+
+                foreach (UnitType eLoopUnit in pInfoEffectPlayer.maeWaterUnit)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_WATER_UNIT", buildUnitTypeLinkVariable(eLoopUnit, pGame));
+                }
+
+                foreach (UnitType eLoopUnit in pInfoEffectPlayer.maeInvisibleUnit)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_INVISIBLE_UNIT", buildUnitTypeLinkVariable(eLoopUnit, pGame));
+                }
+
+                foreach (ImprovementType eLoopImprovement in pInfoEffectPlayer.maeImprovementSpreadBorders)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_IMPROVEMENT_SPREAD_BORDER", buildImprovementLinkVariable(eLoopImprovement, pGame));
+                }
+
+                foreach (JobType eLoopJob in pInfoEffectPlayer.maeNoFamilyRestrictionJob)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_NO_FAMILY_RESTRICTION_JOB", buildJobLinkVariable(eLoopJob));
+                }
+
+                foreach (FamilyType eLoopFamily in pInfoEffectPlayer.maeForceFamily)
+                {
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_FORCE_FAMILY", buildFamilyLinkVariable(eLoopFamily, pGame));
+                }
+
+                {
+                    for (ProjectType eLoopProject = 0; eLoopProject < infos().projectsNum(); eLoopProject++)
+                    {
+                        if (infos().project(eLoopProject).meEffectPlayerPrereq == eEffectPlayer)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_UNLOCKS_PROJECT", buildProjectLinkVariable(eLoopProject, null));
+                        }
+                    }
+                }
+
+                {
+                    for (ProjectType eLoopProject = 0; eLoopProject < infos().projectsNum(); eLoopProject++)
+                    {
+                        if (infos().project(eLoopProject).meCapitalEffectPlayerPrereq == eEffectPlayer)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_UNLOCKS_PROJECT_CAPITAL", buildCapitalLinkVariable(pCapitalCity), buildProjectLinkVariable(eLoopProject, null));
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eEffectCity = pInfoEffectPlayer.meEffectCity;
+
+                    if (eEffectCity != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildEffectCityHelpYieldsAll(subText, eEffectCity, pGame, pPlayer, null, pActivePlayer);
+                            }
+
+                            if (subText.HasContent)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ALL_CITIES_EFFECT", subText.ToTextVariable());
+                            }
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eEffectCity = pInfoEffectPlayer.meEffectCity;
+
+                    if (eEffectCity != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildEffectCityHelpNoYieldsAll(subText, eEffectCity, pGame, pPlayer, null, pActivePlayer);
+                            }
+
+                            if (subText.HasContent)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ALL_CITIES_EFFECT", subText.ToTextVariable());
+                            }
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eEffectCity = pInfoEffectPlayer.meEffectCity;
+
+                    if (eEffectCity != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildEffectCityHelpYieldsPotentialAll(subText, eEffectCity, pGame, pPlayer, null, pActivePlayer);
+                            }
+
+                            if (subText.HasContent)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ALL_CITIES_EFFECT", subText.ToTextVariable());
+                            }
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eEffectCityExtra = pInfoEffectPlayer.meEffectCityExtra;
+
+                    if (eEffectCityExtra != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildEffectCityHelpYieldsAll(subText, eEffectCityExtra, pGame, pPlayer, null, pActivePlayer);
+                            }
+
+                            if (subText.HasContent)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ALL_CITIES_EFFECT", subText.ToTextVariable());
+                            }
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eEffectCityExtra = pInfoEffectPlayer.meEffectCityExtra;
+
+                    if (eEffectCityExtra != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildEffectCityHelpNoYieldsAll(subText, eEffectCityExtra, pGame, pPlayer, null, pActivePlayer);
+                            }
+
+                            if (subText.HasContent)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ALL_CITIES_EFFECT", subText.ToTextVariable());
+                            }
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eEffectCityExtra = pInfoEffectPlayer.meEffectCityExtra;
+
+                    if (eEffectCityExtra != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildEffectCityHelpYieldsPotentialAll(subText, eEffectCityExtra, pGame, pPlayer, null, pActivePlayer);
+                            }
+
+                            if (subText.HasContent)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ALL_CITIES_EFFECT", subText.ToTextVariable());
+                            }
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eCapitalEffectCity = pInfoEffectPlayer.meCapitalEffectCity;
+
+                    if (eCapitalEffectCity != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildEffectCityHelp(subText, eCapitalEffectCity, pGame, pCapitalCity, pCapitalCity?.governor(), false, pActivePlayer);
+                            }
+
+                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CAPITAL_EFFECT", subText.ToTextVariable());
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eConnectedEffectCity = pInfoEffectPlayer.meConnectedEffectCity;
+
+                    if (eConnectedEffectCity != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                buildEffectCityHelpAll(subText, eConnectedEffectCity, pGame, pPlayer, x => x.isConnected() ? 1 : 0, false, pActivePlayer);
+                            }
+
+                            builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONNECTED_EFFECT", subText.ToTextVariable());
+                        }
+                    }
+                }
+
+                {
+                    EffectCityType eStateReligionEffectCity = pInfoEffectPlayer.meStateReligionEffectCity;
+
+                    if (eStateReligionEffectCity != EffectCityType.NONE)
+                    {
+                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            if (eStateReligion != ReligionType.NONE)
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    buildEffectCityHelpAll(subText, eStateReligionEffectCity, pGame, pPlayer, x => x.isReligion(eStateReligion) ? 1 : 0, false, pActivePlayer);
+                                }
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_RELIGIOUS_CITIES_EFFECT", buildReligionLinkVariable(eStateReligion, pGame, pActivePlayer, false), subText.ToTextVariable());
+                            }
+                            else
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    buildEffectCityHelp(subText, eStateReligionEffectCity, pGame, pPlayer, false, pActivePlayer);
+                                }
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_STATE_RELIGION_CITIES_EFFECT", subText.ToTextVariable());
+                            }
+                        }
+                    }
+                }
+
+                {
+                    EffectUnitType eEffectUnit = pInfoEffectPlayer.meEffectUnit;
+
+                    if (eEffectUnit != EffectUnitType.NONE)
+                    {
+                        using (builder.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_ALL_UNITS_EFFECT")))
+                        {
+                            buildEffectUnitHelp(builder, eEffectUnit, pGame);
+                        }
+                    }
+                }
+
+                for (UnitTraitType eLoopUnitTrait = 0; eLoopUnitTrait < infos().unitTraitsNum(); eLoopUnitTrait++)
+                {
+                    EffectUnitType eEffectUnit = pInfoEffectPlayer.maeEffectUnitTrait[eLoopUnitTrait];
+
+                    if (eEffectUnit != EffectUnitType.NONE)
+                    {
+                        using (builder.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TRAIT_UNITS_EFFECT", buildUnitTraitLinkVariable(eLoopUnitTrait))))
+                        {
+                            buildEffectUnitHelp(builder, eEffectUnit, pGame);
+                        }
+                    }
+                }
+
+                for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); eLoopUnit++)
+                {
+                    EffectUnitType eEffectUnit = pInfoEffectPlayer.maeEffectUnit[eLoopUnit];
+
+                    if (eEffectUnit != EffectUnitType.NONE)
+                    {
+                        using (builder.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_UNITS_EFFECT", buildUnitTypeLinkVariable(eLoopUnit, pGame))))
+                        {
+                            buildEffectUnitHelp(builder, eEffectUnit, pGame);
+                        }
+                    }
+                }
+
+                foreach ((ReligionType eReligion, BonusType eBonus) pLoopPair in pInfoEffectPlayer.mlpReligionSpreadBonus)
+                {
+                    using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                        {
+                            buildBonusHelp(subText, pLoopPair.eBonus, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR(""));
+                        }
+
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_RELIGION_SPREAD_BONUS", buildReligionLinkVariable(pLoopPair.eReligion, pGame, pActivePlayer), subText.ToTextVariable());
+                    }
+                }
+
+                foreach ((StatType eStat, BonusType eBonus) pLoopPair in pInfoEffectPlayer.mlpStatBonus)
+                {
+                    using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                        {
+                            buildBonusHelp(subText, pLoopPair.eBonus, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR(""));
+                        }
+
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_STAT_BONUS", TEXTVAR_TYPE(infos().stat(pLoopPair.eStat).mName, TEXTVAR(1)), subText.ToTextVariable());
+                    }
+                }
+
+                foreach ((MissionResultType eMissionResult, BonusType eBonus) pLoopPair in pInfoEffectPlayer.mlpMissionPlayerBonus)
+                {
+                    using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                        {
+                            buildBonusHelp(subText, pLoopPair.eBonus, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR(""));
+                        }
+
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_MISSION_PLAYER_BONUS", TEXTVAR_TYPE(infos().missionResult(pLoopPair.eMissionResult).meName), subText.ToTextVariable());
+                    }
+                }
+
+                foreach ((MissionResultType eMissionResult, BonusType eBonus) pLoopPair in pInfoEffectPlayer.mlpMissionTargetBonus)
+                {
+                    using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                        {
+                            buildBonusHelp(subText, pLoopPair.eBonus, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR(""));
+                        }
+
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_MISSION_TARGET_BONUS", TEXTVAR_TYPE(infos().missionResult(pLoopPair.eMissionResult).meName), subText.ToTextVariable());
+                    }
+                }
+
+                using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                {
+                    using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                    {
+                        for (LawType eLoopLaw = 0; eLoopLaw < infos().lawsNum(); eLoopLaw++)
+                        {
+                            if (infos().law(eLoopLaw).maeEffectPlayerDisabled.Contains(eEffectPlayer))
+                            {
+                                subText.Add(buildLawLinkVariable(eLoopLaw));
+                            }
+                        }
+                    }
+
+                    if (subText.HasContent)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_DISABLED_LAWS", subText.ToTextVariable());
+                    }
+                }
+
+                {
+                    TextType eDescription = pInfoEffectPlayer.meDescription;
+
+                    if (eDescription != TextType.NONE)
+                    {
+                        builder.AddTEXT(eDescription);
+                    }
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ###  EffectPlayer combinations             ###
+  ##############################################*/
+                if (pInfoEffectPlayer.bAnyEffectPlayerEffectPlayer && !effectPlayerIgnore.Contains(eEffectPlayer))
+                {
+                    effectPlayerIgnore.Add(eEffectPlayer);
+
+                    EffectPlayerType eEffectPlayerUnlock = pInfoEffectPlayer.meEffectPlayer;
+                    if (eEffectPlayerUnlock != EffectPlayerType.NONE)
+                    {
+                        effectPlayerIgnore.Add(eEffectPlayerUnlock);
+                    }
+
+                    for (EffectPlayerType eLoopEffectPlayer = 0; eLoopEffectPlayer < infos().effectPlayersNum(); eLoopEffectPlayer++)
+                    {
+                        if (pInfoEffectPlayer.maeEffectPlayerEffectPlayer[eLoopEffectPlayer] != EffectPlayerType.NONE)
+                        {
+                            effectPlayerIgnore.Add(eLoopEffectPlayer);
+
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    buildEffectPlayerHelp(builder, pInfoEffectPlayer.maeEffectPlayerEffectPlayer[eLoopEffectPlayer], pGame, pPlayer, pActivePlayer, ref effectPlayerIgnore, eStateReligion, bAllCities, effectCityScopeType);
+                                }
+
+                                if (subText.HasContent)
+                                {
+                                    builder.AddWithParenthesis(TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_CITY_HELP_NO_YIELDS_EFFECT_CITY_EFFECT_CITY", 
+                                        buildEffectPlayerLinkVariable(eLoopEffectPlayer), subText.ToTextVariable()));
+                                }
+                            }
+
+                            effectPlayerIgnore.Remove(eLoopEffectPlayer);
+                        }
+
+                    }
+
+                    effectPlayerIgnore.Remove(eEffectPlayer);
+
+                    if (eEffectPlayerUnlock != EffectPlayerType.NONE)
+                    {
+                        effectPlayerIgnore.Remove(eEffectPlayerUnlock);
+                    }
+
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ###  EffectPlayer combinations             ###
+  ##############################################*/
 
                 return builder;
             }
@@ -4856,9 +5896,946 @@ namespace BetterAI
         }
         //copy-paste END
 
+        //lines 42813-43676
+        public override TextBuilder buildTraitHelp(TextBuilder builder, TraitType eTrait, Game pGame, Player pActivePlayer, Character pCharacter = null, bool bName = false, bool bInvalidTraits = false, bool bRestrictions = false, bool bDetails = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.BULLET)
+        {
+            //using (new UnityProfileScope("HelpText.buildTraitHelp"))
+            {
+                BetterAIInfoTrait pInfoTrait = (BetterAIInfoTrait)infos().trait(eTrait);
+
+                if (bName)
+                {
+                    InfoTrait trait = infos().trait(eTrait);
+                    TextType traitName = getGenderedTraitName(trait, pCharacter?.getGender() ?? GenderType.NONE);
+                    builder.AddTEXT("TEXT_HELPTEXT_TRAIT_TITLE",
+                    string.IsNullOrEmpty(trait.mzIconName) ? TEXTVAR(false) : mSpriteRepository?.GetInlineIconVariable(eTrait) ?? TEXTVAR(false),
+                    TEXTVAR_TYPE(traitName),
+                    TEXTVAR(trait.mbArchetype),
+                    TEXTVAR(trait.mbItem));
+                }
+
+                using (builder.BeginScope(scopeType))
+                {
+                    using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        buildTraitJobs(subText, eTrait, pCharacter);
+                        if (subText.HasContent)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_JOB_PREREQ", subText.ToTextVariable());
+                        }
+                    }
+
+                    {
+                        if (infos().trait(eTrait).mbClergy)
+                        {
+                            if (infos().religion(infos().trait(eTrait).meReligion).meType == ReligionType.NONE)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_CLERGY_TRAIT");
+                            }
+                            else if (infos().religion(infos().trait(eTrait).meReligion).mePaganNation != NationType.NONE)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_PAGAN_CLERGY_TRAIT");
+                            }
+                            else
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_WORLD_CLERGY_TRAIT");
+                            }
+                        }
+                    }
+
+                    {
+                        EffectCityType eEffectCity = infos().trait(eTrait).meGovernorEffectCity;
+
+                        if (eEffectCity != EffectCityType.NONE)
+                        {
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                City pCityGovernor = ((pCharacter != null) ? pCharacter.cityGovernor() : null);
+
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    buildEffectCityHelp(subText, eEffectCity, pGame, pCityGovernor, pCharacter, false, pActivePlayer);
+                                }
+
+                                if (subText.HasContent)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_CHARACTER_TRAIT_GOVERNOR", subText.ToTextVariable());
+                                }
+                            }
+                        }
+                    }
+
+                    {
+                        EffectCityType eEffectCity = infos().trait(eTrait).meStateReligionEffectCity;
+
+                        if (eEffectCity != EffectCityType.NONE)
+                        {
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                City pCityGovernor = ((pCharacter != null) ? pCharacter.cityGovernor() : null);
+
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    buildEffectCityHelp(subText, eEffectCity, pGame, pCityGovernor, pCharacter, false, pActivePlayer);
+                                }
+
+                                if (subText.HasContent)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_CHARACTER_TRAIT_GOVERNOR_STATE_RELIGION", subText.ToTextVariable());
+                                }
+                            }
+                        }
+                    }
+
+                    {
+                        EffectUnitType eEffectUnit = infos().trait(eTrait).meGeneralEffectUnit;
+
+                        if (eEffectUnit != EffectUnitType.NONE)
+                        {
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    buildEffectUnitHelp(subText, eEffectUnit, pGame);
+                                }
+
+                                if (subText.HasContent)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_CHARACTER_TRAIT_GENERAL", subText.ToTextVariable(), TEXTVAR(pCharacter != null ? pCharacter.isMale() : true));
+                                }
+                            }
+                        }
+                    }
+
+                    {
+                        EffectUnitType eEffectUnit = infos().trait(eTrait).meLeaderEffectUnit;
+
+                        if (eEffectUnit != EffectUnitType.NONE)
+                        {
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    buildEffectUnitHelp(subText, eEffectUnit, pGame);
+                                }
+
+                                if (subText.HasContent)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_CHARACTER_TRAIT_GENERAL_LEADER", subText.ToTextVariable(), TEXTVAR(pCharacter != null ? pCharacter.isMale() : true));
+                                }
+                            }
+                        }
+                    }
+
+                    {
+                        EffectPlayerType eEffectPlayer = infos().trait(eTrait).meLeaderEffectPlayer;
+
+                        if (eEffectPlayer != EffectPlayerType.NONE)
+                        {
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    Player pCharacterPlayer = pCharacter != null ? pCharacter.player() : null;
+                                    buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer);
+                                }
+
+                                if (subText.HasContent)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_TRAIT_LEADER", subText.ToTextVariable());
+                                }
+                            }
+
+                            for (CouncilType eLoopCouncil = 0; eLoopCouncil < infos().councilsNum(); eLoopCouncil++)
+                            {
+                                if (!(infos().council(eLoopCouncil).mbDisable))
+                                {
+                                    if (infos().council(eLoopCouncil).meEffectPlayerPrereq == eEffectPlayer)
+                                    {
+                                        builder.AddTEXT("TEXT_HELPTEXT_TECH_UNLOCKS_GENERIC", buildCouncilLinkVariable(eLoopCouncil));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
 /*####### Better Old World AI - Base DLL #######
-  ### misc                             START ###
+  ### Alternative GV bonuses           START ###
   ##############################################*/
+                    {
+                        if (pInfoTrait.maeJobEffectPlayer.Count > 0)
+                        {
+                            for (JobType eLoopJob = 0; eLoopJob < infos().jobsNum(); eLoopJob++)
+                            {
+                                if (pGame != null ? pGame.checkGameContent(eLoopJob) : App.CheckContentOwnership(infos().job(eLoopJob).meGameContentRequired, infos(), null))
+                                {
+                                    EffectPlayerType eEffectPlayer = pInfoTrait.maeJobEffectPlayer[eLoopJob];
+                                    if (eEffectPlayer != EffectPlayerType.NONE)
+                                    {
+                                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                                        {
+                                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                            {
+                                                Player pCharacterPlayer = pCharacter != null ? pCharacter.player() : null;
+                                                buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer);
+                                            }
+
+                                            if (subText.HasContent)
+                                            {
+                                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_JOB", buildJobLinkVariable(eLoopJob, pCharacter), subText.ToTextVariable());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    {
+                        if (pInfoTrait.bAnyTraitEffectPlayer)
+                        {
+                            for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
+                            {
+                                EffectPlayerType eEffectPlayer = pInfoTrait.maeTraitEffectPlayer[eLoopTrait];
+                                if (eEffectPlayer == EffectPlayerType.NONE)
+                                {
+                                    BetterAIInfoTrait pLoopInfoTrait = (BetterAIInfoTrait)infos().trait(eLoopTrait);
+                                    eEffectPlayer = pLoopInfoTrait.maeTraitEffectPlayer[eTrait];
+                                }
+
+                                if (eEffectPlayer != EffectPlayerType.NONE)
+                                {
+                                    using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                                    {
+                                        using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                        {
+                                            Player pCharacterPlayer = pCharacter != null ? pCharacter.player() : null;
+                                            buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer);
+                                        }
+
+                                        if (subText.HasContent)
+                                        {
+                                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_TRAIT", buildTraitLinkVariable(eLoopTrait, pCharacter), subText.ToTextVariable());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+
+                    for (MissionType eLoopMission = 0; eLoopMission < infos().missionsNum(); eLoopMission++)
+                    {
+                        void addMission(TextBuilder builder, MissionType eMission, SubjectType eSubject, Character pCharacter)
+                        {
+                            if (eSubject != SubjectType.NONE)
+                            {
+                                if (infos().subject(eSubject).meTraitPrereq == eTrait)
+                                {
+                                    if (infos().subject(eSubject).meCharacter == CharacterType.NONE || (pCharacter != null && infos().subject(eSubject).meCharacter == pCharacter.getCharacter()))
+                                    {
+                                        if (infos().subject(eSubject).mbLeader)
+                                        {
+                                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_LEADER_MISSION", buildMissionLinkVariable(eMission));
+                                        }
+                                        else
+                                        {
+                                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_MISSION", buildMissionLinkVariable(eMission));
+                                        }
+                                    }
+                                }
+                                if (infos().subject(eSubject).maeTraitAny.Count > 0)
+                                {
+                                    foreach (TraitType eLoopTrait in infos().subject(eSubject).maeTraitAny)
+                                    {
+                                        if (eTrait == eLoopTrait)
+                                        {
+                                            if (infos().subject(eSubject).meCharacter == CharacterType.NONE || (pCharacter != null && infos().subject(eSubject).meCharacter == pCharacter.getCharacter()))
+                                            {
+                                                if (infos().subject(eSubject).mbLeader)
+                                                {
+                                                    builder.AddTEXT("TEXT_HELPTEXT_TRAIT_LEADER_MISSION", buildMissionLinkVariable(eMission));
+                                                }
+                                                else
+                                                {
+                                                    builder.AddTEXT("TEXT_HELPTEXT_TRAIT_MISSION", buildMissionLinkVariable(eMission));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        addMission(builder, eLoopMission, infos().mission(eLoopMission).meSubjectCharacter, pCharacter);
+
+                        foreach (SubjectType eLoopSubject in infos().mission(eLoopMission).maeSubjectCharacterOn)
+                        {
+                            if (eLoopSubject != infos().mission(eLoopMission).meSubjectCharacter)
+                            {
+                                addMission(builder, eLoopMission, eLoopSubject, pCharacter);
+                            }
+                        }
+                    }
+
+                    {
+                        int iValue = infos().trait(eTrait).miXPTurn;
+                        if (iValue > 0)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_XP_PER_YEAR", buildSignedTextVariable(iValue), buildTurnScaleName(pGame));
+
+                            if (pCharacter != null)
+                            {
+                                builder.AddWithParenthesis(buildSlashText(pCharacter.getXP(), pCharacter.getUpgradeXPThreshold()));
+                            }
+                        }
+                    }
+
+                    {
+                        int iValue = infos().trait(eTrait).miStrengthLimitModifier;
+                        if (iValue != 0)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_STRENGTH_MODIFIER", buildSignedTextVariable(iValue));
+                        }
+                    }
+
+                    {
+                        int iValue = infos().trait(eTrait).miWeaknessLimitModifier;
+                        if (iValue != 0)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_WEAKNESS_MODIFIER", buildSignedTextVariable(iValue));
+                        }
+                    }
+
+                    if (infos().trait(eTrait).meReligionAgent != ReligionType.NONE)
+                    {
+                        builder.AddTEXT("TEXT_HELPTEXT_TRAIT_RELIGION_AGENT", buildAgentLinkVariable(), buildReligionLinkVariable(infos().trait(eTrait).meReligionAgent, pGame, pActivePlayer));
+                    }
+
+                    {
+                        int iValue = infos().trait(eTrait).miAgentModifier;
+                        if (iValue != 0)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_AGENT_MODIFIER", buildSignedTextVariable(iValue, true));
+                        }
+                    }
+
+                    if (pCharacter != null)
+                    {
+                        using (TextBuilder subCommaText = TextBuilder.GetTextBuilder(TextManager))
+                        {
+                            bool bRatingValue = false;
+
+                            using (subCommaText.BeginScope(TextBuilder.ScopeType.COMMA))
+                            {
+                                TraitType eArchetype = pCharacter.getArchetype();
+
+                                for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
+                                {
+                                    int iValue = infos().trait(eTrait).maiRating[eLoopRating];
+
+                                    if (infos().trait(eTrait).mbArchetype)
+                                    {
+                                        if ((eArchetype != TraitType.NONE) && (eArchetype != eTrait))
+                                        {
+                                            iValue -= infos().trait(eArchetype).maiRating[eLoopRating];
+                                        }
+                                    }
+
+                                    foreach (TraitType eOtherTrait in infos().trait(eTrait).maeTraitReplaces)
+                                    {
+                                        if (pCharacter.isTrait(eOtherTrait) && (eArchetype != eOtherTrait))
+                                        {
+                                            iValue -= infos().trait(eOtherTrait).maiRating[eLoopRating];
+                                        }
+                                    }
+
+                                    if (iValue != 0)
+                                    {
+                                        TextVariable ratingValueText = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", buildSignedTextVariable(iValue), buildRatingLinkVariable(eLoopRating, true));
+
+                                        using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                                        {
+                                            int iNewValue = (pCharacter.getRating(eLoopRating) + ((pCharacter.isTrait(eTrait)) ? 0 : iValue));
+                                            int iOldValue = (pCharacter.getRating(eLoopRating) - ((pCharacter.isTrait(eTrait)) ? iValue : 0));
+
+                                            buildRatingHelp(subText, eLoopRating, iNewValue, iOldValue, pGame, pActivePlayer, pCharacter, pCharacter.getPlayerOpinionCharacter(), pCharacter.isLeader(), pCharacter.isLeaderSpouse(), pCharacter.isSuccessor(), pCharacter.isCourtier(), pCharacter.isClergy(), pCharacter.getCouncil(), pCharacter.isCityGovernor(), pCharacter.cityGovernor(), pCharacter.isCityAgent(), pCharacter.cityAgent(), pCharacter.isUnitGeneral(), pCharacter.unitGeneral());
+                                            if (subText.HasContent)
+                                            {
+                                                ratingValueText = buildEnclosedParenthesis(ratingValueText, subText.ToTextVariable());
+                                                bRatingValue = true;
+                                            }
+                                        }
+
+                                        if (bRatingValue)
+                                        {
+                                            builder.Add(ratingValueText);
+                                        }
+                                        else
+                                        {
+                                            subCommaText.AddTEXT("TEXT_HELPTEXT_CONCAT_SPACE_TWO", buildSignedTextVariable(iValue), buildRatingLinkVariable(eLoopRating, true));
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (subCommaText.HasContent)
+                            {
+                                builder.Add(subCommaText.ToTextVariable());
+                            }
+                        }
+                    }
+                    else
+                    {
+                        using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
+                        {
+                            for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
+                            {
+                                int iValue = infos().trait(eTrait).maiRating[eLoopRating];
+                                if (iValue != 0)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_CONCAT_SPACE_TWO", buildSignedTextVariable(iValue), buildRatingLinkVariable(eLoopRating, true));
+                                }
+                            }
+                        }
+                    }
+
+                    if (bRestrictions)
+                    {
+                        if (infos().trait(eTrait).mbNoMarry)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_MARRY");
+                        }
+
+                        if (infos().trait(eTrait).mbNoBirth)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_BIRTH");
+                        }
+
+                        if (infos().trait(eTrait).mbNoSuccession)
+                        {
+                            if ((pCharacter != null) && pCharacter.isLeader())
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_FORFEITS");
+                            }
+                            else
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_HEIR", TEXTVAR(pCharacter != null ? pCharacter.isMale() : true));
+                            }
+                        }
+
+                        if (infos().trait(eTrait).mbNoSuccessionChildren)
+                        {
+                            if ((pCharacter != null) && pCharacter.isLeader())
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_FORFEITS");
+                            }
+                            else
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_HEIR_CHILDREN");
+                            }
+                        }
+
+                        if (infos().trait(eTrait).mbNoJob)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_JOB_LIST", buildAllJobsLinkVariable(pCharacter, pGame));
+                        }
+
+                        if (infos().trait(eTrait).mbNoCouncil)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_COUNCIL");
+                        }
+
+                        if (infos().trait(eTrait).mbNoGeneral)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_GENERAL", TEXTVAR(pCharacter != null ? pCharacter.isMale() : true));
+                        }
+
+                        if (infos().trait(eTrait).mbNoGovernor)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_GOVERNOR", TEXTVAR(pCharacter != null ? pCharacter.isMale() : true));
+                        }
+
+                        if (infos().trait(eTrait).mbNoCourtier)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_COURTIER", buildCourtierLinkVariable(eGender: pCharacter != null ? pCharacter.getGender() : GenderType.NONE), TEXTVAR(pCharacter != null ? pCharacter.isMale() : true));
+                        }
+
+                        if (infos().trait(eTrait).mbNoFamilyHead)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_FAMILY_HEAD");
+                        }
+
+                        if (infos().trait(eTrait).mbNoReligionHeadNew)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_RELIGION_HEAD_NEW", TEXTVAR(pCharacter != null ? pCharacter.isMale() : true));
+                        }
+
+                        if (infos().trait(eTrait).mbNoReligion)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_RELIGION");
+                        }
+
+                        if (infos().trait(eTrait).mbNoEvents)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_NO_EVENTS", buildTraitLinkVariable(eTrait, pCharacter));
+                        }
+
+                        if (infos().trait(eTrait).mbGiveBirth)
+                        {
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_GIVE_BIRTH");
+                        }
+
+                        if (infos().trait(eTrait).mbStrength)
+                        {
+                            if (pCharacter != null)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_STRENGTH_COUNT", pCharacter.countStrengths());
+                            }
+                            else
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_STRENGTH");
+                            }
+                        }
+
+                        if (infos().trait(eTrait).mbWeakness)
+                        {
+                            if (pCharacter != null)
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_WEAKNESS_COUNT", pCharacter.countWeaknesses());
+                            }
+                            else
+                            {
+                                builder.AddTEXT("TEXT_HELPTEXT_TRAIT_WEAKNESS");
+                            }
+                        }
+                    }
+                }
+
+                if (bDetails)
+                {
+                    using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        using (subText.BeginScope(scopeType))
+                        {
+                            int iDeathProb = infos().utils().modify(infos().Helpers.getTraitDieProb(eTrait, pGame), infos().trait(eTrait).miDieModifier);
+                            {
+                                if (iDeathProb > 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_DEATH_CHANCE", iDeathProb);
+                                }
+                            }
+
+                            {
+                                int iValue = infos().trait(eTrait).miDieModifier;
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_DIE_MODIFIER", buildSignedTextVariable(iValue, false));
+                                }
+                            }
+
+                            {
+                                int iValue = infos().trait(eTrait).miRemoveTurns;
+                                if (iValue > 0)
+                                {
+                                    if ((pCharacter != null) && pCharacter.isTrait(eTrait))
+                                    {
+                                        int iTurns = (iValue - pCharacter.getTraitTurnLength(eTrait));
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_REMOVE_TURNS_CHARACTER", iTurns, buildTurnScaleName(pGame, iTurns));
+                                    }
+                                    else
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_REMOVE_TURNS", iValue, buildTurnScaleName(pGame, iValue));
+                                    }
+                                }
+                            }
+
+                            {
+                                int iValue = infos().trait(eTrait).miBirthModifier;
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_BIRTH_CHANCE", buildSignedTextVariable(iValue));
+                                }
+                            }
+
+                            {
+                                int iValue = infos().trait(eTrait).miFamilyHeadModifier;
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_FAMILY_HEAD_CHANCE", buildSignedTextVariable(iValue));
+                                }
+                            }
+
+                            {
+                                int iValue = infos().trait(eTrait).miReligionHeadModifier;
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_RELIGION_HEAD_CHANCE", buildSignedTextVariable(iValue));
+                                }
+                            }
+
+                            int iReplaceProbability = 0;
+                            for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
+                            {
+                                int iValue = infos().utils().modify(infos().trait(eTrait).maiTraitProb[eLoopTrait], -iDeathProb);
+                                if (iValue > 0 && (pCharacter == null || !pCharacter.isTrait(eLoopTrait)))
+                                {
+                                    iReplaceProbability += infos().trait(eTrait).maiTraitProb[eLoopTrait];
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OTHER_TRAIT_CHANCE", TEXTVAR(iValue), buildTraitLinkVariable(eLoopTrait, pCharacter));
+                                }
+                            }
+
+                            {
+                                int iValue = infos().utils().modify(infos().trait(eTrait).miRemoveProb, -iDeathProb);
+                                iValue = infos().utils().modify(iValue, -iReplaceProbability);
+                                if (iValue > 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_REMOVE_CHANCE", iValue, buildTraitLinkVariable(eTrait, pCharacter));
+                                }
+                            }
+
+                            for (ReligionType eLoopReligion = 0; eLoopReligion < infos().religionsNum(); eLoopReligion++)
+                            {
+                                int iValue = infos().trait(eTrait).maiReligionOpinion[eLoopReligion];
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_RELIGION_OPINION", buildSignedTextVariable(iValue), buildReligionLinkVariable(eLoopReligion, pGame, pActivePlayer));
+                                }
+                            }
+
+                            for (ReligionType eLoopReligion = 0; eLoopReligion < infos().religionsNum(); eLoopReligion++)
+                            {
+                                int iValue = infos().trait(eTrait).maiReligionOpinionWeighted[eLoopReligion];
+                                if (iValue != 0)
+                                {
+                                    if (pCharacter != null)
+                                    {
+                                        int iChange = infos().Helpers.getReligionOpinionWeightedTrait(eLoopReligion, eTrait, pCharacter.getPlayerOpinionCharacter());
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_RELIGION_OPINION_WEIGHTED_CHARACTER", buildSignedTextVariable(iChange), buildReligionLinkVariable(eLoopReligion, pGame, pActivePlayer), buildSignedTextVariable(iValue));
+                                    }
+                                    else
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_RELIGION_OPINION_WEIGHTED", buildSignedTextVariable(iValue), buildReligionLinkVariable(eLoopReligion, pGame, pActivePlayer));
+                                    }
+                                }
+                            }
+
+                            for (FamilyClassType eLoopFamilyClass = 0; eLoopFamilyClass < infos().familyClassesNum(); eLoopFamilyClass++)
+                            {
+                                int iValue = infos().trait(eTrait).maiFamilyClassOpinion[eLoopFamilyClass];
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_FAMILY_CLASS_OPINION", buildSignedTextVariable(iValue), buildFamilyClassLinkVariable(eLoopFamilyClass));
+                                }
+                            }
+
+                            for (LawType eLoopLaw = 0; eLoopLaw < infos().lawsNum(); eLoopLaw++)
+                            {
+                                int iValue = infos().trait(eTrait).maiLawOpinion[eLoopLaw];
+                                if (iValue > 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_LAW_OPINION", buildSignedTextVariable(iValue), buildLawLinkVariable(eLoopLaw));
+                                }
+                            }
+
+                            for (JobType eLoopJob = 0; eLoopJob < infos().jobsNum(); eLoopJob++)
+                            {
+                                if (pGame != null ? pGame.checkGameContent(eLoopJob) : App.CheckContentOwnership(infos().job(eLoopJob).meGameContentRequired, infos(), null))
+                                {
+                                    int iValue = infos().trait(eTrait).maiJobOpinion[eLoopJob];
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_JOB_OPINION", buildSignedTextVariable(iValue), buildJobLinkVariable(eLoopJob));
+                                    }
+                                }
+                            }
+
+                            for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
+                            {
+                                int iValue = infos().trait(eTrait).maiTraitOpinion[eLoopTrait];
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OTHER_TRAIT_OPINION", buildSignedTextVariable(iValue), buildTraitLinkVariable(eLoopTrait, pCharacter));
+                                }
+                            }
+
+                            {
+                                int iValue = infos().trait(eTrait).miOpinionSame;
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OTHER_TRAIT_OPINION", buildSignedTextVariable(iValue), buildTraitLinkVariable(eTrait, pCharacter));
+                                }
+                            }
+
+                            if ((pCharacter != null) ? !(pCharacter.isLeader()) : true)
+                            {
+                                int iValue = infos().trait(eTrait).miOpinion;
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION", buildSignedTextVariable(iValue));
+                                }
+                            }
+
+                            if ((pCharacter != null) ? pCharacter.hasFamily() : true)
+                            {
+                                int iValue = infos().trait(eTrait).miOpinionFamily;
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_FAMILY", buildSignedTextVariable(iValue));
+                                }
+                            }
+
+                            if ((pCharacter != null) ? pCharacter.isLeader() : true)
+                            {
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionReligion;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_RELIGION", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionProximity;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_PROXIMITY", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionStrength;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_STRENGTH", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionKnowledge;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_KNOWLEDGE", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionGenerals;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_GENERALS", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionGovernors;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_GOVERNORS", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionWonders;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_WONDERS", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionLaws;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_LAWS", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionCognomen;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_COGNOMEN", buildSignedTextVariable(iValue));
+                                    }
+                                }
+
+                                if ((pCharacter != null) ? (pCharacter.getTeam() != pActivePlayer.getTeam()) : true)
+                                {
+                                    int iValue = infos().trait(eTrait).miOpinionTrades;
+                                    if (iValue != 0)
+                                    {
+                                        subText.AddTEXT("TEXT_HELPTEXT_TRAIT_OPINION_TRADES", buildSignedTextVariable(iValue));
+                                    }
+                                }
+                            }
+
+                            {
+                                int iValue = infos().trait(eTrait).miReligionPaganOpinion;
+                                if (iValue != 0)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_RELIGION_PAGAN_OPINION", buildSignedTextVariable(iValue));
+                                }
+                            }
+
+                            {
+                                using (TextBuilder ratingText = TextBuilder.GetTextBuilder(TextManager))
+                                {
+                                    for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
+                                    {
+                                        int iValue = infos().trait(eTrait).maiRatingFallback[eLoopRating];
+                                        if (iValue != 0)
+                                        {
+                                            TextVariable ratingValueText = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", buildSignedTextVariable(iValue), buildRatingLinkVariable(eLoopRating, true));
+                                            ratingText.Add(ratingValueText);
+                                        }
+                                    }
+
+                                    if (ratingText.HasContent)
+                                    {
+                                        using (subText.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_RATING_FALLBACK_LIST")))
+                                        {
+                                            subText.Add(ratingText.ToTextVariable());
+                                        }
+                                    }
+                                }
+                            }
+
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_TRAIT_INCLUDED_IN")))
+                            {
+                                for (SubjectType eLoopSubject = 0; eLoopSubject < infos().subjectsNum(); eLoopSubject++)
+                                {
+                                    if (infos().subject(eLoopSubject).maeTraitAny.Contains(eTrait) && !infos().subject(eLoopSubject).mbHidden)
+                                    {
+                                        subText.Add(buildSubjectTraitAnyLinkVariable(eLoopSubject, pCharacter != null ? pCharacter.getGender() : GenderType.NONE));
+                                    }
+                                }
+                            }
+
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_TRAIT_EXCUDED_FROM")))
+                            {
+                                for (SubjectType eLoopSubject = 0; eLoopSubject < infos().subjectsNum(); eLoopSubject++)
+                                {
+                                    if (infos().subject(eLoopSubject).maeTraitNone.Contains(eTrait) && !infos().subject(eLoopSubject).mbHidden)
+                                    {
+                                        subText.Add(buildSubjectTraitNoneLinkVariable(eLoopSubject, pCharacter != null ? pCharacter.getGender() : GenderType.NONE));
+                                    }
+                                }
+                            }
+
+                            using (subText.BeginScope(TextBuilder.ScopeType.COMMA, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_TRAIT_COMMON_FAMILYCLASS")))
+                            {
+                                if (pActivePlayer == null || !pActivePlayer.hasNation())
+                                {
+                                    for (FamilyClassType eLoopFamilyClass = 0; eLoopFamilyClass < infos().familyClassesNum(); ++eLoopFamilyClass)
+                                    {
+                                        int iValue = infos().familyClass(eLoopFamilyClass).maiTraitDie[eTrait];
+                                        if (iValue > 1)
+                                        {
+                                            subText.Add(buildFamilyClassLinkVariable(eLoopFamilyClass));
+                                        }
+                                    }
+                                }
+                                else if (pGame != null)
+                                {
+                                    for (FamilyType eLoopFamily = 0; eLoopFamily < infos().familiesNum(); ++eLoopFamily)
+                                    {
+                                        if (infos().family(eLoopFamily).mabNation[(int)(pActivePlayer.getNation())])
+                                        {
+                                            FamilyClassType eFamilyClass = pGame.getFamilyClass(eLoopFamily);
+                                            if (eFamilyClass != FamilyClassType.NONE)
+                                            {
+                                                int iValue = infos().familyClass(eFamilyClass).maiTraitDie[eTrait];
+                                                if (iValue > 1)
+                                                {
+                                                    subText.Add(buildFamilyLinkVariable(eLoopFamily, pGame));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            {
+                                if (infos().trait(eTrait).meEncyclopediaCharacter != CharacterType.NONE)
+                                {
+                                    subText.AddTEXT("TEXT_HELPTEXT_TRAIT_UNIQUE_CHARACTER", buildCharacterPresetLinkVariable(infos().trait(eTrait).meEncyclopediaCharacter, pActivePlayer));
+                                }
+                            }
+
+                            if (pGame != null)
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.INDENTED_BULLET, insertBeforeScopeText: TEXTVAR_TYPE("TEXT_HELPTEXT_NOTABLE_CHARACTERS")))
+                                {
+                                    using (var hashSetScope = CollectionCache.GetHashSetScoped<Character>())
+                                    using (var charListScoped = CollectionCache.GetListScoped<Character>())
+                                    {
+                                        HashSet<Character> spCharactersAdded = hashSetScope.Value;
+
+                                        pGame.getActiveCharacters(charListScoped.Value);
+
+                                        for (int iPass = 0; iPass < InfoHelpers.NOTABLE_CHARACTER_PASSES; iPass++)
+                                        {
+                                            foreach (Character pLoopCharacter in charListScoped.Value)
+                                            {
+                                                if (!(spCharactersAdded.Contains(pLoopCharacter)))
+                                                {
+                                                    if (pLoopCharacter.hasContact(pActivePlayer.getTeam()))
+                                                    {
+                                                        if (infos().Helpers.isNotableCharacter(pLoopCharacter, iPass, pActivePlayer))
+                                                        {
+                                                            if (pLoopCharacter.isTrait(eTrait))
+                                                            {
+                                                                subText.Add(buildCharacterLinkVariable(pLoopCharacter, pActivePlayer));
+                                                            }
+
+                                                            spCharactersAdded.Add(pLoopCharacter);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (subText.HasContent)
+                        {
+                            buildDividerText(builder);
+                            builder.Add(subText.ToTextVariable());
+                        }
+                    }
+                }
+
+                if (infos().trait(eTrait).meDescription != TextType.NONE)
+                {
+                    buildDividerText(builder);
+
+                    using (buildColorTextPositiveScope(builder))
+                    {
+                        builder.AddTEXT(infos().trait(eTrait).meDescription);
+                    }
+                }
+
+                return builder;
+            }
+        }
+
+
+
+
+        /*####### Better Old World AI - Base DLL #######
+          ### misc                             START ###
+          ##############################################*/
         //public struct BetterAICommaListVariableGenerator : CommaListVariableGenerator
         //{
         //}

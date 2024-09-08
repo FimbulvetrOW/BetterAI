@@ -26,9 +26,9 @@ namespace BetterAI
     public class BetterAITile : Tile
     {
 
-        /*####### Better Old World AI - Base DLL #######
-          ### Better bounce tile search        START ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search        START ###
+  ##############################################*/
         public virtual bool isDistanceCloserToOtherTiles(Tile pStartTile, HashSet<Tile> otherTiles)
         {
             if (otherTiles == null || otherTiles.Count == 0)
@@ -92,14 +92,14 @@ namespace BetterAI
 
             return false;
         }
-        /*####### Better Old World AI - Base DLL #######
-          ### Better bounce tile search          END ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search          END ###
+  ##############################################*/
 
 
-        /*####### Better Old World AI - Base DLL #######
-          ### City Biome                       START ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### City Biome                       START ###
+  ##############################################*/
         public virtual CityBiomeType getCityBiome()
         {
             BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
@@ -122,13 +122,33 @@ namespace BetterAI
                 pCityTerritory?.setTerrainChanged();
             }
         }
-        /*####### Better Old World AI - Base DLL #######
-          ### City Biome                         END ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### City Biome                         END ###
+  ##############################################*/
 
-        /*####### Better Old World AI - Base DLL #######
-          ### Bonus adjacent Improvement       START ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### Continue specialist on pillaged  START ###
+  ##############################################*/
+        //refering getImprovementFinished() lines 4504-4514
+        public virtual ImprovementType getImprovementFinishedorPillaged()
+        {
+            if (isImprovementUnfinished() && !isPillaged())
+            {
+                return ImprovementType.NONE;
+            }
+            else
+            {
+                return getImprovement();
+            }
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Continue specialist on pillaged    END ###
+  ##############################################*/
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement       START ###
+  ##############################################*/
         public virtual bool canCityTileAddImprovementAdjacent(BetterAICity pCityTerritory, ImprovementType eImprovement, bool bSourceSpreadsBorders)
         {
             for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
@@ -183,9 +203,9 @@ namespace BetterAI
 
             return false;
         }
-        /*####### Better Old World AI - Base DLL #######
-          ### Bonus adjacent Improvement         END ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### Bonus adjacent Improvement         END ###
+  ##############################################*/
 
         public virtual bool isBorder(TeamType eTeam)
         {
@@ -1171,7 +1191,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### No immediate unit from improvement START #
   ##############################################*/
-        //not a priority
+        //solved by overriding doImprovementFinished directly
         //public override Unit addImprovementUnit(UnitType eUnit = UnitType.NONE)
         //{
         //    MethodBase MB_doImprovementFinished = typeof(BetterAITile).GetMethod("doImprovementFinished", BindingFlags.Instance | BindingFlags.Public);
@@ -1186,6 +1206,87 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### No immediate unit from improvement END ###
   ##############################################*/
+
+
+        //lines 8928-8992
+        public override bool isDirectionHostileZOC(DirectionType eDirection, Unit pUnit, TeamType eTeam, TribeType eTribe, TeamType eTeamVisibility, bool bIgnoreRiver)
+        {
+            Tile pAdjacentTile = tileAdjacent(eDirection);
+            if (pAdjacentTile == null)
+            {
+                return false;
+            }
+            if (isWater() != pAdjacentTile.isWater())
+            {
+                return false;
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement         START ###
+  ##############################################*/
+            //ZOC of units with mbAmphibiousEmbark extends over river
+            //if (!bIgnoreRiver && isRiver(eDirection))
+            //{
+            //    return false;
+            //}
+
+            bool bNoAttacker = ((eTeam == TeamType.NONE) && (eTribe == TribeType.NONE));
+
+            if (pAdjacentTile.hasCity() && isLand())
+            {
+                if (bNoAttacker || pAdjacentTile.isHostileCity(eTeam, eTribe))
+                {
+                    if ((pUnit == null) || !(pUnit.hasIgnoreZOC(this)))
+                    {
+                        if (pAdjacentTile.city().getTribe() != infos().Globals.ANARCHY_TRIBE)
+                        {
+                            if (bIgnoreRiver || !isRiver(eDirection)) //BAI: only without river
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (pAdjacentTile.hasUnit())
+            {
+                using (var unitListScoped = CollectionCache.GetListScoped<int>())
+                {
+                    pAdjacentTile.getAliveUnits(unitListScoped.Value);
+
+                    foreach (int iUnitID in unitListScoped.Value)
+                    {
+                        BetterAIUnit pAdjacentUnit = (BetterAIUnit)game().unit(iUnitID);
+                        if (bIgnoreRiver || (pAdjacentUnit.mbAmphibiousEmbark && ((BetterAIInfoGlobals)infos().Globals).BAI_AMPHIBIOUS_ZOC_CROSSES_RIVER == 1) || !isRiver(eDirection)) //BAI: without river or with mbAmphibiousEmbark
+                        {
+                            if (pAdjacentUnit.hasZOC() && !(pAdjacentUnit.isHiddenFrom(eTeamVisibility)))
+                            {
+                                if (bNoAttacker || game().isHostileUnit(eTeam, eTribe, pAdjacentUnit))
+                                {
+                                    if (pUnit == null)
+                                    {
+                                        return true;
+                                    }
+                                    if (!(pUnit.hasIgnoreZOC(this)))
+                                    {
+                                        return true;
+                                    }
+                                    if (pAdjacentUnit.isUnitTraitZOC(pUnit.getType()))
+                                    {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement           END ###
+  ##############################################*/
+
 
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###

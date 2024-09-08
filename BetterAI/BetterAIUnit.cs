@@ -23,10 +23,57 @@ namespace BetterAI
 {
     public partial class BetterAIUnit : Unit
     {
+        //lines 2052-2080
+
+        protected override void setGeneralID(int iNewValue)
+        {
+            if (getGeneralID() != iNewValue)
+            {
+                int iDeltaCriticalChance = 0;
+
+                if (hasGeneral())
+                {
+                    iDeltaCriticalChance -= general().getRatingCriticalChanceTotal();
+                    general().resetAllTraitEffectUnit(-1);
+                    general().setUnitGeneralID(-1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+                    ((BetterAICharacter)general()).resetJobTraitEffectPlayer(infos().Globals.GENERAL_JOB, -1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+                }
+
+                updateLastData(DirtyType.miGeneralID, mpCurrentData.miGeneralID, ref mpLastUpdateData.miGeneralID);
+                mpCurrentData.miGeneralID = iNewValue;
+
+                if (hasGeneral())
+                {
+                    iDeltaCriticalChance += general().getRatingCriticalChanceTotal();
+                    general().setUnitGeneralID(getID());
+                    general().resetAllTraitEffectUnit(1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+                    ((BetterAICharacter)general()).resetJobTraitEffectPlayer(infos().Globals.GENERAL_JOB, 1);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+                }
+
+                if (iDeltaCriticalChance != 0)
+                {
+                    resetCriticalHit();
+                }
+            }
+        }
+
+
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-        //this whole DirtyType part is still opague to me, so I'm hoping this works without
+        //this whole DirtyType and NetworkData part is still opague to me, so I'm hoping this works without
 
         public bool mbAmphibiousEmbark = false;
         public int miAmphibiousEmbarkCount = 0;

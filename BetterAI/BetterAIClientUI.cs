@@ -336,6 +336,270 @@ namespace BetterAI
         }
         //copy-paste END
 
+
+        protected override void updateReligionSelection(ReligionType eReligion)
+        {
+            //using var profileScope = new UnityProfileScope("ClientUI.updateReligionSelection");
+
+            //damn protection levels
+            int maxSelectedReligionCharacterButtonsCount = (int)base.GetType().GetField("maxSelectedReligionCharacterButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
+            int maxSelectedReligionCityButtonsCount = (int)base.GetType().GetField("maxSelectedReligionCityButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
+
+            if (eReligion != ReligionType.NONE)
+            {
+                Player pActivePlayer = ClientMgr.activePlayer();
+                UIAttributeTag religionTag = mSelectedPanel.GetSubTag("-Religion");
+                InfoReligion infoReligion = Infos.religion(eReligion);
+
+                string name = getReligionName(eReligion);
+
+                if (pActivePlayer.getStateReligion() == eReligion)
+                {
+                    religionTag.SetTEXT("Name", TextManager, HelpText.buildEnclosedParenthesis(TEXTVAR(name), HelpText.buildStateReligionLinkVariable(eReligion, pActivePlayer)));
+                }
+                else
+                {
+                    religionTag.SetKey("Name", name);
+                }
+
+                bool hasHead = Game.hasReligionHead(eReligion);
+                if (hasHead)
+                {
+                    religionTag.SetInt("Head-ID", Game.getReligionHeadID(eReligion));
+                }
+                religionTag.SetBool("Head-IsActive", hasHead);
+
+                religionTag.SetKey("Rename-Data", infoReligion.SafeTypeString());
+                religionTag.SetBool("Rename-IsActive", Game.getReligionFounder(eReligion) == pActivePlayer.getPlayer());
+                religionTag.SetKey("Image", infoReligion.mzIconName);
+                religionTag.SetKey("ImageColor", getHolyCityHexString(eReligion));
+                using (var iconScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_RELIGION), eReligion.ToStringCached()))
+                {
+                    religionTag.ItemType = iconScope.Type;
+                    religionTag.DataSB = iconScope.DataList;
+                }
+
+                int iOpinion = pActivePlayer.getReligionOpinionRate(eReligion);
+                OpinionReligionType eOpinion = pActivePlayer.getReligionOpinion(eReligion);
+                string zColor = ColorManager.GetColorHex(Infos.opinionReligion(eOpinion).meColor);
+                TextVariable opinionText = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", HelpText.buildOpinionReligionLinkVariable(eOpinion, eReligion, pActivePlayer.getPlayer()), HelpText.buildSignedTextVariable(iOpinion));
+                religionTag.SetTEXT("Opinion", TextManager, HelpText.buildColorTextVariable(opinionText, zColor));
+
+                bool bCanHaveTheology = infoReligion.mePaganNation == NationType.NONE;
+                if (bCanHaveTheology)
+                {
+                    int iMaxTier = -1;
+                    for (TheologyType eLoopTheology = 0; eLoopTheology < Infos.theologiesNum(); eLoopTheology++)
+                    {
+                        int iTier = Infos.theology(eLoopTheology).miTier;
+                        if (iTier > iMaxTier)
+                            iMaxTier = iTier;
+                    }
+
+                    for (int iLoopTier = 0; iLoopTier <= iMaxTier; iLoopTier++)
+                    {
+                        UIAttributeTag theologyTag = religionTag.GetSubTag("-Theology", iLoopTier);
+                        theologyTag.SetKey("TierLabel", TEXT("TEXT_UI_SELECTED_RELIGION_THEOLOGY", TEXTVAR(iLoopTier + 1)));
+                        theologyTag.SetTEXT("Label", TextManager, HelpText.buildAdoptTheologyTierLinkVariable(Game, eReligion, iLoopTier));
+                    }
+                    religionTag.SetInt("Theologies-Count", iMaxTier + 1);
+                }
+                religionTag.SetBool("Theologies-IsVisible", bCanHaveTheology);
+
+                bool bAnyFamily = false;
+                using (var familyScope = CollectionCache.GetStringBuilderScoped())
+                {
+                    for (FamilyType eLoopFamily = 0; eLoopFamily < Infos.familiesNum(); eLoopFamily++)
+                    {
+                        if (pActivePlayer.isFamilyStarted(eLoopFamily) && pActivePlayer.getFamilyReligion(eLoopFamily) == eReligion)
+                        {
+                            HelpText.buildFamilyCrestLink(familyScope.Value, eLoopFamily, Game).Append("  ");
+                            bAnyFamily = true;
+                        }
+                    }
+                    religionTag.SetKey("Families-Label", familyScope.Value.ProfiledToString());
+                    religionTag.SetBool("HasFamilies", bAnyFamily);
+                }
+
+                bool bAnyNation = false;
+                using (var nationScope = CollectionCache.GetStringBuilderScoped())
+                {
+                    foreach (Player pPlayer in Game.getPlayers())
+                    {
+                        if (pPlayer.isAlive())
+                        {
+                            if (pPlayer.getStateReligion() == eReligion)
+                            {
+                                HelpText.buildPlayerCrestLink(nationScope.Value, pPlayer.getPlayer(), Game, pActivePlayer).Append("  ");
+                                bAnyNation = true;
+                            }
+                        }
+                    }
+                    religionTag.SetKey("Nations-Label", nationScope.Value.ProfiledToString());
+                    religionTag.SetBool("HasNations", bAnyNation);
+                }
+
+                bool bAnyTribe = false;
+                using (var tribeScope = CollectionCache.GetStringBuilderScoped())
+                {
+                    for (TribeType eLoopTribe = 0; eLoopTribe < Infos.tribesNum(); eLoopTribe++)
+                    {
+                        if (Game.isDiplomacyTribeAlive(eLoopTribe))
+                        {
+                            if (Game.getTribeReligion(eLoopTribe) == eReligion)
+                            {
+                                HelpText.buildTribeCrestLink(tribeScope.Value, eLoopTribe, Game).Append("  ");
+                                bAnyTribe = true;
+                            }
+                        }
+                    }
+                    religionTag.SetKey("Tribes-Label", tribeScope.Value.ProfiledToString());
+                    religionTag.SetBool("HasTribes", bAnyTribe);
+                }
+
+                int numCharacters = 0;
+                using (var characterScope = CollectionCache.GetListScoped<int>())
+                {
+                    List<int> activeCharacters = characterScope.Value;
+                    pActivePlayer.getActiveCharacters(activeCharacters);
+
+                    foreach (int charID in activeCharacters)
+                    {
+                        Character pCharacter = Game.character(charID);
+                        if (pCharacter.getReligion() == eReligion)
+                        {
+                            UIAttributeTag characterTag = religionTag.GetSubTag("-Character", numCharacters);
+                            characterTag.SetInt("ID", charID);
+                            characterTag.IsActive = true;
+                            numCharacters++;
+                        }
+                    }
+
+                    if (numCharacters > maxSelectedReligionCharacterButtonsCount)
+                    {
+                        maxSelectedReligionCharacterButtonsCount = numCharacters;
+                        religionTag.SetInt("Characters-Count", numCharacters);
+                    }
+                    else
+                    {
+                        for (int i = numCharacters; i < maxSelectedReligionCharacterButtonsCount; i++)
+                        {
+                            UIAttributeTag characterTag = religionTag.GetSubTag("-Character", i);
+                            characterTag.IsActive = false;
+                        }
+                    }
+                }
+                religionTag.SetBool("Characters-IsVisible", numCharacters > 0);
+
+                int numCities = 0;
+/*####### Better Old World AI - Base DLL #######
+  ### Rel. Improvements in City list   START ###
+  ##############################################*/
+                using (var ImprovementTypeListScope = CollectionCache.GetListScoped<ImprovementType>())
+                using (var ImprovementClassCountScope = CollectionCache.GetDictionaryScoped<ImprovementClassType, int>())
+                using (var ImprovementShortNameScope = CollectionCache.GetDictionaryScoped<ImprovementType, string>())
+                {
+                    List<ImprovementType> ImprovementTypes = ImprovementTypeListScope.Value;
+                    Dictionary<ImprovementClassType, int> ImprovementClassCounts = ImprovementClassCountScope.Value;
+                    Dictionary<ImprovementType, string> ImprovementShortNames = ImprovementShortNameScope.Value;
+
+                    for (ImprovementType eLoopImprovement = 0; eLoopImprovement < Infos.improvementsNum(); eLoopImprovement++)
+                    {
+                        if ((Game?.getImprovementReligionSpread(eLoopImprovement) ?? Infos.improvement(eLoopImprovement).meReligionSpread) == eReligion || Infos.improvement(eLoopImprovement).meReligionPrereq == eReligion)
+                        {
+                            ImprovementTypes.Add(eLoopImprovement);
+                            if (Infos.improvement(eLoopImprovement).meClass != ImprovementClassType.NONE)
+                            {
+                                if (ImprovementClassCounts.ContainsKey(Infos.improvement(eLoopImprovement).meClass))
+                                {
+                                    ImprovementClassCounts.Add(Infos.improvement(eLoopImprovement).meClass, 1);
+                                }
+                                else
+                                {
+                                    ImprovementClassCounts[Infos.improvement(eLoopImprovement).meClass] += 1;
+                                }
+                            }
+                        }
+                    }
+
+                    foreach (ImprovementType eLoopImprovement in ImprovementTypes)
+                    {
+                        string shortName;
+
+                        if (Infos.improvement(eLoopImprovement).meClass != ImprovementClassType.NONE && ImprovementClassCounts[Infos.improvement(eLoopImprovement).meClass] == 1)
+                        {
+                            //use improvement class name
+                            shortName = TEXT(Infos.improvementClass(Infos.improvement(eLoopImprovement).meClass).mName);
+
+                        }
+                        else
+                        {
+                            //use improvement name
+                            shortName = TEXT(Infos.improvement(eLoopImprovement).mName);
+                        }
+
+                        //if there are multiple words separated by spaces in the name, use the last word. Shrine of Poseidon: "P"
+                        int iStartSubString = 0;
+                        if (shortName.LastIndexOf(" ") != -1)
+                        {
+                            iStartSubString = shortName.LastIndexOf(" ") + 1;
+                        }
+                        shortName = shortName.Substring(iStartSubString, 1);
+
+                        ImprovementShortNames.Add(eLoopImprovement, shortName);
+                    }
+/*####### Better Old World AI - Base DLL #######
+  ### Rel. Improvements in City list     END ###
+  ##############################################*/
+
+                    foreach (int iCity in pActivePlayer.getCities())
+                    {
+                        City pCity = Game.city(iCity);
+                        if (pCity.isReligion(eReligion))
+                        {
+                            UIAttributeTag cityTag = religionTag.GetSubTag("-City", numCities);
+/*####### Better Old World AI - Base DLL #######
+  ### Rel. Improvements in City list   START ###
+  ##############################################*/
+                            //cityTag.SetTEXT("Name", TextManager, HelpText.buildCityLinkVariable(pCity, pActivePlayer, true, false));
+                            cityTag.SetTEXT("Name", TextManager, ((BetterAIHelpText)HelpText).buildCityLinkVariableWithReligiousImprovements(Game, pCity, pActivePlayer, eReligion, ImprovementTypes, ImprovementShortNames, true, false));
+/*####### Better Old World AI - Base DLL #######
+  ### Rel. Improvements in City list     END ###
+  ##############################################*/
+
+                            cityTag.SetInt("ID", pCity.getID());
+                            cityTag.IsActive = true;
+                            numCities++;
+                        }
+                    }
+
+                    if (numCities > maxSelectedReligionCityButtonsCount)
+                    {
+                        maxSelectedReligionCityButtonsCount = numCities;
+                        religionTag.SetInt("Cities-Count", numCities);
+                    }
+                    else
+                    {
+                        for (int i = numCities; i < maxSelectedReligionCityButtonsCount; i++)
+                        {
+                            UIAttributeTag cityTag = religionTag.GetSubTag("-City", i);
+                            cityTag.IsActive = false;
+                        }
+                    }
+                }
+                religionTag.SetBool("Cities-IsVisible", numCities > 0);
+
+                bool bAnyFollowers = bAnyFamily || bAnyNation || bAnyTribe || numCharacters > 0 || numCities > 0;
+                religionTag.SetBool("Members-IsVisible", bAnyFollowers);
+
+                makeDirty(DirtyType.ACTION_PANEL);
+
+                religionTag.SetBool("ScrollRect-IsActive", bAnyFollowers || bCanHaveTheology);
+            }
+        }
+
+
+
 /*####### Better Old World AI - Base DLL #######
   ### Worker Default List Extra Items  START ###
   ##############################################*/

@@ -65,35 +65,12 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
   ##############################################*/
-        //lines 2615-2624
-        public override void setCityAgentID(int iNewValue)
-        {
-            if (getCityAgentID() != iNewValue)
-            {
-                updateLastData(DirtyType.miCityAgentID, mpCurrentData.miCityAgentID, ref mpLastUpdateData.miCityAgentID);
 
-                if (((BetterAIInfoJob)infos().job(infos().Globals.AGENT_JOB)).bAnyTraitEffectPlayer)
-                {
-                    if (getCityAgentID() != -1)
-                    {
-                        //remove job-trait player effect
-                    }
-                    else if (iNewValue != -1)
-                    {
-                        //add job-trait player effect
-                    }
-                }
-
-                mpCurrentData.miCityAgentID = iNewValue;
-
-                updateOpinionPlayer();
-            }
-        }
-
+        //lines 5982-5993
         public override void resetTraitEffectPlayer(TraitType eTrait, int iChange)
         {
             base.resetTraitEffectPlayer(eTrait, iChange);
-            if (!isLeader() && isJob())
+            if (isJob())
             {
                 EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eTrait))).maeJobEffectPlayer[getJob()];
 
@@ -105,7 +82,7 @@ namespace BetterAI
 
             if (((BetterAIInfoTrait)(infos().trait(eTrait))).bAnyTraitEffectPlayer)
             {
-                for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
+                foreach (TraitType eLoopTrait in getTraits())
                 {
                     if (eTrait != eLoopTrait)
                     {
@@ -121,6 +98,18 @@ namespace BetterAI
                             player().changeEffectPlayerCount(eEffectPlayer, iChange);
                         }
                     }
+                }
+            }
+        }
+
+        public virtual void resetJobTraitEffectPlayer(JobType eJob, int iChange)
+        {
+            foreach (TraitType eLoopTrait in getTraits())
+            {
+                EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)infos().trait(eLoopTrait)).maeJobEffectPlayer[eJob];
+                if (eEffectPlayer != EffectPlayerType.NONE)
+                {
+                    player().changeEffectPlayerCount(eEffectPlayer, iChange);
                 }
             }
         }
