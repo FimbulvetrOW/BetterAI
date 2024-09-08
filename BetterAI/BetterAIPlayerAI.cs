@@ -3159,7 +3159,7 @@ namespace BetterAI
                         }
                     }
 
-                    if (iFoundCharacters > 0)
+                    if (CharactersTurnsLeftEstimate.Count > 0)
                     {
                         iRemainingEffectTurns = infos.utils().range((CharactersTurnsLeftEstimate.Sum()) / CharactersTurnsLeftEstimate.Count, 0, AI_YIELD_TURNS);
                     }
