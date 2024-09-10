@@ -975,15 +975,233 @@ namespace BetterAI
   ### AI: City Yield Values              END ###
   ##############################################*/
 
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+            //ToDo: characterSwapValuePerTurn and getOverlapTurns
+            //lines 5757-5775
+            protected override long leaderValue(Character pCharacter)
+            {
+                long iValue = 0;
 
+                if (pCharacter != null && player != null)
+                {
+                    for (RatingType eRating = 0; eRating < infos.ratingsNum(); ++eRating)
+                    {
+                        iValue += ratingValue(eRating, pCharacter.getRating(eRating), pCharacter, bLeader: true, bLeaderSpouse: false, bSuccessor: false, CourtierType.NONE, CouncilType.NONE, -1, UnitType.NONE);
+                    }
+
+                    //foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    //{
+                    //    iValue += traitValue(eLoopTrait, pCharacter, true, bLeader: true, bLeaderSpouse: false, bSuccessor: false, CouncilType.NONE, -1, UnitType.NONE);
+                    //}
+                    iValue += getTotalCharacterTraitsValue(pCharacter, bLeader: true, bLeaderSpouse: false, bSuccessor: false, CouncilType.NONE, iCityGovernor: -1, UnitType.NONE, iCityAgent: -1);
+
+                }
+
+                return iValue;
+            }
+
+            //lines 5777-5795
+            protected override long leaderSpouseValue(Character pCharacter)
+            {
+                long iValue = 0;
+
+                if (pCharacter != null && player != null)
+                {
+                    for (RatingType eRating = 0; eRating < infos.ratingsNum(); ++eRating)
+                    {
+                        iValue += ratingValue(eRating, pCharacter.getRating(eRating), pCharacter, bLeader: false, bLeaderSpouse: true, bSuccessor: false, CourtierType.NONE, CouncilType.NONE, -1, UnitType.NONE);
+                    }
+
+                    //foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    //{
+                    //    iValue += traitValue(eLoopTrait, pCharacter, true, bLeader: false, bLeaderSpouse: true, bSuccessor: false, CouncilType.NONE, -1, UnitType.NONE);
+                    //}
+                    iValue += getTotalCharacterTraitsValue(pCharacter, bLeader: false, bLeaderSpouse: true, bSuccessor: false, CouncilType.NONE, iCityGovernor: -1, UnitType.NONE, iCityAgent: -1);
+                }
+
+                return iValue;
+            }
+
+            //lines 5797-5815
+            protected override long heirValue(Character pCharacter)
+            {
+                long iValue = 0;
+
+                if (pCharacter != null && player != null)
+                {
+                    for (RatingType eRating = 0; eRating < infos.ratingsNum(); ++eRating)
+                    {
+                        iValue += ratingValue(eRating, pCharacter.getRating(eRating), pCharacter, bLeader: false, bLeaderSpouse: false, bSuccessor: true, CourtierType.NONE, CouncilType.NONE, -1, UnitType.NONE);
+                    }
+
+                    //foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    //{
+                    //    iValue += traitValue(eLoopTrait, pCharacter, true, bLeader: false, bLeaderSpouse: false, bSuccessor: true, CouncilType.NONE, -1, UnitType.NONE);
+                    //}
+                    iValue += getTotalCharacterTraitsValue(pCharacter, bLeader: false, bLeaderSpouse: false, bSuccessor: true, CouncilType.NONE, iCityGovernor: -1, UnitType.NONE, iCityAgent: -1);
+
+                }
+
+                return iValue;
+            }
+
+            //lines 5850-5921
+            public override long governorValue(Character pCharacter, City pCity, bool bIncludeCost, bool bSubtractCurrent)
+            {
+                long iValue = 0;
+
+                if (pCharacter != null && player != null)
+                {
+                    if (pCharacter.isLeader())
+                    {
+                        long iLeaderValue = 0;
+                        for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); ++eLoopYield)
+                        {
+                            int iYieldAmount = infos.yield(eLoopYield).miLeaderGovernor;
+                            if (iYieldAmount != 0)
+                            {
+                                iLeaderValue += infos.utils().modify(iYieldAmount, pCity.calculateTotalYieldModifierForGovernor(eLoopYield, pCharacter)) * cityYieldValue(eLoopYield, pCity);
+                            }
+                        }
+                        iValue += iLeaderValue * getTurnsLeftEstimate(pCharacter, false) / Constants.YIELDS_MULTIPLIER;
+                    }
+
+                    iValue += getCharacterXPValue(pCharacter, pCity.culture().miXP * getTurnsLeftEstimate(pCharacter, false));
+
+                    for (RatingType eRating = 0; eRating < infos.ratingsNum(); ++eRating)
+                    {
+                        iValue += ratingValue(eRating, pCharacter.getRating(eRating), pCharacter, false, false, false, eCouncil: CouncilType.NONE, iCityGovernor: pCity.getID(), eUnitGeneral: UnitType.NONE);
+                    }
+
+                    //foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    //{
+                    //    iValue += traitValue(eLoopTrait, pCharacter, true, false, false, false, eCouncil: CouncilType.NONE, iCityGovernor: pCity.getID(), eUnitGeneral: UnitType.NONE);
+                    //}
+                    iValue += getTotalCharacterTraitsValue(pCharacter, bLeader: false, bLeaderSpouse: false, bSuccessor: false, CouncilType.NONE, iCityGovernor: pCity.getID(), UnitType.NONE, iCityAgent: -1);
+
+                    iValue = infos.utils().modify(iValue, getJobValueModifierForTutor(pCharacter), true);
+
+                    if (pCharacter.hasFamily())
+                    {
+                        int iFamilyOpinion = game.familyClass(pCharacter.getFamily()).miGovernorOpinion;
+                        if (pCharacter.isFamilyHead())
+                        {
+                            iFamilyOpinion += infos.job(infos.Globals.GOVERNOR_JOB).miOpinion + player.getJobOpinionRate(infos.Globals.GOVERNOR_JOB);
+                        }
+
+                        if (iFamilyOpinion != 0)
+                        {
+                            iValue += getFamilyOpinionValue(pCharacter.getFamily(), iFamilyOpinion);
+                        }
+                    }
+
+                    if (bSubtractCurrent)
+                    {
+                        if (pCharacter.isJob())
+                        {
+                            iValue -= jobValue(pCharacter);
+                        }
+                        if (pCity.hasGovernor())
+                        {
+                            iValue = characterSwapValuePerTurn(pCity.governor(), pCharacter, governorValue(pCity.governor(), pCity, false, false), iValue, false) * getOverlapTurns(pCity.governor(), pCharacter, false);
+                        }
+                    }
+
+
+                    if (bIncludeCost)
+                    {
+                        for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
+                        {
+                            iValue -= pCity.getMakeGovernorCost(eLoopYield) * yieldValue(eLoopYield);
+                        }
+                    }
+                }
+
+                return iValue;
+            }
+
+            //courtiers get nothing from traits
+
+            //lines 5938-6001
+
+            protected override long councilValue(Character pCharacter, CouncilType eCouncil, bool bIncludeCost, bool bSubtractCurrent)
+            {
+                long iValue = 0;
+
+                if (pCharacter != null && player != null)
+                {
+                    iValue += getCharacterXPValue(pCharacter, infos.council(eCouncil).miXP * getTurnsLeftEstimate(pCharacter, false));
+
+                    for (RatingType eLoopRating = 0; eLoopRating < infos.ratingsNum(); ++eLoopRating)
+                    {
+                        iValue += ratingValue(eLoopRating, pCharacter.getRating(eLoopRating), pCharacter, false, false, false, eCouncil: eCouncil, iCityGovernor: -1, eUnitGeneral: UnitType.NONE);
+                    }
+
+                    //foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    //{
+                    //    iValue += traitValue(eLoopTrait, pCharacter, true, false, false, false, eCouncil: eCouncil, iCityGovernor: -1, eUnitGeneral: UnitType.NONE);
+                    //}
+                    iValue += getTotalCharacterTraitsValue(pCharacter, bLeader: false, bLeaderSpouse: false, bSuccessor: false, eCouncil: eCouncil, iCityGovernor: -1, UnitType.NONE, iCityAgent: -1);
+
+                    iValue = infos.utils().modify(iValue, getJobValueModifierForTutor(pCharacter), true);
+
+                    int iOpinion = pCharacter.getFamilyOpinionCouncil(eCouncil);
+                    if (pCharacter.hasFamily())
+                    {
+                        if (pCharacter.isFamilyHead())
+                        {
+                            iOpinion += infos.council(eCouncil).miOpinion;
+                        }
+
+                        iOpinion -= getLoneCouncilOpinion(pCharacter, eCouncil);
+
+                        iOpinion += pCharacter.getFamilyOpinionCouncil(eCouncil);
+                    }
+                    if (iOpinion != 0)
+                    {
+                        iValue += getFamilyOpinionValue(pCharacter.getFamily(), iOpinion);
+                    }
+
+                    if (bSubtractCurrent)
+                    {
+                        if (pCharacter.isJob())
+                        {
+                            iValue -= jobValue(pCharacter);
+                        }
+                        if (player.hasCouncilCharacter(eCouncil))
+                        {
+                            Character pCouncil = player.councilCharacter(eCouncil);
+                            iValue = characterSwapValuePerTurn(pCharacter, pCharacter, councilValue(pCouncil, eCouncil, false, false), iValue, false) * getOverlapTurns(pCouncil, pCharacter, false);
+                        }
+                    }
+
+                    if (bIncludeCost)
+                    {
+                        if (infos.council(eCouncil).meAssignMission != MissionType.NONE)
+                        {
+                            for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
+                            {
+                                iValue -= player.getMissionCost(infos.council(eCouncil).meAssignMission, eLoopYield, pCharacter) * yieldValue(eLoopYield);
+                            }
+                        }
+                    }
+                }
+
+                return iValue;
+            }
+
+            //lines 6003-6042
             public override long agentValue(Character pCharacter, City pCity, bool bIncludeCost, bool bSubtractCurrent)
             {
                 long iValue = base.agentValue(pCharacter, pCity, bIncludeCost, bSubtractCurrent);
 
-                foreach (TraitType eLoopTrait in pCharacter.getTraits())
-                {
-                    iValue += traitValue(eLoopTrait, pCharacter, true, false, false, false, eCouncil: CouncilType.NONE, iCityGovernor: -1, eUnitGeneral: UnitType.NONE, iCityAgent: pCity.getID());
-                }
+                //foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                //{
+                //    iValue += traitValue(eLoopTrait, pCharacter, true, false, false, false, eCouncil: CouncilType.NONE, iCityGovernor: -1, eUnitGeneral: UnitType.NONE, iCityAgent: pCity.getID());
+                //}
+                iValue += getTotalCharacterTraitsValue(pCharacter, bLeader: false, bLeaderSpouse: false, bSuccessor: false, CouncilType.NONE, iCityGovernor: -1, UnitType.NONE, iCityAgent: pCity.getID());
 
                 return iValue;
             }
@@ -2788,61 +3006,37 @@ namespace BetterAI
                 return game.yearsToTurns(Math.Max(0, iMaxAge - pCharacter.getAge()));
             }
 
-
-            //lines 11587-11622
-            protected override long traitValueCurrentRole(TraitType eTrait, Character pCharacter, bool bRemove)
+            public virtual long getTotalCharacterTraitsValue(Character pCharacter, bool? bLeader = null, bool? bLeaderSpouse = null, bool? bSuccessor = null, CouncilType? eCouncil = null, int? iCityGovernor = null, UnitType? eUnitGeneral = null, int? iCityAgent = null)
             {
-                if (infos.trait(eTrait).mbNoJob)
+                long iValue = 0;
+
+                using (var traitPlayerEffectsScoped = CollectionCache.GetHashSetScoped<TraitType>())
                 {
-                    if (pCharacter.isJob())
+                    HashSet<TraitType> sTraitPlayerEffectIgnore = traitPlayerEffectsScoped.Value;
+
+                    foreach (TraitType eLoopTrait in pCharacter.getTraits())
                     {
-                        return -jobValue(pCharacter);
+                        iValue += traitValue(eLoopTrait, pCharacter, bRemove: true, ref sTraitPlayerEffectIgnore, bLeader, bLeaderSpouse, bSuccessor, eCouncil, iCityGovernor, eUnitGeneral, iCityAgent);
+                        sTraitPlayerEffectIgnore.Add(eLoopTrait);
                     }
-                }
-                if (infos.trait(eTrait).mbNoCouncil)
-                {
-                    if (pCharacter.isCouncil())
-                    {
-                        return -jobValue(pCharacter);
-                    }
-                }
-                if (infos.trait(eTrait).mbNoGeneral)
-                {
-                    if (pCharacter.isUnitGeneral())
-                    {
-                        return -jobValue(pCharacter);
-                    }
-                }
-                if (infos.trait(eTrait).mbNoGovernor)
-                {
-                    if (pCharacter.isCityGovernor())
-                    {
-                        return -jobValue(pCharacter);
-                    }
-                }
-                if (infos.trait(eTrait).mbDoomed)
-                {
-                    return -characterValue(pCharacter);
+
+                    //return traitValue(eTrait, pCharacter, bRemove, ref sTraitPlayerEffectIgnore, bLeader, bLeaderSpouse, bSuccessor, eCouncil, iCityGovernor, eUnitGeneral, iCityAgent: null);
                 }
 
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses           START ###
-  ##############################################*/
-                //return traitValue(eTrait, pCharacter, bRemove, pCharacter.isLeaderOrHeir());
-                return traitValue(eTrait, pCharacter, bRemove, pCharacter.isLeaderOrHeir(), bSkipTraitPlayerEffects: false);
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses           START ###
-  ##############################################*/
+                return iValue;
             }
-
 
             //lines 11624-11725
             protected override long traitValue(TraitType eTrait, Character pCharacter, bool bRemove, bool? bLeader = null, bool? bLeaderSpouse = null, bool? bSuccessor = null, CouncilType? eCouncil = null, int? iCityGovernor = null, UnitType? eUnitGeneral = null)
             {
-                return traitValue(eTrait, pCharacter, bRemove, bLeader, bLeaderSpouse, bSuccessor, eCouncil, iCityGovernor, eUnitGeneral, iCityAgent: null, bSkipTraitPlayerEffects: true);
+                using (var traitPlayerEffectsScoped = CollectionCache.GetHashSetScoped<TraitType>())
+                {
+                    HashSet<TraitType>  sTraitPlayerEffectIgnore = traitPlayerEffectsScoped.Value;
+                    return traitValue(eTrait, pCharacter, bRemove, ref sTraitPlayerEffectIgnore, bLeader, bLeaderSpouse, bSuccessor, eCouncil, iCityGovernor, eUnitGeneral, iCityAgent: null);
+                }
             }
 
-            protected virtual long traitValue(TraitType eTrait, Character pCharacter, bool bRemove, bool? bLeader = null, bool? bLeaderSpouse = null, bool? bSuccessor = null, CouncilType? eCouncil = null, int? iCityGovernor = null, UnitType? eUnitGeneral = null, int? iCityAgent = null, bool bSkipTraitPlayerEffects = true)
+            protected virtual long traitValue(TraitType eTrait, Character pCharacter, bool bRemove, ref HashSet<TraitType> sTraitPlayerEffectIgnore, bool? bLeader = null, bool? bLeaderSpouse = null, bool? bSuccessor = null, CouncilType? eCouncil = null, int? iCityGovernor = null, UnitType? eUnitGeneral = null, int? iCityAgent = null)
             {
                 //using var profileScope = new UnityProfileScope("PlayerAI.traitValue");
 
@@ -2874,14 +3068,20 @@ namespace BetterAI
 
                     if (eEffectPlayer != EffectPlayerType.NONE)
                     {
-                        long iSubValue = effectPlayerValue(eEffectPlayer, player.getStateReligion(), bRemove);
+                        long iLeaderValue = effectPlayerValue(eEffectPlayer, player.getStateReligion(), bRemove);
 
                         if (!bTestLeader)
                         {
-                            iSubValue /= 2;
+                            iLeaderValue /= 2;
                         }
-
-                        iValue += iSubValue;
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+                        iLeaderValue *= getTurnsLeftEstimate(pCharacter, false);
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+                        iValue += iLeaderValue;
                     }
                 }
 
@@ -2924,51 +3124,46 @@ namespace BetterAI
 
                     if (eCouncilJob != JobType.NONE && pInfoTrait.maeJobEffectPlayer[eCouncilJob] != EffectPlayerType.NONE)
                     {
-                        iValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[eCouncilJob], player.getStateReligion(), bRemove);
+                        long iCouncilValue = effectPlayerValue(pInfoTrait.maeJobEffectPlayer[eCouncilJob], player.getStateReligion(), bRemove);
+                        iCouncilValue *= getJobTurnsLeftEstimate(pCharacter, eCouncilJob);
+                        iValue += iCouncilValue;
                     }
                 }
-
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses             END ###
-  ##############################################*/
 
                 if (iTestGovernorCityID != -1)
                 {
                     EffectCityType eEffectCity = pInfoTrait.meGovernorEffectCity;
 
+                    long iGovernorValue = 0;
                     if (eEffectCity != EffectCityType.NONE)
                     {
-                        iValue += effectCityValue(eEffectCity, game.city(iTestGovernorCityID), bRemove);
+                        iGovernorValue += effectCityValue(eEffectCity, game.city(iTestGovernorCityID), bRemove);
                     }
 
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses           START ###
-  ##############################################*/
                     if (pInfoTrait.maeJobEffectPlayer[infos.Globals.GOVERNOR_JOB] != EffectPlayerType.NONE)
                     {
-                        iValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GOVERNOR_JOB], player.getStateReligion(), bRemove);
+                        iGovernorValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GOVERNOR_JOB], player.getStateReligion(), bRemove);
                     }
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses             END ###
-  ##############################################*/
 
+                    iGovernorValue *= getJobTurnsLeftEstimate(pCharacter, infos.Globals.GOVERNOR_JOB);
+                    iValue += iGovernorValue;
                 }
 
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses           START ###
-  ##############################################*/
                 if (iTestAgentCityID != -1)
                 {
                     if (pInfoTrait.maeJobEffectPlayer[infos.Globals.AGENT_JOB] != EffectPlayerType.NONE)
                     {
-                        iValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.AGENT_JOB], player.getStateReligion(), bRemove);
+                        long iAgentValue = effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.AGENT_JOB], player.getStateReligion(), bRemove);
+                        iAgentValue *= getJobTurnsLeftEstimate(pCharacter, infos.Globals.AGENT_JOB);
+                        iValue += iAgentValue;
                     }
                 }
+
+                //iValue *= getTurnsLeftEstimate(pCharacter, false);
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
   ##############################################*/
 
-                iValue *= getTurnsLeftEstimate(pCharacter, false);
 
                 if (eTestUnit != UnitType.NONE)
                 {
@@ -3000,17 +3195,14 @@ namespace BetterAI
                         {
                             iGeneralValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GENERAL_JOB], player.getStateReligion(), bRemove);
                         }
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses             END ###
-  ##############################################*/
+
                     }
 
-                    iValue += iGeneralValue * getTurnsLeftEstimate(pCharacter, true);
+                    //iValue += iGeneralValue * getTurnsLeftEstimate(pCharacter, true);
+                    iGeneralValue *= getJobTurnsLeftEstimate(pCharacter, infos.Globals.GENERAL_JOB);
+                    iValue += iGeneralValue;
                 }
 
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses           START ###
-  ##############################################*/
                 if (pInfoTrait.bAnyTraitEffectPlayer)
                 {
                     if (pCharacter.isTrait(eTrait) && !bRemove)
@@ -3022,34 +3214,30 @@ namespace BetterAI
                         UnityEngine.Debug.Log("[traitValue] traits not already on a character can only be added.");
                     }
 
-                    foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    if (!(sTraitPlayerEffectIgnore.Contains(eTrait)))
                     {
-                        //this is a bit hacky but I only want to count the value once when looping through traits (see leaderValue, leaderSpouseValue, heirValue, governorValue, councilValue, generalValue. I should probably just override all of them -_-)
-                        //bSkipTraitPlayerEffects is false for traitValueCurrentRole
-                        if (bSkipTraitPlayerEffects)
+                        foreach (TraitType eLoopTrait in pCharacter.getTraits())
                         {
-                            if (eLoopTrait < eTrait)
+                            if (sTraitPlayerEffectIgnore.Contains(eLoopTrait))
                             {
                                 continue;
                             }
-                            if (eLoopTrait == eTrait)
+
+                            EffectPlayerType eLoopEffectPlayer = pInfoTrait.maeTraitEffectPlayer[eLoopTrait];
+                            if (eLoopEffectPlayer == EffectPlayerType.NONE)
                             {
-                                bSkipTraitPlayerEffects = false;
-                                continue;
+                                eLoopEffectPlayer = ((BetterAIInfoTrait)(infos.trait(eLoopTrait))).maeTraitEffectPlayer[eTrait];
                             }
-                        }
 
-                        EffectPlayerType eLoopEffectPlayer = pInfoTrait.maeTraitEffectPlayer[eLoopTrait];
-                        if (eLoopEffectPlayer == EffectPlayerType.NONE)
-                        {
-                            eLoopEffectPlayer = ((BetterAIInfoTrait)(infos.trait(eLoopTrait))).maeTraitEffectPlayer[eTrait];
-                        }
-
-                        if (eLoopEffectPlayer != EffectPlayerType.NONE)
-                        {
-                            iValue += effectPlayerValue(eLoopEffectPlayer, player.getStateReligion(), bRemove);
+                            if (eLoopEffectPlayer != EffectPlayerType.NONE)
+                            {
+                                long iJobliketraitValue = effectPlayerValue(eLoopEffectPlayer, player.getStateReligion(), bRemove);
+                                iJobliketraitValue *= getTraitTurnsLeftEstimate(pCharacter, eLoopTrait);
+                                iValue += iJobliketraitValue;
+                            }
                         }
                     }
+
                 }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
@@ -3058,9 +3246,6 @@ namespace BetterAI
                 iValue /= AI_YIELD_TURNS;
 
                 return infos.utils().modify(iValue, pCharacter.isHeir() ? AI_HEIR_TUTOR_MODIFIER : 0, true);
-                //iValue = infos.utils().modify(iValue, pCharacter.isHeir() ? AI_HEIR_TUTOR_MODIFIER : 0, true);
-
-                //return iValue;
             }
 
             //lines 12298-12966
