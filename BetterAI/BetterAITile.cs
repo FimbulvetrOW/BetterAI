@@ -511,7 +511,7 @@ namespace BetterAI
                     {
                         if (infos().improvement(eLoopImprovement).meClass == pImprovementInfo.meBonusAdjacentImprovementClass)
                         {
-                            if (pCity.player() != null && pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true) && pCity.canCityHaveImprovement(eLoopImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement: false, bForceImprovement: true))
+                            if (pCity.player() != null && pCity.player().canStartImprovement(eLoopImprovement, pCity, bTestTech: false, bForceImprovement: true) && pCity.canCityHaveImprovement(eLoopImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement: false, bForceImprovement: true))
                             {
                                 bFound = true;
                                 eTestImprovement = eLoopImprovement;

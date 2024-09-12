@@ -2297,7 +2297,7 @@ namespace BetterAI
 
                         eBonusImprovement = pImprovementInfo.meBonusAdjacentImprovement;
 
-                        if (!(BAI_pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory: TeamType.NONE, bTestTerritory: true, bTestEnabled: true, bTestReligion: true, bUpgradeImprovement:false, bForceImprovement: true)))
+                        if (!(BAI_pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory: TeamType.NONE, bTestTerritory: false, bTestEnabled: false, bTestReligion: false, bUpgradeImprovement: false, bForceImprovement: true)))
                         {
                             UnityEngine.Debug.Log("AI considering an invalid improvement (meBonusAdjacentImprovement)");
                             return -1;
@@ -2308,7 +2308,7 @@ namespace BetterAI
                     {
                         if (BAI_pCity == null) //invalid
                         {
-                            UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovementClass is not NONE");
+                            //UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovementClass is not NONE");
                             return -1;
                         }
 
@@ -2316,7 +2316,7 @@ namespace BetterAI
                         {
                             if (infos.improvement(eLoopImprovement).meClass == pImprovementInfo.meBonusAdjacentImprovementClass)
                             {
-                                if (BAI_pCity.canCityHaveImprovement(eLoopImprovement, eTeamTerritory: TeamType.NONE, bTestTerritory: true, bTestEnabled: true, bTestReligion: true, bUpgradeImprovement: false, bForceImprovement: true))
+                                if (BAI_pCity.canCityHaveImprovement(eLoopImprovement, eTeamTerritory: TeamType.NONE, bTestTerritory: false, bTestEnabled: false, bTestReligion: false, bUpgradeImprovement: false, bForceImprovement: true))
                                 {
                                     eBonusImprovement = eLoopImprovement;
                                     break;
@@ -2325,7 +2325,8 @@ namespace BetterAI
 
                             if (eBonusImprovement == ImprovementType.NONE)
                             {
-                                UnityEngine.Debug.Log("AI considering an invalid improvement (meBonusAdjacentImprovementClass)");
+                                //System.Diagnostics.StackTrace t = new System.Diagnostics.StackTrace();
+                                //UnityEngine.Debug.Log("AI considering an invalid improvement (meBonusAdjacentImprovementClass) " + t.ToString());
                                 return -1;
                             }
                         }
@@ -3051,7 +3052,7 @@ namespace BetterAI
                 {
                     bTestLeader = bLeader.Value;
                 }
-                bool bTestLeaderSpouse = pCharacter.isLeaderSpouse();
+                bool bTestLeaderSpouse = pCharacter.isLeaderSpouse();  //not in use
                 if (bLeaderSpouse.HasValue)
                 {
                     bTestLeaderSpouse = bLeaderSpouse.Value;
