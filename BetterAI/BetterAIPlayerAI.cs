@@ -4658,6 +4658,20 @@ namespace BetterAI
                             {
                                 return 0;
                             }
+
+                            //what is this?
+                            //foreach (int iLoopUnit in pOtherPlayer.getUnits())
+                            //{
+                            //    Unit pLoopUnit = game.unit(iLoopUnit);
+                            //    if (pLoopUnit != null && pLoopUnit.isVisibleTo(player.getTeam()))
+                            //    {
+                            //        Tile pLoopTile = pLoopUnit.tile();
+                            //        if (getTileProtection(pLoopTile) > 0 && getTileDanger(pLoopTile) > getTileProtection(pLoopTile))
+                            //        {
+                            //            return 0;
+                            //        }
+                            //    }
+                            //}
                         }
                     }
                 }
@@ -4811,6 +4825,85 @@ namespace BetterAI
                 return infos.utils().range(iPercent, 0, 100);
             }
             //copy-paste END
+
+
+            public override int getWarOfferPercent(TribeType eTribe)
+            {
+                //using var profileScope = new UnityProfileScope("PlayerAI.getWarOfferPercent");
+
+                if (player == null)
+                {
+                    return 0;
+                }
+
+                PlayerType eThisPlayer = getPlayer();
+                Tribe pTribe = game.tribe(eTribe);
+
+                if (!(player.canDeclareWarTribe(eTribe)))
+                {
+                    return 0;
+                }
+
+                if (player.countTribeMemories(infos.Globals.TRIBE_WAR_MEMORY) > 0)
+                {
+                    return 0;
+                }
+
+                if (pTribe.hasPlayerAlly())
+                {
+                    return getWarOfferPercent(pTribe.getPlayerAlly());
+                }
+
+                //seriously what is this? Getting scared a bit too easily
+                //foreach (int iLoopUnit in pTribe.getUnits())
+                //{
+                //    Unit pLoopUnit = game.unit(iLoopUnit);
+                //    if (pLoopUnit != null && pLoopUnit.isVisibleTo(player.getTeam()))
+                //    {
+                //        Tile pLoopTile = pLoopUnit.tile();
+                //        if (getTileProtection(pLoopTile) > 0 && getTileDanger(pLoopTile) > getTileProtection(pLoopTile))
+                //        {
+                //            return 0;
+                //        }
+                //    }
+                //}
+
+                int iPercent = player.tribeOpinion(eTribe).miWarPercent;
+
+/*####### Better Old World AI - Base DLL #######
+  ### more precision for WarOffer      START ###
+  ##############################################*/
+                int iMulti = 640;
+                int iMultiHalf = 320;
+                iPercent *= iMulti;
+/*####### Better Old World AI - Base DLL #######
+  ### more precision for WarOffer        END ###
+  ##############################################*/
+
+                iPercent = infos.utils().modify(iPercent, game.tribeDiplomacy(eTribe, eThisPlayer).miWarModifier);
+
+                {
+                    Character pLeader = player.leader();
+
+                    if (pLeader != null)
+                    {
+                        foreach (TraitType eLoopTrait in pLeader.getTraits())
+                        {
+                            iPercent = infos.utils().modify(iPercent, infos.trait(eLoopTrait).miWarModifier);
+                        }
+                    }
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### more precision for WarOffer      START ###
+  ##############################################*/
+                iPercent = (iPercent + iMultiHalf) / iMulti; //rounding
+/*####### Better Old World AI - Base DLL #######
+  ### more precision for WarOffer        END ###
+  ##############################################*/
+
+                return infos.utils().range(iPercent, 0, 100);
+            }
 
         }
     }

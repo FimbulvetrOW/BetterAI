@@ -677,7 +677,7 @@ namespace BetterAI
 
                     if (hasPlayer())
                     {
-                        changeRoutChain(1);
+                        changeRoutChain(1, pActingPlayer);
                         if (bOwnerActing)
                         {
                             player().doEventTrigger(infos().Globals.UNIT_ROUT_EVENTTRIGGER, this);
@@ -696,7 +696,7 @@ namespace BetterAI
                 {
                     if (getCooldown() == infos().Globals.ROUT_COOLDOWN)
                     {
-                        changeRoutChain(1);
+                        changeRoutChain(1, pActingPlayer);
                         // don't allow infinite attacks after rout
                         setCooldown(infos().Globals.ATTACK_COOLDOWN);
                     }
@@ -704,10 +704,6 @@ namespace BetterAI
                     doCooldown(infos().Globals.ATTACK_COOLDOWN, bTestTurn: true);
                 }
 
-                if (getRoutChain() >= 5)
-                {
-                    game().doAchievement(infos().getType<AchievementType>("ACHIEVEMENT_FIVE_ROUTS"), player());
-                }
             }
             else
             {

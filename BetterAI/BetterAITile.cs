@@ -1287,6 +1287,63 @@ namespace BetterAI
   ### Land Unit Water Movement           END ###
   ##############################################*/
 
+        //lines 10594-10641
+        public override Unit addImprovementUnit(UnitType eUnit = UnitType.NONE)
+        {
+            if (!hasImprovement())
+            {
+                return null;
+            }
+
+            if (eUnit == UnitType.NONE)
+            {
+                using (var dieMapScoped = CollectionCache.GetListScoped<(UnitType, int)>())
+                {
+                    List<(UnitType, int)> mapUnitDie = dieMapScoped.Value;
+
+                    for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); ++eLoopUnit)
+                    {
+                        int iDie = improvement().maiUnitDie[eLoopUnit];
+
+                        if (hasImprovementTribeSite())
+                        {
+                            iDie += improvement().maaiTribeUnitDie[getImprovementTribeSite(), eLoopUnit];
+                        }
+
+                        if (iDie > 0)
+                        {
+                            mapUnitDie.Add((eLoopUnit, iDie));
+                        }
+                    }
+
+                    eUnit = infos().utils().randomDieMap(mapUnitDie, game().nextSeed(), UnitType.NONE);
+                }
+            }
+
+            if (eUnit != UnitType.NONE)
+            {
+                if (hasImprovementTribeSite())
+                {
+                    Unit pUnit = game().createUnitNearby(eUnit, this, PlayerType.NONE, getImprovementTribeSite());
+                    pUnit.tile().bounceUnitsCantOccupy(pUnit);
+                    return pUnit;
+                }
+                else if (hasCityTerritory() && hasOwner())
+                {
+/*####### Better Old World AI - Base DLL #######
+  ### Spawn Bonus Unit near Improvement START###
+  ##############################################*/
+                    //return cityTerritory().createBuildUnit(eUnit);
+                    return cityTerritory().createBuildUnit(eUnit, pTile: this);
+/*####### Better Old World AI - Base DLL #######
+  ### Spawn Bonus Unit near Improvement  END ###
+  ##############################################*/
+                }
+            }
+
+            return null;
+        }
+
 
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
@@ -1489,25 +1546,6 @@ namespace BetterAI
                     }
                 }
 
-                {
-                    ReligionType eReligionPrereq = infos().improvement(eImprovement).meReligionPrereq;
-
-                    if (eReligionPrereq != ReligionType.NONE)
-                    {
-                        for (TheologyType eLoopTheology = 0; eLoopTheology < infos().theologiesNum(); eLoopTheology++)
-                        {
-                            if (game().isReligionTheology(eReligionPrereq, eLoopTheology))
-                            {
-                                int iValue = infos().improvementClass(eImprovementClass).maaiTheologyYieldOutput[eLoopTheology, eYield];
-                                if (iValue != 0)
-                                {
-                                    iOutput += iValue;
-                                }
-                            }
-                        }
-                    }
-                }
-
                 if (pCityTerritory != null)
                 {
                     iOutput += pCityTerritory.getEffectCityImprovementClassYieldForGovernor(eImprovementClass, eYield, pGovernor, dEffectCityExtraCounts);
@@ -1521,6 +1559,10 @@ namespace BetterAI
         public virtual int yieldModifierNoSpecialist(ImprovementType eImprovement, YieldType eYield, City pCity, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
             //using var profileScope = new UnityProfileScope("Game.tileYieldModifierNoSpecialist");
+            if (eImprovement == ImprovementType.NONE)
+            {
+                return 0;
+            }
 
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {

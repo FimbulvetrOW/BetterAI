@@ -137,6 +137,19 @@ namespace BetterAI
   ### ZOC ignore exceptions              END ###
   ##############################################*/
 
+
+/*####### Better Old World AI - Base DLL #######
+  ### Yield icons are enough           START ###
+  ##############################################*/
+        //lines 4943-4950
+        public override TextVariable buildYieldValueLinkVariable(YieldType eYield, int iValue, bool bRate = false, bool bPercent = false, int iMultiplier = 0, bool bIcon = false)
+        {
+            return base.buildYieldValueIconLinkVariable(eYield, iValue, bRate, bPercent, iMultiplier, bColor: false);
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Yield icons are enough             END ###
+  ##############################################*/
+
         //lines 8684-13513
         public override TextBuilder buildWidgetHelp(TextBuilder builder, WidgetData pWidget, ClientManager pManager, bool bIncludeEncyclopediaFooter = true)
         {
@@ -495,30 +508,6 @@ namespace BetterAI
                                     }
 
                                     bShowModifiers = true;
-                                }
-                            }
-                        }
-
-                        {
-                            ReligionType eReligionPrereq = infos().improvement(eImprovement).meReligionPrereq;
-
-                            if (eReligionPrereq != ReligionType.NONE)
-                            {
-                                for (TheologyType eLoopTheology = 0; eLoopTheology < infos().theologiesNum(); eLoopTheology++)
-                                {
-                                    if (pGame.isReligionTheology(eReligionPrereq, eLoopTheology))
-                                    {
-                                        int iValue = infos().improvementClass(eImprovementClass).maaiTheologyYieldOutput[eLoopTheology, eLoopYield];
-                                        if (iValue != 0)
-                                        {
-                                            using (buildSecondaryTextScope(builder))
-                                            {
-                                                builder.AddTEXT("TEXT_HELPTEXT_YIELD_FROM", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildTheologyLinkVariable(eLoopTheology, eReligionPrereq, true));
-                                            }
-
-                                            bShowModifiers = true;
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -907,7 +896,7 @@ namespace BetterAI
 
                         foreach (EffectCityType eEffectCity in effectListScoped.Value)
                         {
-                            buildEffectCityHelpYields(builder, eEffectCity, pGame, null, pActivePlayer);
+                            buildEffectCityHelpYields(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), pActivePlayer);
                         }
 
                         foreach (EffectCityType eEffectCity in effectListScoped.Value)
@@ -1728,24 +1717,6 @@ namespace BetterAI
                                 {
                                     for (TheologyType eLoopTheology = 0; eLoopTheology < infos().theologiesNum(); eLoopTheology++)
                                     {
-                                        if (infos().improvementClass(eImprovementClass).maaiTheologyYieldOutput.Count > 0)
-                                        {
-                                            CommaListVariableGenerator yieldsList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.NONE, TextManager);
-
-                                            for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
-                                            {
-                                                int iValue = infos().improvementClass(eImprovementClass).maaiTheologyYieldOutput[eLoopTheology, eLoopYield];
-                                                if (iValue != 0)
-                                                {
-                                                    yieldsList.AddItem(buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER));
-                                                }
-                                            }
-
-                                            if (yieldsList.Count > 0)
-                                            {
-                                                subText.AddTEXT("TEXT_HELPTEXT_ENTRY_COLON_SPACE_ONE", buildTheologyLinkVariable(eLoopTheology, eReligionPrereq), yieldsList.Finalize());
-                                            }
-                                        }
                                         if (infos().improvementClass(eImprovementClass).maeTheologyCityEffect[eLoopTheology] != EffectCityType.NONE)
                                         {
                                             using (TextBuilder effectCityText = TextBuilder.GetTextBuilder(TextManager))
@@ -2690,11 +2661,6 @@ namespace BetterAI
                     if (infos().unit(eUnit).mbFound)
                     {
                         builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_FOUND_CITY");
-                    }
-
-                    if (infos().unit(eUnit).mbHarvest)
-                    {
-                        builder.AddTEXT("TEXT_HELPTEXT_UNIT_TYPE_CAN_HARVEST_RESOURCE", buildHarvestResourceLinkVariable());
                     }
 
                     if (infos().unit(eUnit).mbBuild)
@@ -3875,26 +3841,44 @@ namespace BetterAI
                     if (iValue != 0)
                     {
                         builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_WAR_YIELD", buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+
+                        int iNumWars = (pPlayer?.countTeamWars() ?? 0) + (pPlayer?.countTribeWars() ?? 0);
+                        if (iNumWars > 0)
+                        {
+                            builder.AddWithParenthesis(buildYieldValueIconLinkVariable(eLoopYield, iValue * iNumWars, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                        }
                     }
 
-                    foreach ((DiplomacyType eDiplomacy, YieldType eYield, int iAmount) pLoopTriple in pInfoEffectPlayer.mlpTeamDiplomacyYields)
+                    foreach ((DiplomacyType eDiplomacy, YieldType eYield, int iAmount) in infos().effectPlayer(eEffectPlayer).mlpTeamDiplomacyYields)
                     {
-                        if (pLoopTriple.eYield == eLoopYield)
+                        if (eYield == eLoopYield)
                         {
-                            if (pLoopTriple.iAmount != 0)
+                            if (iAmount != 0)
                             {
-                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_DIPLOMACY_YIELD", buildYieldValueIconLinkVariable(eLoopYield, pLoopTriple.iAmount, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame), buildDiplomacyLinkVariable(pLoopTriple.eDiplomacy, false));
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_DIPLOMACY_YIELD", buildYieldValueIconLinkVariable(eLoopYield, iAmount, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame), buildDiplomacyLinkVariable(eDiplomacy, false));
+
+                                int iNumDiplomacy = pPlayer?.countTeamDiplomacy(eDiplomacy) ?? 0;
+                                if (iNumDiplomacy > 0)
+                                {
+                                    builder.AddWithParenthesis(buildYieldValueIconLinkVariable(eLoopYield, iValue * iNumDiplomacy, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                }
                             }
                         }
                     }
 
-                    foreach ((DiplomacyType eDiplomacy, YieldType eYield, int iAmount) pLoopTriple in pInfoEffectPlayer.mlpTribeDiplomacyYields)
+                    foreach ((DiplomacyType eDiplomacy, YieldType eYield, int iAmount) in infos().effectPlayer(eEffectPlayer).mlpTribeDiplomacyYields)
                     {
-                        if (pLoopTriple.eYield == eLoopYield)
+                        if (eYield == eLoopYield)
                         {
-                            if (pLoopTriple.iAmount != 0)
+                            if (iAmount != 0)
                             {
-                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TRIBE_DIPLOMACY_YIELD", buildYieldValueIconLinkVariable(eLoopYield, pLoopTriple.iAmount, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame), buildDiplomacyLinkVariable(pLoopTriple.eDiplomacy, true));
+                                builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_TRIBE_DIPLOMACY_YIELD", buildYieldValueIconLinkVariable(eLoopYield, iAmount, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame), buildDiplomacyLinkVariable(eDiplomacy, true));
+
+                                int iNumDiplomacy = pPlayer?.countTribeDiplomacy(eDiplomacy) ?? 0;
+                                if (iNumDiplomacy > 0)
+                                {
+                                    builder.AddWithParenthesis(buildYieldValueIconLinkVariable(eLoopYield, iValue * iNumDiplomacy, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                }
                             }
                         }
                     }
@@ -3924,6 +3908,12 @@ namespace BetterAI
                     if (iValue != 0)
                     {
                         builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_YIELD_RATE_LAWS", TEXTVAR(bAllCities), buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+
+                        int iNumLaws = pPlayer?.countActiveLaws() ?? 0;
+                        if (iNumLaws > 0)
+                        {
+                            builder.AddWithParenthesis(buildYieldValueIconLinkVariable(eLoopYield, iValue * iNumLaws, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                        }
                     }
                 }
 
@@ -3933,6 +3923,12 @@ namespace BetterAI
                     if (iValue != 0)
                     {
                         builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_YIELD_RATE_GENERALS", TEXTVAR(bAllCities), buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+
+                        int iNumGenerals = pPlayer?.countGenerals() ?? 0;
+                        if (iNumGenerals > 0)
+                        {
+                            builder.AddWithParenthesis(buildYieldValueIconLinkVariable(eLoopYield, iValue * iNumGenerals, iMultiplier: Constants.YIELDS_MULTIPLIER));
+                        }
                     }
                 }
 
@@ -3942,6 +3938,12 @@ namespace BetterAI
                     if (iValue != 0)
                     {
                         builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_YIELD_UPKEEP", buildYieldValueIconLinkVariable(eLoopYield, iValue, iMultiplier: Constants.YIELDS_MULTIPLIER), buildTurnScaleName(pGame));
+
+                        int iNumCities = pActivePlayer?.getNumCities() ?? 0;
+                        if (iNumCities > 0)
+                        {
+                            builder.AddWithParenthesis(buildYieldValueIconLinkVariable(eLoopYield, infos().utils().modify(iValue * iNumCities, pPlayer.getYieldUpkeepModifier()), iMultiplier: Constants.YIELDS_MULTIPLIER));
+                        }
                     }
                 }
 
@@ -3951,6 +3953,37 @@ namespace BetterAI
                     if (iValue != 0)
                     {
                         builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_UNIT_TRAIT_CONSUMPTION_MODIFIER", buildUnitTraitLinkVariable(eLoopUnitTrait), buildSignedTextVariable(iValue, true));
+
+
+                        if (pPlayer != null)
+                        {
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                                    {
+                                        int iBase = 0;
+                                        for (int i = 0; i < pPlayer.getNumUnits(); ++i)
+                                        {
+                                            Unit pUnit = pPlayer.unitAt(i);
+                                            if (pUnit != null && pUnit.info().maeUnitTrait.Contains(eLoopUnitTrait))
+                                            {
+                                                iBase += pUnit.info().maiYieldConsumption[eLoopYield];
+                                            }
+                                        }
+                                        if (iBase != 0)
+                                        {
+                                            subText.Add(buildYieldValueIconLinkVariable(eLoopYield, infos().utils().modify(iBase * Constants.YIELDS_MULTIPLIER, iValue), iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                        }
+                                    }
+                                }
+                                if (subText.HasContent)
+                                {
+                                    builder.AddWithParenthesis(subText.ToTextVariable());
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -4287,7 +4320,7 @@ namespace BetterAI
                     {
                         using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                         {
-                            buildBonusHelp(subText, pLoopPair.eBonus, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR(""));
+                            buildBonusHelp(subText, pLoopPair.eBonus, pGame, pPlayer, pActivePlayer, bName: false, bShowCity: false, startLineVariable: TEXTVAR(""), bDetails: false);
                         }
 
                         builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_STAT_BONUS", TEXTVAR_TYPE(infos().stat(pLoopPair.eStat).mName, TEXTVAR(1)), subText.ToTextVariable());
@@ -5785,7 +5818,7 @@ namespace BetterAI
 
                                 for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
                                 {
-                                    int iValue = infos().trait(eTrait).maiRating[eLoopRating];
+                                    int iValue = infos().trait(eTrait).maiRating[eLoopRating] + infos().trait(eTrait).maiPermanentRating[eLoopRating];
 
                                     if (infos().trait(eTrait).mbArchetype)
                                     {
@@ -5844,7 +5877,7 @@ namespace BetterAI
                         {
                             for (RatingType eLoopRating = 0; eLoopRating < infos().ratingsNum(); eLoopRating++)
                             {
-                                int iValue = infos().trait(eTrait).maiRating[eLoopRating];
+                                int iValue = infos().trait(eTrait).maiRating[eLoopRating] + infos().trait(eTrait).maiPermanentRating[eLoopRating];
                                 if (iValue != 0)
                                 {
                                     builder.AddTEXT("TEXT_HELPTEXT_CONCAT_SPACE_TWO", buildSignedTextVariable(iValue), buildRatingLinkVariable(eLoopRating, true));

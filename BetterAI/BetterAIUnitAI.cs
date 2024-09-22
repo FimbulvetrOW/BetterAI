@@ -63,7 +63,7 @@ namespace BetterAI
                     return false;
                 }
 /*####### Better Old World AI - Base DLL #######
-  ### No Raider Ships                  START ###
+  ### No Raider Ships                    END ###
   ##############################################*/
 
                 return true;
@@ -85,6 +85,90 @@ namespace BetterAI
                 }
                 return iValue;
             }
+
+            //lines 5669-5742
+            protected override void setRaidCity(PathFinder pPathfinder)
+            {
+                if (unit.isRaiding())
+                {
+                    Tile pTile = unit.tile();
+
+                    int iBestDist = int.MaxValue;
+                    City pBestCity = null;
+                    for (TeamType eTeam = 0; eTeam < game.getNumTeams(); ++eTeam)
+                    {
+                        if (unit.isRaidTeam(eTeam))
+                        {
+                            City pCity = pTile.findBestRaidCity(unit.getOriginalTribe(), int.MaxValue, eTeam, bIgnoreMinTurns: true);
+                            if (pCity == null)
+                            {
+/*####### Better Old World AI - Base DLL #######
+  ### Proper Raid City Search          START ###
+  ##############################################*/
+                                //pCity = pTile.findBestRaidCity(eTeam: eTeam, bIgnoreMinTurns: true);
+                                pCity = pTile.findBestRaidCity(unit.getTribe(), int.MaxValue, eTeam: eTeam, bIgnoreMinTurns: true);
+/*####### Better Old World AI - Base DLL #######
+  ### Proper Raid City Search            END ###
+  ##############################################*/
+                            }
+                            if (pCity != null)
+                            {
+                                int iDist = pTile.distanceTile(pCity.tile());
+                                if (iDist < iBestDist)
+                                {
+                                    pBestCity = pCity;
+                                    iBestDist = iDist;
+                                }
+                            }
+                        }
+                    }
+
+                    // if already in city territory, or if there is no city to raid and no prior target, behave like a non-raiding unit
+                    if (pBestCity != null ? pBestCity.hasTerritoryTile(unit.getTileID()) : (Target == -1))
+                    {
+                        clearRole();
+                        return;
+                    }
+
+                    using (var tileListScoped = CollectionCache.GetListScoped<int>())
+                    {
+                        List<int> aiCandidateTiles = tileListScoped.Value;
+
+                        if (pBestCity != null)
+                        {
+                            foreach (int iTile in pBestCity.getTerritoryTiles())
+                            {
+                                aiCandidateTiles.Add(iTile);
+                            }
+                        }
+                        else if (Target != -1)
+                        {
+                            aiCandidateTiles.Add(Target);
+                        }
+
+                        if (doTribePickTarget(pPathfinder, aiCandidateTiles, unit.getStepsToFatigue(), true))
+                        {
+                            return;
+                        }
+
+                        if (doTribePickPillage(pPathfinder, aiCandidateTiles, unit.getStepsToFatigue()))
+                        {
+                            return;
+                        }
+
+                        if (doTribePickTarget(pPathfinder, aiCandidateTiles, int.MaxValue, true))
+                        {
+                            return;
+                        }
+
+                        if (doTribePickPillage(pPathfinder, aiCandidateTiles, int.MaxValue))
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+
 
         }
     }

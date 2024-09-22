@@ -22,10 +22,14 @@ namespace BetterAI
                 {
                     if (pPlayer.getNumStartingTiles() < pPlayer.getMinStartingCities())
                     {
-                        pPlayer.addStartingTileID(azSortedCitySites[i].pTile.getID());
-                        claimCitySite(i);
-                        --i;
-                        azSortedCitySites.Sort(); // sort after each iteration because claiming a sity changes things
+                        int tileID = azSortedCitySites[i].pTile.getID();
+                        if (isValidPlayerLandArea(tileID, pPlayer))
+                        {
+                            pPlayer.addStartingTileID(tileID);
+                            claimCitySite(i);
+                            --i;
+                            SortCitySites(); // sort after each iteration because claiming a sity changes things
+                        }
                     }
                 }
             }
@@ -65,30 +69,34 @@ namespace BetterAI
 
                 if (pPlayer.isStartCityNumberFlexible())
                 {
-                    pPlayer.addStartingTileID(azSortedCitySites[i].pTile.getID());
-                    --iNumTargetCities;
-                    claimCitySite(i);
-                    --i;
-
-
-
-                    //// Cap player cities to twice the average
-                    //if (pPlayer.getNumStartingTiles() >= 2 * pGame.development().miAvgCities)
-                    if (pPlayer.getNumStartingTiles() >= iMaxAIStartingCities)
+                    int tileID = azSortedCitySites[i].pTile.getID();
+                    if (isValidPlayerLandArea(tileID, pPlayer))
                     {
-                        for (int j = azSortedCitySites.Count - 1; j >= 0; --j)
+                        pPlayer.addStartingTileID(tileID);
+                        --iNumTargetCities;
+                        claimCitySite(i);
+                        --i;
+
+
+
+                        //// Cap player cities to twice the average
+                        //if (pPlayer.getNumStartingTiles() >= 2 * pGame.development().miAvgCities)
+                        if (pPlayer.getNumStartingTiles() >= iMaxAIStartingCities)
                         {
-                            if (azSortedCitySites[j].pPlayer == pPlayer)
+                            for (int j = azSortedCitySites.Count - 1; j >= 0; --j)
                             {
-                                azSortedCitySites.RemoveAt(j);
+                                if (azSortedCitySites[j].pPlayer == pPlayer)
+                                {
+                                    azSortedCitySites.RemoveAt(j);
+                                }
                             }
                         }
-                    }
 /*####### Better Old World AI - Base DLL #######
   ### Less development cities variation  END ###
   ##############################################*/
 
-                    azSortedCitySites.Sort(); // sort after each iteration because claiming a sity changes things
+                        SortCitySites(); // sort after each iteration because claiming a sity changes things
+                    }
                 }
             }
         }
