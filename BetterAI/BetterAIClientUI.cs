@@ -336,7 +336,7 @@ namespace BetterAI
         }
         //copy-paste END
 
-
+        //lines 10893-11081
         protected override void updateReligionSelection(ReligionType eReligion)
         {
             //using var profileScope = new UnityProfileScope("ClientUI.updateReligionSelection");
@@ -784,6 +784,694 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Worker Default List Extra Items    END ###
   ##############################################*/
+
+
+        //lines 16872-17142
+        protected override void updateCharacters(bool updateCharacterList = true)
+        {
+            if (((BetterAIInfoGlobals)Infos.Globals).BAI_ALT_CHARACTER_SORT == 0)
+            {
+                updateCharacters(updateCharacterList);
+                return;
+            }
+            else
+            {
+
+                //using (new UnityProfileScope("ClientUI.updateCharacters"))
+                {
+                    Player pActivePlayer = ClientMgr.activePlayer();
+
+                    if (pActivePlayer.hasLeader())
+                    {
+                        UIAttributeTag leaderTag = mPlayerFamily.GetSubTag("-CurrentLeader");
+                        UIAttributeTag characterTabTag = UI.GetUIAttributeTag("Court");
+                        Character playerLeader = pActivePlayer.leader();
+                        updateCharacterSlotData(leaderTag, playerLeader, RoleType.LEADER, playerLeader != null);
+
+                        int iLivingSpouses = 0;
+                        for (int iLoopSpouse = 0; iLoopSpouse < playerLeader.getNumSpouses(); iLoopSpouse++)
+                        {
+                            Character pLoopCharacter = playerLeader.getSpouseAtIndex(iLoopSpouse);
+
+                            if (pLoopCharacter.isAlive())
+                            {
+                                UIAttributeTag spouseSlotTag = leaderTag.GetSubTag("-Spouse", iLivingSpouses);
+                                updateCharacterSlotData(spouseSlotTag, pLoopCharacter, RoleType.SPOUSE, (pLoopCharacter != null));
+                                iLivingSpouses++;
+                            }
+                        }
+                        characterTabTag.SetInt("Spouse-Count", Math.Max(iLivingSpouses, 1));
+                        characterTabTag.SetBool("Spouse-IsActive", iLivingSpouses > 0);
+
+                        if (iLivingSpouses == 0)
+                        {
+                            UIAttributeTag spouseSlotTag = leaderTag.GetSubTag("-Spouse", 0);
+                            updateCharacterSlotData(spouseSlotTag, null, RoleType.SPOUSE, false);
+                        }
+
+                        //Heir
+                        {
+                            Character pNextLeader = pActivePlayer.heir();
+                            UIAttributeTag heirSlotTag = leaderTag.GetSubTag("-Heir");
+                            updateCharacterSlotData(heirSlotTag, pNextLeader, RoleType.HEIR, (pNextLeader != null));
+                        }
+
+                        //Council
+                        {
+                            for (CouncilType eLoopCouncil = 0; eLoopCouncil < Infos.councilsNum(); eLoopCouncil++)
+                            {
+                                if (!(Infos.council(eLoopCouncil).mbDisable))
+                                {
+                                    UIAttributeTag councilListTag = leaderTag.GetSubTag("-CouncilList", (int)eLoopCouncil);
+                                    Character pCharacter = pActivePlayer.councilCharacter(eLoopCouncil);
+
+                                    if (pCharacter != null && pCharacter.isDead() && pCharacter.getDeadCouncil() == eLoopCouncil)
+                                        pCharacter = null;
+
+                                    updateCharacterSlotData(councilListTag, pCharacter, RoleType.COUNCIL, pActivePlayer.isCouncilUnlock(eLoopCouncil), eLoopCouncil);
+                                    maiCouncilMembers[(int)eLoopCouncil] = pCharacter?.getID() ?? -1;
+                                }
+                                else
+                                {
+                                    leaderTag.GetSubTag("-CouncilList", (int)eLoopCouncil).IsActive = false;
+                                }
+
+                            }
+                            leaderTag.SetInt("CouncilList-Count", (int)Infos.councilsNum());
+                        }
+
+                        mCharacters.SetTEXT("CurrentFilter", TextManager, GetCharacterListFilterName(currentCharListFilter));
+
+                        if (updateCharacterList)
+                        {
+                            bool showCharacters = false;
+
+                            //Heirs
+                            {
+                                int numHeirs = 0;
+                                foreach (int iLoopSuccession in pActivePlayer.getSuccession())
+                                {
+                                    Character pLoopSuccession = Game.character(iLoopSuccession);
+
+                                    if (pLoopSuccession.isAlive())
+                                    {
+                                        UIAttributeTag currentLeaderHeirListTag = characterTabTag.GetSubTag("-Heir", numHeirs);
+                                        currentLeaderHeirListTag.SetKey("State", GetCharacterCardBG(iLoopSuccession));
+                                        currentLeaderHeirListTag.SetInt("ID", iLoopSuccession);
+                                        UI.GetUIAttributeTag("Character", iLoopSuccession).SetInt("PlaceInLine", numHeirs + 1);
+                                        numHeirs++;
+                                    }
+                                }
+                                characterTabTag.SetInt("Heir-Count", numHeirs);
+                                characterTabTag.SetBool("Heir-IsActive", numHeirs > 0);
+                                showCharacters |= numHeirs > 0;
+                            }
+
+                            //Court
+                            {
+                                int numCourtiers = 0;
+
+                                using (var charListScoped = CollectionCache.GetListScoped<int>())
+                                {
+                                    pActivePlayer.getActiveCharacters(charListScoped.Value);
+
+                                    foreach (int iLoopCharacter in charListScoped.Value)
+                                    {
+                                        Character pLoopCharacter = Game.character(iLoopCharacter);
+
+                                        if (pLoopCharacter.isCourtier() && !pLoopCharacter.isLeaderOrSpouseOrHeir())
+                                        {
+                                            UIAttributeTag currentLeaderCourtierListTag = characterTabTag.GetSubTag("-Courtier", numCourtiers);
+                                            currentLeaderCourtierListTag.SetKey("State", GetCharacterCardBG(iLoopCharacter));
+                                            currentLeaderCourtierListTag.SetInt("ID", iLoopCharacter);
+                                            numCourtiers++;
+                                        }
+                                    }
+                                }
+
+                                characterTabTag.SetInt("Courtier-Count", numCourtiers);
+                                characterTabTag.SetBool("Courtier-IsActive", numCourtiers > 0);
+                                showCharacters |= numCourtiers > 0;
+                            }
+
+                            //Clergy
+                            {
+                                int numClergy = 0;
+
+                                using (var charListScoped = CollectionCache.GetListScoped<int>())
+                                {
+                                    pActivePlayer.getActiveCharacters(charListScoped.Value);
+
+                                    foreach (int iLoopCharacter in charListScoped.Value)
+                                    {
+                                        Character pLoopCharacter = Game.character(iLoopCharacter);
+
+                                        if (pLoopCharacter.isClergy() && !pLoopCharacter.isLeaderOrSpouseOrHeir())
+                                        {
+                                            UIAttributeTag currentLeaderClergyListTag = characterTabTag.GetSubTag("-Clergy", numClergy);
+                                            currentLeaderClergyListTag.SetKey("State", GetCharacterCardBG(iLoopCharacter));
+                                            currentLeaderClergyListTag.SetInt("ID", iLoopCharacter);
+                                            numClergy++;
+                                        }
+                                    }
+                                }
+
+                                characterTabTag.SetInt("Clergy-Count", numClergy);
+                                characterTabTag.SetBool("Clergy-IsActive", numClergy > 0);
+                                showCharacters |= numClergy > 0;
+                            }
+
+                            //using (new UnityProfileScope("ClientUI.updateCharacters.addCharacterFamily"))
+                            {
+
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative Character Sorting    START ###
+  ##############################################*/
+                                //using (var checkedIDSetScoped = CollectionCache.GetHashSetScoped<int>())
+                                using (var charIDListScoped = CollectionCache.GetListScoped<int>())
+                                using (var ordererIDListScoped = CollectionCache.GetListScoped<int>())
+                                {
+                                    //HashSet<int> checkedIDSet = checkedIDSetScoped.Value;
+                                    List<int> charIDList = charIDListScoped.Value;
+                                    List<int> orderedIDList = ordererIDListScoped.Value;
+
+                                    pActivePlayer.getActiveCharacters(charIDList);
+                                    //pActivePlayer.getActiveCharacters(orderedIDList);
+
+
+                                    //charIDList.Sort(CompareAges);
+                                    //
+                                    //int CompareAges(int charID, int otherCharID)
+                                    //{
+                                    //    int charAge = Game.character(charID).getAge();
+                                    //    int otherCharAge = Game.character(otherCharID).getAge();
+                                    //
+                                    //    if (charAge != otherCharAge)
+                                    //    {
+                                    //        return otherCharAge - charAge;
+                                    //    }
+                                    //
+                                    //    return charID - otherCharID;
+                                    //}
+
+                                    foreach (int iLoopCharacter in charIDList)
+                                    {
+                                        Character pLoopCharacter = Game.character(iLoopCharacter);
+                                        if (validCharacterFamily(pLoopCharacter))
+                                        {
+                                            orderedIDList.Add(iLoopCharacter);
+                                        }
+                                    }
+
+                                    orderedIDList.Sort(OrderCharacters);
+
+                                    int OrderCharacters(int charID, int otherCharID)
+                                    {
+                                        Character first = Game.character(charID);
+                                        Character second = Game.character(otherCharID);
+
+                                        //#1 leader
+                                        if (first.isLeader() /* && !second.isLeader() */)
+                                        {
+                                            return -1;
+                                        }
+                                        else
+                                        {
+                                            if (second.isLeader() /* && !first.isLeader()*/)
+                                            {
+                                                return 1;
+                                            }
+                                        }
+
+                                        //if (currentCharListFilter == CharacterListFilterType.NOTABLE)
+                                        //{
+                                        //    if (first.getPinnedTurn() != second.getPinnedTurn())
+                                        //    {
+                                        //        return first.getPinnedTurn() - second.getPinnedTurn();
+                                        //    }
+                                        //}
+
+                                        if (currentCharListFilter == CharacterListFilterType.NONE || currentCharListFilter == CharacterListFilterType.COURT || currentCharListFilter == CharacterListFilterType.NOTABLE)
+                                        {
+                                            //#2 Leader Spouse(s)
+                                            if (first.isLeaderSpouse())
+                                            {
+                                                if (!second.isLeaderSpouse())
+                                                {
+                                                    return -1;
+                                                }
+                                            }
+                                            else if (second.isLeaderSpouse())
+                                            {
+                                                return 1;
+                                            }
+
+                                            //#3 Heirs 
+                                            if (first.isSuccessor())
+                                            {
+                                                if (second.isSuccessor())
+                                                {
+                                                    return pActivePlayer.getSuccession().IndexOf(charID) - pActivePlayer.getSuccession().IndexOf(otherCharID);
+                                                }
+                                                else
+                                                {
+                                                    return -1;
+                                                }
+                                            }
+                                            else if (second.isSuccessor())
+                                            {
+                                                return 1;
+                                            }
+                                        }
+
+
+                                        //#4 Council
+                                        if (first.isCouncil())
+                                        {
+                                            if (second.isCouncil())
+                                            {
+                                                int iFirstCharacterCouncilRank;
+                                                int iSecondCharacterCoucilRank;
+
+                                                if (first.getCouncil() == Infos.Globals.AMBASSADOR_COUNCIL)
+                                                {
+                                                    //iFirstCharacterCouncilRank = 1;
+                                                    return -1;
+                                                }
+                                                else if (first.getCouncil() == Infos.Globals.CHANCELLOR_COUNCIL)
+                                                {
+                                                    iFirstCharacterCouncilRank = 2;
+                                                }
+                                                else if (first.getCouncil() == Infos.Globals.SPYMASTER_COUNCIL)
+                                                {
+                                                    iFirstCharacterCouncilRank = 3;
+                                                }
+                                                else
+                                                {
+                                                    iFirstCharacterCouncilRank = 4;
+                                                }
+
+                                                if (second.getCouncil() == Infos.Globals.AMBASSADOR_COUNCIL)
+                                                {
+                                                    iSecondCharacterCoucilRank = 1;
+                                                }
+                                                else if (second.getCouncil() == Infos.Globals.CHANCELLOR_COUNCIL)
+                                                {
+                                                    iSecondCharacterCoucilRank = 2;
+                                                }
+                                                else if (second.getCouncil() == Infos.Globals.SPYMASTER_COUNCIL)
+                                                {
+                                                    iSecondCharacterCoucilRank = 3;
+                                                }
+                                                else
+                                                {
+                                                    //other
+                                                    iSecondCharacterCoucilRank = 4;
+                                                }
+
+                                                if (iFirstCharacterCouncilRank != iSecondCharacterCoucilRank)
+                                                {
+                                                    return iFirstCharacterCouncilRank - iSecondCharacterCoucilRank;
+                                                }
+
+                                            }
+                                            else
+                                            {
+                                                return -1;
+                                            }
+                                        }
+                                        else if (second.isCouncil())
+                                        {
+                                            return 1;
+                                        }
+
+                                        //#5 notable
+                                        if (currentCharListFilter == CharacterListFilterType.NONE)
+                                        {
+                                            if (first.isNotable())
+                                            {
+                                                if (!second.isNotable())
+                                                {
+                                                    return -1;
+                                                }
+                                            }
+                                            else if (second.isNotable())
+                                            {
+                                                return 1;
+                                            }
+                                        }
+
+                                        //#6 Courtiers
+                                        if (first.isCourtier())
+                                        {
+                                            if (!second.isCourtier())
+                                            {
+                                                return -1;
+                                            }
+                                        }
+                                        else if (second.isCourtier())
+                                        {
+                                            return 1;
+                                        }
+
+                                        //#7 family
+                                        bool bFirstIgnoreFamily = false;
+                                        bool bSecondIgnoreFamily = false;
+                                        if (currentCharListFilter == CharacterListFilterType.GENERALS)
+                                        {
+                                            if (first.hasGeneralAll())
+                                            {
+                                                bFirstIgnoreFamily = true;
+                                            }
+
+                                            if (second.hasGeneralAll())
+                                            {
+                                                bSecondIgnoreFamily = true;
+                                            }
+                                        }
+                                        else if (currentCharListFilter == CharacterListFilterType.GOVERNORS)
+                                        {
+                                            if (first.hasGovernorAll())
+                                            {
+                                                bFirstIgnoreFamily = true;
+                                            }
+
+                                            if (second.hasGovernorAll())
+                                            {
+                                                bSecondIgnoreFamily = true;
+                                            }
+                                        }
+
+
+                                        {
+                                            if (!first.hasFamily() || bFirstIgnoreFamily)
+                                            {
+                                                //iFirstFamilyRank = 0;
+                                                if (second.hasFamily() && !bSecondIgnoreFamily)
+                                                {
+                                                    return -1;
+                                                }
+                                            }
+                                            else if (!second.hasFamily() || bSecondIgnoreFamily)
+                                            {
+                                                return 1;
+                                            }
+                                            else
+                                            {
+                                                if (first.getFamily() != second.getFamily())
+                                                {
+                                                    int iFirstFamilyRank = 0;
+                                                    int iSecondFamilyRank = 0;
+                                                    int i = 1;
+                                                    foreach (FamilyType eLoopFamily in pActivePlayer.getFamilies())
+                                                    {
+                                                        if (first.getFamily() == eLoopFamily)
+                                                        {
+                                                            iFirstFamilyRank = i;
+                                                        }
+
+                                                        if (second.getFamily() == eLoopFamily)
+                                                        {
+                                                            iSecondFamilyRank = i;
+                                                        }
+
+                                                        i++;
+                                                    }
+
+                                                    //if (iFirstFamilyRank != iSecondFamilyRank)
+                                                    {
+                                                        return iFirstFamilyRank - iSecondFamilyRank;
+                                                    }
+                                                }
+                                                else /* if (currentCharListFilter == CharacterListFilterType.NONE) */
+                                                {
+                                                    if (first.isFamilyHead())
+                                                    {
+                                                        return -1;
+                                                    }
+                                                    if (second.isFamilyHead())
+                                                    {
+                                                        return 1;
+                                                    }
+                                                }
+
+                                            }
+                                        }
+
+                                        //#8 (possible) jobs: Generals, Governors, Agents
+                                        if (first.isJob())
+                                        {
+                                            if (second.isJob())
+                                            {
+                                                if (first.getJob() != second.getJob())
+                                                {
+                                                    if (first.getJob() == Infos.Globals.GENERAL_JOB)
+                                                    {
+                                                        return -1;
+                                                    }
+                                                    else if (second.getJob() == Infos.Globals.GENERAL_JOB)
+                                                    {
+                                                        return 1;
+                                                    }
+                                                    else if (first.getJob() == Infos.Globals.GOVERNOR_JOB)
+                                                    {
+                                                        return -1;
+                                                    }
+                                                    else if (second.getJob() == Infos.Globals.GOVERNOR_JOB)
+                                                    {
+                                                        return 1;
+                                                    }
+                                                    else if (first.getJob() == Infos.Globals.AGENT_JOB)
+                                                    {
+                                                        return -1;
+                                                    }
+                                                    else if (second.getJob() == Infos.Globals.AGENT_JOB)
+                                                    {
+                                                        return 1;
+                                                    }
+                                                    else
+                                                    {
+                                                        //precaution for more jobs
+                                                        return (int)first.getJob() - (int)second.getJob();
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                return -1;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (second.isJob())
+                                            {
+                                                return 1;
+                                            }
+                                            else
+                                            {
+                                                //both no job: look at filter settings
+                                                if (currentCharListFilter == CharacterListFilterType.GENERALS || currentCharListFilter == CharacterListFilterType.NONE)
+                                                {
+                                                    if (first.hasGeneralAll())
+                                                    {
+                                                        if (!second.hasGeneralAll())
+                                                        {
+                                                            return -1;
+                                                        }
+                                                    }
+                                                    else if (second.hasGeneralAll())
+                                                    {
+                                                        return 1;
+                                                    }
+                                                }
+
+                                                if (currentCharListFilter == CharacterListFilterType.GOVERNORS || currentCharListFilter == CharacterListFilterType.NONE)
+                                                {
+                                                    //hasGovernorAll
+                                                    if (first.hasGovernorAll())
+                                                    {
+                                                        if (!second.hasGovernorAll())
+                                                        {
+                                                            return -1;
+                                                        }
+                                                    }
+                                                    else if (second.hasGovernorAll())
+                                                    {
+                                                        return 1;
+                                                    }
+
+                                                    //duplicating hasGovernorPrereq
+                                                    if (first.hasGovernorPrereq())
+                                                    {
+                                                        if (second.hasGovernorPrereq())
+                                                        {
+
+                                                        }
+                                                        else
+                                                        {
+                                                            return -1;
+                                                        }
+                                                    }
+                                                    else if (second.hasGovernorPrereq())
+                                                    {
+                                                        return 1;
+                                                    }
+                                                }
+
+                                                //hasGeneralPrereq
+                                                if (first.hasGeneralPrereq())
+                                                {
+                                                    if (second.hasGeneralPrereq())
+                                                    {
+
+                                                    }
+                                                    else
+                                                    {
+                                                        return -1;
+                                                    }
+                                                }
+                                                else if (second.hasGeneralPrereq())
+                                                {
+                                                    return 1;
+                                                }
+
+                                                //hasGovernorPrereq
+                                                if (first.hasGovernorPrereq())
+                                                {
+                                                    if (second.hasGovernorPrereq())
+                                                    {
+
+                                                    }
+                                                    else
+                                                    {
+                                                        return -1;
+                                                    }
+                                                }
+                                                else if (second.hasGovernorPrereq())
+                                                {
+                                                    return 1;
+                                                }
+
+                                                //hasAgentPrereq: inlcuding religion agents here
+                                                if (first.hasAgentPrereq(bIncludeReligion: true))
+                                                {
+                                                    if (second.hasAgentPrereq(bIncludeReligion: true))
+                                                    {
+
+                                                    }
+                                                    else
+                                                    {
+                                                        return -1;
+                                                    }
+                                                }
+                                                else if (second.hasAgentPrereq(bIncludeReligion: true))
+                                                {
+                                                    return 1;
+                                                }
+
+                                            }
+                                        }
+
+
+                                        //#9 age: old first
+                                        int charAge = first.getAge();
+                                        int otherCharAge = second.getAge();
+
+                                        if (charAge != otherCharAge)
+                                        {
+                                            return otherCharAge - charAge;
+                                        }
+
+                                        //#10 character IDs: lowest number = oldest entry first
+                                        return charID - otherCharID;
+                                    }
+
+
+
+                                    //foreach (FamilyType eLoopFamily in pActivePlayer.getFamilies())
+                                    //{
+                                    //    Character pHead = pActivePlayer.familyHead(eLoopFamily);
+                                    //    if (pHead != null && validCharacterFamily(pHead))
+                                    //    {
+                                    //        checkedIDSet.Add(pHead.getID());
+                                    //        orderedIDList.Add(pHead.getID());
+                                    //        //addCharacterFamily(pHead, checkedIDSet, charIDList, orderedIDList);
+                                    //    }
+                                    //
+                                    //    foreach (int iLoopCharacter in charIDList)
+                                    //    {
+                                    //        if (checkedIDSet.Contains(iLoopCharacter))
+                                    //        {
+                                    //            continue;
+                                    //        }
+                                    //
+                                    //        Character pLoopCharacter = Game.character(iLoopCharacter);
+                                    //
+                                    //        if (pLoopCharacter.getFamily() == eLoopFamily && validCharacterFamily(pLoopCharacter))
+                                    //        {
+                                    //            checkedIDSet.Add(pLoopCharacter.getID());
+                                    //            orderedIDList.Add(pLoopCharacter.getID());
+                                    //            //addCharacterFamily(pLoopCharacter, checkedIDSet, charIDList, orderedIDList);
+                                    //        }
+                                    //    }
+                                    //}
+                                    //
+                                    //foreach (int iLoopCharacter in charIDList)
+                                    //{
+                                    //    if (!checkedIDSet.Contains(iLoopCharacter) && validCharacterFamily(Game.character(iLoopCharacter)))
+                                    //    {
+                                    //        checkedIDSet.Add(iLoopCharacter);
+                                    //        orderedIDList.Add(iLoopCharacter);
+                                    //        //addCharacterFamily(Game.character(iLoopCharacter), checkedIDSet, charIDList, orderedIDList);
+                                    //    }
+                                    //}
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative Character Sorting      END ###
+  ##############################################*/
+
+
+                                    int numCharacters = 0;
+                                    foreach (int iLoopCharacter in orderedIDList)
+                                    {
+                                        using (new UnityProfileScope("ClientUI.updateCharacters.SetUIData"))
+                                        {
+                                            UIAttributeTag characterListTag = UI.GetUIAttributeTag("CharacterListCharacter", numCharacters);
+                                            characterListTag.SetKey("State", GetCharacterCardBG(iLoopCharacter));
+                                            characterListTag.SetInt("ID", iLoopCharacter);
+                                            characterListTag.IsActive = true;
+                                            numCharacters++;
+                                        }
+                                    }
+
+                                    if (numCharacters > maxCharacterListCount)
+                                    {
+                                        maxCharacterListCount = numCharacters;
+                                        UI.SetUIAttribute("CharacterList-Count", maxCharacterListCount.ToStringCached());
+                                    }
+                                    else
+                                    {
+                                        for (int i = numCharacters; i < maxCharacterListCount; i++)
+                                        {
+                                            UIAttributeTag characterListTag = UI.GetUIAttributeTag("CharacterListCharacter", i);
+                                            characterListTag.IsActive = false;
+                                        }
+                                    }
+                                }
+
+                                mCharacters.IsActive = showCharacters;
+                            }
+
+                            mPlayerFamily.SetBool("CurrentNation-ShowNation", false);
+                        }
+
+                        Interfaces?.CIQ?.SetToGameState();
+                        Interfaces?.CIQ?.ProcessColor(pActivePlayer.getPrimaryPlayerColor(pActivePlayer));
+                    }
+                }
+            }
+        }
+
+
 
         //lines 17830-17937
         protected override void updateQueuePanel()
