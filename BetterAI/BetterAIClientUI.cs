@@ -979,7 +979,11 @@ namespace BetterAI
                                         foreach (int iLoopCharacter in charIDList)
                                         {
                                             Character pLoopCharacter = Game.character(iLoopCharacter);
-                                            if (pLoopCharacter.isPinned())
+                                            if (pLoopCharacter.isLeader())
+                                            {
+                                                orderedIDList.Insert(0, iLoopCharacter);
+                                            }
+                                            else if (pLoopCharacter.isPinned())
                                             {
                                                 int iInsertIndex = orderedIDList.Count;
                                                 for (int i = orderedIDList.Count - 1; i >= 0; i--)

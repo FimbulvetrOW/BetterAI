@@ -137,19 +137,6 @@ namespace BetterAI
   ### ZOC ignore exceptions              END ###
   ##############################################*/
 
-
-/*####### Better Old World AI - Base DLL #######
-  ### Yield icons are enough           START ###
-  ##############################################*/
-        //lines 4943-4950
-        public override TextVariable buildYieldValueLinkVariable(YieldType eYield, int iValue, bool bRate = false, bool bPercent = false, int iMultiplier = 0, bool bIcon = false)
-        {
-            return base.buildYieldValueIconLinkVariable(eYield, iValue, bRate, bPercent, iMultiplier, bColor: false);
-        }
-/*####### Better Old World AI - Base DLL #######
-  ### Yield icons are enough             END ###
-  ##############################################*/
-
         //lines 8684-13513
         public override TextBuilder buildWidgetHelp(TextBuilder builder, WidgetData pWidget, ClientManager pManager, bool bIncludeEncyclopediaFooter = true)
         {
@@ -512,6 +499,30 @@ namespace BetterAI
                             }
                         }
 
+                        {
+                            ReligionType eReligionPrereq = infos().improvement(eImprovement).meReligionPrereq;
+
+                            if (eReligionPrereq != ReligionType.NONE)
+                            {
+                                for (TheologyType eLoopTheology = 0; eLoopTheology < infos().theologiesNum(); eLoopTheology++)
+                                {
+                                    if (pGame.isReligionTheology(eReligionPrereq, eLoopTheology))
+                                    {
+                                        int iValue = infos().improvementClass(eImprovementClass).maaiTheologyYieldOutput[eLoopTheology, eLoopYield];
+                                        if (iValue != 0)
+                                        {
+                                            using (buildSecondaryTextScope(builder))
+                                            {
+                                                builder.AddTEXT("TEXT_HELPTEXT_YIELD_FROM", buildYieldTextVariable(iValue, true, false, Constants.YIELDS_MULTIPLIER), buildTheologyLinkVariable(eLoopTheology, eReligionPrereq, true));
+                                            }
+
+                                            bShowModifiers = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         if (pCityTerritory != null)
                         {
                             foreach (EffectCityType eLoopEffectCity in pCityTerritory.getActiveEffectCity())
@@ -773,7 +784,7 @@ namespace BetterAI
 
         //1k lines of copy-paste START
         //lines 20296-21274
-        public override TextBuilder buildImprovementHelp(TextBuilder builder, ImprovementType eImprovement, Tile pTile, ClientManager pManager, bool bName = true, bool bCosts = true, bool bDetails = true, bool bEncyclopedia = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.NONE)
+        public override TextBuilder buildImprovementHelp(TextBuilder builder, ImprovementType eImprovement, Tile pTile, ClientManager pManager, bool bName = true, bool bCosts = true, bool bDetails = true, bool bEncyclopedia = false, bool bShowTotal = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.NONE)
         {
             //using (new UnityProfileScope("HelpText.buildImprovementHelp"))
             using (var effectListScoped = CollectionCache.GetListScoped<EffectCityType>())
@@ -807,7 +818,7 @@ namespace BetterAI
 
                     if ((pTile != null) && pTile.isInfoVisible(pActivePlayer.getTeam(), pManager))
                     {
-                        buildImprovementBreakdown(builder, eImprovement, SpecialistType.NONE, pTile, pManager);
+                        buildImprovementBreakdown(builder, eImprovement, pTile.getFreeSpecialist(eImprovement), pTile, pManager);
                     }
 
                     using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
@@ -896,7 +907,7 @@ namespace BetterAI
 
                         foreach (EffectCityType eEffectCity in effectListScoped.Value)
                         {
-                            buildEffectCityHelpYields(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), pActivePlayer);
+                            buildEffectCityHelpYields(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), pActivePlayer, bShowTotal);
                         }
 
                         foreach (EffectCityType eEffectCity in effectListScoped.Value)
@@ -1054,17 +1065,9 @@ namespace BetterAI
 
                                             if (eEffectCity != EffectCityType.NONE)
                                             {
-                                                using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                                                using (builder.BeginScope(TextBuilder.ScopeType.INDENTED_BULLET))
                                                 {
-                                                    using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
-                                                    {
-                                                        buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), true, pActivePlayer, bSkipImpossible: !bEncyclopedia);
-                                                    }
-
-                                                    if (subText.HasContent)
-                                                    {
-                                                        builder.AddWithParenthesis(subText.ToTextVariable());
-                                                    }
+                                                    buildEffectCityHelp(builder, eEffectCity, pGame, pCityTerritory, pCityTerritory?.governor(), true, pActivePlayer, bSkipImpossible: !bEncyclopedia);
                                                 }
                                             }
                                         }
@@ -1155,7 +1158,7 @@ namespace BetterAI
                             {
                                 SpecialistType eSpecialist = infos().improvement(eImprovement).meSpecialist;
 
-                                if (eSpecialist != SpecialistType.NONE)
+                                if (eSpecialist != SpecialistType.NONE && (pTile == null || pTile.getFreeSpecialist(eImprovement) == SpecialistType.NONE))
                                 {
                                     using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
                                     {
@@ -1347,29 +1350,33 @@ namespace BetterAI
                             }
                         }
 
-                        if ((pTile == null) || (pTile.getImprovement() != eImprovement))
+                        using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
                         {
-                            using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
+                            ImprovementType eDevelopImprovement = mInfos.Helpers.getDevelopImprovement(eImprovement, pGame?.getTribeLevel() ?? TribeLevelType.NONE);
+
+                            if (eDevelopImprovement != ImprovementType.NONE)
                             {
-                                ImprovementType eDevelopImprovement = mInfos.Helpers.getDevelopImprovement(eImprovement, pGame?.getTribeLevel() ?? TribeLevelType.NONE);
+                                TextVariable developImprovement = buildImprovementLinkVariable(eDevelopImprovement, pGame);
 
-                                if (eDevelopImprovement != ImprovementType.NONE)
+                                int iDevelopTurns = infos().improvement(eImprovement).miDevelopTurns;
+
+                                if (pTile != null && pTile.getImprovement() == eImprovement)
                                 {
-                                    TextVariable developImprovement = buildImprovementLinkVariable(eDevelopImprovement, pGame);
-
-                                    int iDevelopTurns = infos().improvement(eImprovement).miDevelopTurns;
-
-                                    if (infos().improvement(eImprovement).miDevelopRand != 0)
-                                    {
-                                        builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_HELP_DEVELOP_TURNS_RANDOM", developImprovement, TEXTVAR(iDevelopTurns - infos().improvement(eImprovement).miDevelopRand), TEXTVAR(iDevelopTurns));
-                                    }
-                                    else
-                                    {
-                                        builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_HELP_DEVELOP_TURNS", developImprovement, TEXTVAR(iDevelopTurns), buildTurnScaleName(pGame, iDevelopTurns));
-                                    }
+                                    builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_HELP_DEVELOP_TURNS", developImprovement, TEXTVAR(iDevelopTurns - pTile.getImprovementDevelopTurns()), buildTurnScaleName(pGame, iDevelopTurns));
+                                }
+                                else if (infos().improvement(eImprovement).miDevelopRand != 0)
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_HELP_DEVELOP_TURNS_RANDOM", developImprovement, TEXTVAR(iDevelopTurns - infos().improvement(eImprovement).miDevelopRand), iDevelopTurns);
+                                }
+                                else
+                                {
+                                    builder.AddTEXT("TEXT_HELPTEXT_IMPROVEMENT_HELP_DEVELOP_TURNS", developImprovement, TEXTVAR(iDevelopTurns), buildTurnScaleName(pGame, iDevelopTurns));
                                 }
                             }
+                        }
 
+                        if ((pTile == null) || (pTile.getImprovement() != eImprovement))
+                        {
                             if (bCosts)
                             {
                                 buildImprovementCostsHelp(builder, eImprovement, pTile, pManager, true);
@@ -2794,6 +2801,13 @@ namespace BetterAI
                                         }
                                     }
                                 }
+                                foreach (EffectCityType eLoopEffectCity in pCity.getActiveEffectCity())
+                                {
+                                    if (infos().effectCity(eLoopEffectCity).meNewUnitReligion != ReligionType.NONE && infos().unit(eUnit).meBuildReligion == ReligionType.NONE)
+                                    {
+                                        builder.Add(buildReligionLinkVariable(infos().effectCity(eLoopEffectCity).meNewUnitReligion, pGame, pActivePlayer));
+                                    }
+                                }
                             }
                         }
                     }
@@ -3164,6 +3178,9 @@ namespace BetterAI
                     }
                 }
 
+
+                using var effectUnitsScoped = CollectionCache.GetListScoped<(TextVariable, TextVariable)>();
+                List<(TextVariable, TextVariable)> effectUnits = effectUnitsScoped.Value;
                 for (EffectUnitClassType eLoopEffectUnitClass = 0; eLoopEffectUnitClass < infos().effectUnitClassesNum(); eLoopEffectUnitClass++)
                 {
                     if (pUnit.hasEffectUnitClass(eLoopEffectUnitClass))
@@ -3184,38 +3201,71 @@ namespace BetterAI
                                 }
                             }
 
-                            outUnitData.AddStat(TextManager, buildEffectUnitClassLinkVariable(eLoopEffectUnitClass, pUnit), builder.ToTextVariable());
+                            effectUnits.Add((buildEffectUnitClassLinkVariable(eLoopEffectUnitClass, pUnit), builder.ToTextVariable()));
                         }
                     }
                 }
 
-                foreach (EffectUnitType eLoopEffect in pUnit.getEffectUnits())
+
+                if (pUnit.hasEffectUnitAny())
                 {
-                    if (infos().effectUnit(eLoopEffect).meClass == EffectUnitClassType.NONE)
+                    foreach (EffectUnitType eLoopEffect in pUnit.getEffectUnits())
                     {
-                        if (!(pUnit.isGeneralEffectUnit(eLoopEffect)))
+                        if (infos().effectUnit(eLoopEffect).meClass == EffectUnitClassType.NONE)
                         {
-                            if (!pUnit.isEffectUnitSource(eLoopEffect, SourceEffectUnitType.UNIT))
+                            if (!(pUnit.isGeneralEffectUnit(eLoopEffect)))
                             {
-                                using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
+                                if (!pUnit.isEffectUnitSource(eLoopEffect, SourceEffectUnitType.UNIT))
                                 {
-                                    using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
+                                    using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
+                                    {
+                                        using (builder.BeginScope(TextBuilder.ScopeType.COMMA))
+                                        {
+                                            buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true, bIncludeIndirect: false);
+                                        }
+
+                                        effectUnits.Add((buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable()));
+                                    }
+                                }
+                                else if (bExpand)
+                                {
+                                    using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
                                     {
                                         buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true, bIncludeIndirect: false);
+                                        effectUnits.Add((buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable()));
                                     }
-
-                                    outUnitData.AddStat(TextManager, buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable());
-                                }
-                            }
-                            else if (bExpand)
-                            {
-                                using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
-                                {
-                                    buildEffectUnitHelp(builder, eLoopEffect, pGame, bRightJustify: true, bIncludeIndirect: false);
-                                    outUnitData.AddStat(TextManager, buildEffectUnitLinkVariable(eLoopEffect, pUnit), builder.ToTextVariable());
                                 }
                             }
                         }
+                    }
+                }
+
+                if (effectUnits.Count > 0)
+                {
+                    int CompareEffectUnits((TextVariable, TextVariable) first, (TextVariable, TextVariable) second)
+                    {
+                        using var nameFirst = CollectionCache.GetStringBuilderScoped();
+                        using var nameSecond = CollectionCache.GetStringBuilderScoped();
+
+                        TextManager.TEXT(nameFirst.Value, first.Item1);
+                        TextManager.TEXT(nameSecond.Value, second.Item1);
+
+                        for (int i = 0; i < nameFirst.Value.Length; i++)
+                        {
+                            if (i >= nameSecond.Value.Length)
+                                return 1;
+
+                            if (nameFirst.Value[i] != nameSecond.Value[i])
+                                return nameFirst.Value[i] - nameSecond.Value[i];
+                        }
+
+                        return nameFirst.Value.Length - nameSecond.Value.Length;
+                    }
+
+                    effectUnits.Sort(CompareEffectUnits);
+                    foreach (var pair in effectUnits)
+                    {
+                        outUnitData.AddStat(TextManager, pair.Item1, pair.Item2);
                     }
                 }
 
@@ -3398,17 +3448,17 @@ namespace BetterAI
         }
 
         //lines 27316-28221
-        public override TextBuilder buildEffectPlayerHelp(TextBuilder builder, EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer, Player pActivePlayer, ReligionType eStateReligion = ReligionType.NONE, bool bAllCities = false, TextBuilder.ScopeType effectCityScopeType = TextBuilder.ScopeType.COMMA)
+        public override TextBuilder buildEffectPlayerHelp(TextBuilder builder, EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer, Player pActivePlayer, ReligionType eStateReligion = ReligionType.NONE, bool bAllCities = false, bool bShowTotal = false, TextBuilder.ScopeType effectCityScopeType = TextBuilder.ScopeType.COMMA)
         {
             
             using (var ignoreEffectPlayerListScoped = CollectionCache.GetListScoped<EffectPlayerType>())
             {
                 List<EffectPlayerType> effectPlayerIgnore = ignoreEffectPlayerListScoped.Value;
-                return buildEffectPlayerHelp(builder, eEffectPlayer, pGame, pPlayer, pActivePlayer, ref effectPlayerIgnore, eStateReligion, bAllCities, effectCityScopeType);
+                return buildEffectPlayerHelp(builder, eEffectPlayer, pGame, pPlayer, pActivePlayer, ref effectPlayerIgnore, eStateReligion, bAllCities, bShowTotal, effectCityScopeType);
             }
         }
 
-        public virtual TextBuilder buildEffectPlayerHelp(TextBuilder builder, EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer, Player pActivePlayer, ref List<EffectPlayerType> effectPlayerIgnore, ReligionType eStateReligion = ReligionType.NONE, bool bAllCities = false, TextBuilder.ScopeType effectCityScopeType = TextBuilder.ScopeType.COMMA)
+        public virtual TextBuilder buildEffectPlayerHelp(TextBuilder builder, EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer, Player pActivePlayer, ref List<EffectPlayerType> effectPlayerIgnore, ReligionType eStateReligion = ReligionType.NONE, bool bAllCities = false, bool bShowTotal = false, TextBuilder.ScopeType effectCityScopeType = TextBuilder.ScopeType.COMMA)
 
         {
             //using (new UnityProfileScope("HelpText.buildEffectPlayerHelp"))
@@ -3529,6 +3579,37 @@ namespace BetterAI
                     if (iValue != 0)
                     {
                         builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONSUMPTION_MODIFIER", buildSignedTextVariable(iValue, true));
+
+                        if (pPlayer != null)
+                        {
+                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            {
+                                using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
+                                {
+                                    for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                                    {
+                                        int iBase = 0;
+                                        for (int i = 0; i < pPlayer.getNumUnits(); ++i)
+                                        {
+                                            Unit pUnit = pPlayer.unitAt(i);
+                                            if (pUnit != null)
+                                            {
+                                                iBase += pUnit.info().maiYieldConsumption[eLoopYield];
+                                            }
+                                        }
+                                        if (iBase != 0)
+                                        {
+                                            iBase *= Constants.YIELDS_MULTIPLIER;
+                                            subText.Add(buildYieldValueIconLinkVariable(eLoopYield, iBase - infos().utils().modify(iBase, iValue), iMultiplier: Constants.YIELDS_MULTIPLIER));
+                                        }
+                                    }
+                                }
+                                if (subText.HasContent)
+                                {
+                                    builder.AddWithParenthesis(subText.ToTextVariable());
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -4019,7 +4100,7 @@ namespace BetterAI
                                 if (iFromConnection != 0)
                                 {
                                     TextVariable yieldVariable = buildColorTextOptionalVariable(buildYieldValueIconLinkVariable(eLoopYield, iFromConnection, bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER), !(infos().Helpers.yieldWarning(eLoopYield, iFromConnection)));
-                                    TextVariable previewVariable = pPlayer.isConnectedForeignUnlock(eLoopYield) ? QUICKTEXTVAR("icon(bullet)") : TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONNECTED_FOREIGN_WILL_GAIN");
+                                    TextVariable previewVariable = pPlayer.isConnectedForeignUnlock(eLoopYield) ? TEXTVAR("") : TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONNECTED_FOREIGN_WILL_GAIN");
                                     buildBonusLine(subBuilder, previewVariable, TEXTVAR_TYPE("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_CONNECTED_FOREIGN_FROM_TEAM", buildTeamLinkVariable(eLoopTeam, pGame, pActivePlayer, true), yieldVariable));
                                 }
                             }
@@ -4091,7 +4172,7 @@ namespace BetterAI
                         {
                             using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                             {
-                                buildEffectCityHelpYieldsAll(subText, eEffectCity, pGame, pPlayer, null, pActivePlayer);
+                                buildEffectCityHelpYieldsAll(subText, eEffectCity, pGame, pPlayer, null, pActivePlayer, bShowTotal);
                             }
 
                             if (subText.HasContent)
@@ -4151,7 +4232,7 @@ namespace BetterAI
                         {
                             using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                             {
-                                buildEffectCityHelpYieldsAll(subText, eEffectCityExtra, pGame, pPlayer, null, pActivePlayer);
+                                buildEffectCityHelpYieldsAll(subText, eEffectCityExtra, pGame, pPlayer, null, pActivePlayer, bShowTotal);
                             }
 
                             if (subText.HasContent)
@@ -4405,7 +4486,7 @@ namespace BetterAI
                             {
                                 using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                                 {
-                                    buildEffectPlayerHelp(builder, pInfoEffectPlayer.maeEffectPlayerEffectPlayer[eLoopEffectPlayer], pGame, pPlayer, pActivePlayer, ref effectPlayerIgnore, eStateReligion, bAllCities, effectCityScopeType);
+                                    buildEffectPlayerHelp(builder, pInfoEffectPlayer.maeEffectPlayerEffectPlayer[eLoopEffectPlayer], pGame, pPlayer, pActivePlayer, ref effectPlayerIgnore, eStateReligion, bAllCities, bShowTotal, effectCityScopeType);
                                 }
 
                                 if (subText.HasContent)
@@ -5539,7 +5620,7 @@ namespace BetterAI
 
                                 using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                                 {
-                                    buildEffectCityHelp(subText, eEffectCity, pGame, pCityGovernor, pCharacter, false, pActivePlayer);
+                                    buildEffectCityHelp(subText, eEffectCity, pGame, pCityGovernor, pCharacter, false, pActivePlayer, bShowTotal: true);
                                 }
 
                                 if (subText.HasContent)
@@ -5561,7 +5642,7 @@ namespace BetterAI
 
                                 using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                                 {
-                                    buildEffectCityHelp(subText, eEffectCity, pGame, pCityGovernor, pCharacter, false, pActivePlayer);
+                                    buildEffectCityHelp(subText, eEffectCity, pGame, pCityGovernor, pCharacter, false, pActivePlayer, bShowTotal: true);
                                 }
 
                                 if (subText.HasContent)
@@ -5622,7 +5703,7 @@ namespace BetterAI
                                 using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                                 {
                                     Player pCharacterPlayer = pCharacter != null ? pCharacter.player() : null;
-                                    buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer);
+                                    buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer, bShowTotal: true);
                                 }
 
                                 if (subText.HasContent)
@@ -5662,7 +5743,7 @@ namespace BetterAI
                                             using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                                             {
                                                 Player pCharacterPlayer = pCharacter != null ? pCharacter.player() : null;
-                                                buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer);
+                                                buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer, bShowTotal: true);
                                             }
 
                                             if (subText.HasContent)
@@ -5694,7 +5775,7 @@ namespace BetterAI
                                         using (subText.BeginScope(TextBuilder.ScopeType.COMMA))
                                         {
                                             Player pCharacterPlayer = pCharacter != null ? pCharacter.player() : null;
-                                            buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer);
+                                            buildEffectPlayerHelp(subText, eEffectPlayer, pGame, pCharacterPlayer, pActivePlayer, bShowTotal: true);
                                         }
 
                                         if (subText.HasContent)
@@ -6418,9 +6499,9 @@ namespace BetterAI
 
 
 
-        /*####### Better Old World AI - Base DLL #######
-          ### misc                             START ###
-          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### misc                             START ###
+  ##############################################*/
         //public struct BetterAICommaListVariableGenerator : CommaListVariableGenerator
         //{
         //}

@@ -505,19 +505,39 @@ namespace BetterAI
             using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
             {
                 int iRate = 0;
-                getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
+                ImprovementClassType eImprovementClass = infos().improvement(eIndex).meClass;
 
-                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
+                if (pGovernor == governor())
                 {
-                    iRate += infos().effectCity(p.Key).maiImprovementModifier[eIndex] * p.Value;
+                    iRate += getImprovementModifier(eIndex);
+                    if (eImprovementClass != ImprovementClassType.NONE)
+                    {
+                        iRate += getImprovementClassModifier(eImprovementClass);
+                    }
                 }
+                else
+                {
+                    getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
 
+                    foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
+                    {
+                        iRate += infos().effectCity(p.Key).maiImprovementModifier[eIndex] * p.Value;
+                        if (eImprovementClass != ImprovementClassType.NONE)
+                        {
+                            iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eImprovementClass] * p.Value;
+                        }
+                    }
+                }
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
   ##############################################*/
                 foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
                     iRate += infos().effectCity(p.Key).maiImprovementModifier[eIndex] * p.Value;
+                    if (eImprovementClass != ImprovementClassType.NONE)
+                    {
+                        iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eImprovementClass] * p.Value;
+                    }
                 }
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value              END ###
@@ -559,37 +579,37 @@ namespace BetterAI
             }
         }
 
-        public virtual int getImprovementClassModifierForGovernor(ImprovementClassType eIndex, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
-        {
-            if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
-            {
-                return base.getImprovementClassModifier(eIndex);
-            }
+//        public virtual int getImprovementClassModifierForGovernor(ImprovementClassType eIndex, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
+//        {
+//            if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
+//            {
+//                return base.getImprovementClassModifier(eIndex);
+//            }
 
-            using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
-            {
-                int iRate = 0;
-                getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
+//            using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
+//            {
+//                int iRate = 0;
+//                getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
 
-                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
-                {
-                    iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eIndex] * p.Value;
-                }
+//                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
+//                {
+//                    iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eIndex] * p.Value;
+//                }
 
-/*####### Better Old World AI - Base DLL #######
-  ### AI: Improvement Value            START ###
-  ##############################################*/
-                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
-                {
-                    iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eIndex] * p.Value;
-                }
-/*####### Better Old World AI - Base DLL #######
-  ### AI: Improvement Value              END ###
-  ##############################################*/
+///*####### Better Old World AI - Base DLL #######
+//  ### AI: Improvement Value            START ###
+//  ##############################################*/
+//                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
+//                {
+//                    iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eIndex] * p.Value;
+//                }
+///*####### Better Old World AI - Base DLL #######
+//  ### AI: Improvement Value              END ###
+//  ##############################################*/
 
-                return iRate;
-            }
-        }
+//                return iRate;
+//            }
+//        }
 
         //lines 4272-4282
         public override int getYieldTurnsLeft(YieldType eYield)
@@ -731,11 +751,28 @@ namespace BetterAI
             using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
             {
                 int iRate = 0;
-                getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
+                ImprovementClassType eImprovementClass = infos().improvement(eImprovement).meClass;
 
-                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
+                if (pGovernor == governor())
                 {
-                    iRate += infos().effectCity(p.Key).maaiImprovementYield[eImprovement, eYield] * p.Value;
+                    iRate += getEffectCityImprovementYield(eImprovement, eYield);
+                    if (eImprovementClass != ImprovementClassType.NONE)
+                    {
+                        iRate += getEffectCityImprovementClassYield(eImprovementClass, eYield);
+                    }
+                }
+                else
+                {
+                    getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
+
+                    foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
+                    {
+                        iRate += infos().effectCity(p.Key).maaiImprovementYield[eImprovement, eYield] * p.Value;
+                        if (eImprovementClass != ImprovementClassType.NONE)
+                        {
+                            iRate += infos().effectCity(p.Key).maaiImprovementClassYield[eImprovementClass, eYield] * p.Value;
+                        }
+                    }
                 }
 
 /*####### Better Old World AI - Base DLL #######
@@ -744,39 +781,10 @@ namespace BetterAI
                 foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
                 {
                     iRate += infos().effectCity(p.Key).maaiImprovementYield[eImprovement, eYield] * p.Value;
-                }
-/*####### Better Old World AI - Base DLL #######
-  ### AI: Improvement Value              END ###
-  ##############################################*/
-
-                return iRate;
-            }
-        }
-
-        //lines 4922-4938
-        public virtual int getEffectCityImprovementClassYieldForGovernor(ImprovementClassType eImprovementClass, YieldType eYield, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
-        {
-            if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
-            {
-                return base.getEffectCityImprovementClassYieldForGovernor(eImprovementClass, eYield, pGovernor);
-            }
-
-            using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
-            {
-                int iRate = 0;
-                getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
-
-                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
-                {
-                    iRate += infos().effectCity(p.Key).maaiImprovementClassYield[eImprovementClass, eYield] * p.Value;
-                }
-
-/*####### Better Old World AI - Base DLL #######
-  ### AI: Improvement Value            START ###
-  ##############################################*/
-                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
-                {
-                    iRate += infos().effectCity(p.Key).maaiImprovementClassYield[eImprovementClass, eYield] * p.Value;
+                    if (eImprovementClass != ImprovementClassType.NONE)
+                    {
+                        iRate += infos().effectCity(p.Key).maaiImprovementClassYield[eImprovementClass, eYield] * p.Value;
+                    }
                 }
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value              END ###

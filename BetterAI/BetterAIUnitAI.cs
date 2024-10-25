@@ -123,8 +123,8 @@ namespace BetterAI
                         }
                     }
 
-                    // if already in city territory, or if there is no city to raid and no prior target, behave like a non-raiding unit
-                    if (pBestCity != null ? pBestCity.hasTerritoryTile(unit.getTileID()) : (Target == -1))
+                    // if there is no city to raid and no prior target, behave like a non-raiding unit
+                    if (pBestCity == null && Target == -1)
                     {
                         clearRole();
                         return;
@@ -140,20 +140,23 @@ namespace BetterAI
                             {
                                 aiCandidateTiles.Add(iTile);
                             }
+
+                            for (int i = 0; i < pBestCity.tile().distanceTile(pTile); ++i)
+                            {
+                                if (doTribePickTarget(pPathfinder, aiCandidateTiles, unit.getStepsToFatigue() + i, true))
+                                {
+                                    return;
+                                }
+
+                                if (doTribePickPillage(pPathfinder, aiCandidateTiles, unit.getStepsToFatigue() + i))
+                                {
+                                    return;
+                                }
+                            }
                         }
                         else if (Target != -1)
                         {
                             aiCandidateTiles.Add(Target);
-                        }
-
-                        if (doTribePickTarget(pPathfinder, aiCandidateTiles, unit.getStepsToFatigue(), true))
-                        {
-                            return;
-                        }
-
-                        if (doTribePickPillage(pPathfinder, aiCandidateTiles, unit.getStepsToFatigue()))
-                        {
-                            return;
                         }
 
                         if (doTribePickTarget(pPathfinder, aiCandidateTiles, int.MaxValue, true))

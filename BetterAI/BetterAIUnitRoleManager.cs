@@ -308,7 +308,7 @@ namespace BetterAI
   ### Don't defend free City Sites     START ###
   ##############################################*/
                     //don't defend starting tiles at the start of the game with your only military unit, but allow using Militia for defending free city sites.
-                    if (!(Infos.Helpers.isEmergencyUnit(pUnit.getType())) || (Game.getTurn() >= ((Game.isGameOption(Infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? BAI_AI.AI_PLAY_TO_WIN_GRACE_TURNS : BAI_AI.AI_GRACE_TURNS)))
+                    if (Infos.Helpers.isRegularMilitary(pUnit.getType()) || (Game.getTurn() >= ((Game.isGameOption(Infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? BAI_AI.AI_PLAY_TO_WIN_GRACE_TURNS : BAI_AI.AI_GRACE_TURNS)))
                     {
                         return;
                     }

@@ -23,6 +23,145 @@ namespace BetterAI
         {
         }
 
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search        START ###
+  ##############################################*/
+        //restored old version of this method with Predicate
+        //lines 9232-9359
+        public virtual Tile findUnitTileNearby(UnitType eUnit, Tile pTile, PlayerType ePlayer, TribeType eTribe, TeamType eTeamAvoid, bool bTestTile, bool bSpecialTile, int iRequiresArea, City pRequiresCity, Predicate<Tile> predicate = null, Tile pAvoidTile = null, Unit pIgnoreUnit = null)
+        {
+            TeamType eTeam = getPlayerTeam(ePlayer);
+            bool bPredicateTrue = predicate?.Invoke(pTile) ?? false;
+
+            int compareTiles(int iTile1, int iTile2)
+            {
+                Tile pTile1 = tile(iTile1);
+                Tile pTile2 = tile(iTile2);
+
+                if (pTile.isWater())
+                {
+                    bool bSameWater1 = pTile1.isWater() && pTile1.getArea() == pTile.getArea();
+                    bool bSameWater2 = pTile2.isWater() && pTile2.getArea() == pTile.getArea();
+                    if (bSameWater1 != bSameWater2)
+                    {
+                        return bSameWater1 ? -1 : 1;
+                    }
+                }
+                else
+                {
+                    bool bSameLandSection1 = pTile1.getLandSection() == pTile.getLandSection();
+                    bool bSameLandSection2 = pTile2.getLandSection() == pTile.getLandSection();
+                    if (bSameLandSection1 != bSameLandSection2)
+                    {
+                        return bSameLandSection1 ? -1 : 1;
+                    }
+                }
+
+                bool bSamePlayer1 = pTile1.getOwner() == ePlayer;
+                bool bSamePlayer2 = pTile2.getOwner() == ePlayer;
+                if (bSamePlayer1 != bSamePlayer2)
+                {
+                    return bSamePlayer1 ? -1 : 1;
+                }
+
+                bool bSameTeam1 = pTile1.getTeam() == eTeam;
+                bool bSameTeam2 = pTile2.getTeam() == eTeam;
+                if (bSameTeam1 != bSameTeam2)
+                {
+                    return bSameTeam1 ? -1 : 1;
+                }
+
+                if (ePlayer != PlayerType.NONE)
+                {
+                    bool bPathToCity1 = player(ePlayer).hasPathToCity(pTile1);
+                    bool bPathToCity2 = player(ePlayer).hasPathToCity(pTile2);
+                    if (bPathToCity1 != bPathToCity2)
+                    {
+                        return bPathToCity1 ? -1 : 1;
+                    }
+                }
+
+                bool bAdjacentHostile1 = pTile1.adjacentToHostileUnit(eTeam, eTribe, TeamType.NONE);
+                bool bAdjacentHostile2 = pTile2.adjacentToHostileUnit(eTeam, eTribe, TeamType.NONE);
+                if (bAdjacentHostile1 != bAdjacentHostile2)
+                {
+                    return bAdjacentHostile2 ? -1 : 1;
+                }
+
+                bool bDamageTile1 = pTile1.terrain().miUnitDamage > 0;
+                bool bDamageTile2 = pTile2.terrain().miUnitDamage > 0;
+                if (bDamageTile1 != bDamageTile2)
+                {
+                    return bDamageTile2 ? -1 : 1;
+                }
+
+                return pTile1.getID().CompareTo(pTile2.getID());
+            }
+            bool isValidTile(Tile pLoopTile)
+            {
+                if (pLoopTile == pAvoidTile)
+                {
+                    return false;
+                }
+                if (!pLoopTile.canPlaceUnit(eUnit, ePlayer, eTribe, eTeamAvoid, pTile, bSpecialTile, iRequiresArea, pRequiresCity, pIgnoreUnit))
+                {
+                    return false;
+                }
+                if (bPredicateTrue && !predicate(pLoopTile))
+                {
+                    return false;
+                }
+                if (pLoopTile.hasImprovement() && pLoopTile.improvement().mbBonus)
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            if (bTestTile)
+            {
+                if (pTile.canPlaceUnit(eUnit, ePlayer, eTribe, eTeamAvoid, pTile, bSpecialTile, iRequiresArea, pRequiresCity, pIgnoreUnit))
+                {
+                    return pTile;
+                }
+            }
+
+            for (int iRange = 1; iRange < maxDistance(); ++iRange)
+            {
+                if (bPredicateTrue)
+                {
+                    if (iRange > (infos().unit(eUnit).miMovement * infos().unit(eUnit).miFatigue))
+                    {
+                        return null;
+                    }
+                }
+
+                using (var tilesScoped = CollectionCache.GetListScoped<int>())
+                {
+                    List<int> liTiles = tilesScoped.Value;
+                    pTile.getTilesAtDistance(iRange, liTiles);
+
+                    for (int iIndex = liTiles.Count - 1; iIndex >= 0; --iIndex)
+                    {
+                        if (!isValidTile(tile(liTiles[iIndex])))
+                        {
+                            liTiles.RemoveAt(iIndex);
+                        }
+                    }
+
+                    if (liTiles.Count > 0)
+                    {
+                        return tile(liTiles[liTiles.GetMinValueIndex(compareTiles)]);
+                    }
+                }
+            }
+            return null;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Better bounce tile search          END ###
+  ##############################################*/
+
+        //lines 12234-12274
         public override ReligionType doReligionFound(PlayerType ePlayer, bool bTestPrereq)
         {
 /*####### Better Old World AI - Base DLL #######
@@ -70,6 +209,8 @@ namespace BetterAI
 
             return eBestReligion;
         }
+
+        //lines 12275-12297
         public override ReligionType doReligionFoundCity(City pCity, bool bTestPrereq)
         {
 /*####### Better Old World AI - Base DLL #######

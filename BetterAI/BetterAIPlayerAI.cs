@@ -1851,6 +1851,8 @@ namespace BetterAI
                     if (pImprovementInfo.miUnitTurns > 0)
                     {
                         long iUnitValue = 0;
+                        long iWaterUnitValue = 0;
+                        int iWaterDice = 0;
                         int iDiceTotal = 0;
                         for (UnitType eFreeUnit = 0; eFreeUnit < infos.unitsNum(); ++eFreeUnit)
                         {
@@ -1858,12 +1860,32 @@ namespace BetterAI
                             if (iDie > 0)
                             {
                                 iDiceTotal += iDie;
-                                iUnitValue += unitValue(eFreeUnit, pCity, (pTile.isWater() && infos.unit(eFreeUnit).mbWater) ? pTile.getArea() : -1 , false) * iDie;
+                                if (isBuildUnitValid(pCity, pTile.getArea(), eFreeUnit, false, false, false))
+                                {
+                                    //if (isWarship(eFreeUnit))
+                                    if (pTile.isWater() && infos.unit(eFreeUnit).mbWater)
+                                    {
+                                        iWaterDice += iDie;
+                                        iWaterUnitValue += unitValue(eFreeUnit, pCity, pTile.getArea(), false) * iDie;
+                                    }
+                                    else
+                                    {
+                                        iUnitValue += unitValue(eFreeUnit, pCity, -1, false) * iDie;
+                                    }
+                                }
+
+
                             }
                         }
                         if (iDiceTotal > 0)
                         {
-                            iValue = iUnitValue * AI_YIELD_TURNS / iDiceTotal / pImprovementInfo.miUnitTurns;
+                            int iAdditionalShips = (AI_YIELD_TURNS * iWaterDice) / (pImprovementInfo.miUnitTurns * iDiceTotal);
+                            if (iWaterUnitValue > 0 && getWaterUnitTargetNumber(pTile.getArea()) < iAdditionalShips)
+                            {
+                                iWaterUnitValue *= getWaterUnitTargetNumber(pTile.getArea());
+                                iWaterUnitValue /= iAdditionalShips;
+                            }
+                            iValue = ((iUnitValue + iWaterUnitValue) * AI_YIELD_TURNS) / (iDiceTotal * pImprovementInfo.miUnitTurns);
                         }
                     }
 
@@ -4600,9 +4622,19 @@ namespace BetterAI
                     return 0;
                 }
 
-                if (player.countPlayerMemories(infos.Globals.PLAYER_WAR_MEMORY) > 0)
+                for (DiplomacyType eDiplomacy = 0; eDiplomacy < infos.diplomaciesNum(); ++eDiplomacy)
                 {
-                    return 0;
+                    if (infos.diplomacy(eDiplomacy).mbHostile)
+                    {
+                        MemoryPlayerType eMemory = infos.diplomacy(eDiplomacy).mePlayerMemory;
+                        if (eMemory != MemoryPlayerType.NONE)
+                        {
+                            if (player.countPlayerMemories(eMemory) > 0)
+                            {
+                                return 0;
+                            }
+                        }
+                    }
                 }
 
                 if (bCurrentPlayer)
@@ -4844,9 +4876,19 @@ namespace BetterAI
                     return 0;
                 }
 
-                if (player.countTribeMemories(infos.Globals.TRIBE_WAR_MEMORY) > 0)
+                for (DiplomacyType eDiplomacy = 0; eDiplomacy < infos.diplomaciesNum(); ++eDiplomacy)
                 {
-                    return 0;
+                    if (infos.diplomacy(eDiplomacy).mbHostile)
+                    {
+                        MemoryTribeType eMemory = infos.diplomacy(eDiplomacy).meTribeMemory;
+                        if (eMemory != MemoryTribeType.NONE)
+                        {
+                            if (player.countTribeMemories(eMemory) > 0)
+                            {
+                                return 0;
+                            }
+                        }
+                    }
                 }
 
                 if (pTribe.hasPlayerAlly())
