@@ -154,8 +154,11 @@ namespace BetterAI
 
         public override void doUpgradeEvent()
         {
-
-            if (!(player().doEventTrigger(infos().Globals.UPGRADE_CHARACTER_EVENTTRIGGER, this)))
+            if (!hasPlayer())
+            {
+                return;
+            }
+            if (!(player().doEventTrigger(infos().Globals.UPGRADE_CHARACTER_EVENTTRIGGER, pTriggerSubject: this)))
             {
                 using (var ratingsListScoped = CollectionCache.GetListScoped<RatingType>())
                 using (var traitListScoped = CollectionCache.GetListScoped<TraitType>())
@@ -168,9 +171,9 @@ namespace BetterAI
 
                     for (TraitType eLoopTrait = 0; eLoopTrait < infos().traitsNum(); eLoopTrait++)
                     {
-                        if (isValidUpgradeTrait(eLoopTrait, bGeneral: false, bGovernor: false))
+                        if (isValidUpgradeTrait(eLoopTrait, bGeneral: false, bExplorer: false,bGovernor: false))
                         {
-                            if ((isUnitGeneral() || isCityGovernor()) && isValidUpgradeTrait(eLoopTrait, isUnitGeneral(), isCityGovernor()))
+                            if ((isUnitGeneral() || isUnitExplorer() || isCityGovernor()) && isValidUpgradeTrait(eLoopTrait, isUnitGeneral(), isUnitExplorer(), isCityGovernor()))
                             {
                                 aeTraits.Add(eLoopTrait);
                             }

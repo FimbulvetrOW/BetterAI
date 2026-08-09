@@ -14,6 +14,7 @@ using System.Xml;
 using Random = Mohawk.SystemCore.Random;
 using BinaryReader = Mohawk.SystemCore.BinaryReader;
 using BinaryWriter = Mohawk.SystemCore.BinaryWriter;
+using System.Linq;
 
 namespace BetterAI
 {
@@ -21,6 +22,46 @@ namespace BetterAI
     {
         public BetterAIGame(ModSettings pModSettings, IApplication pApp, bool bShowGame) : base(pModSettings, pApp, bShowGame)
         {
+        }
+
+        public virtual CultureType getHighestWonderCulture(BetterAIPlayer pPlayer, bool bIncludeHolyCityValid = false)
+        {
+            CultureType eHighestWonderCulture = infos().Globals.CITY_START_CULTURE;
+
+            if (pPlayer == null)
+            {
+                for (PlayerType eLoopPlayer = 0; eLoopPlayer < getNumPlayers(); eLoopPlayer++)
+                {
+                    BetterAIPlayer pLoopPlayer = (BetterAIPlayer)player(eLoopPlayer);
+                    if (pLoopPlayer.isAlive())
+                    {
+                        CultureType eHighestPlayerWonderCulture = getHighestWonderCulture(pLoopPlayer);
+                        if (infos().Helpers.isCultureHigher(eHighestPlayerWonderCulture, eHighestWonderCulture))
+                        {
+                            eHighestWonderCulture = eHighestPlayerWonderCulture;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+                {
+                    BetterAIInfoImprovement pLoopImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eLoopImprovement);
+                    CultureType eCulturePrereq = pLoopImprovementInfo.meCulturePrereq;
+                    if (pLoopImprovementInfo.mbWonder && (bIncludeHolyCityValid || !pLoopImprovementInfo.mbHolyCityValid)
+                        && eCulturePrereq != CultureType.NONE && infos().Helpers.isCultureHigher(eCulturePrereq, eHighestWonderCulture))
+                    {
+                        if (pPlayer.canStartImprovement(eLoopImprovement, pCity: null, bTestTech: false, bForceImprovement: false, bTestLaws: false, bTestEffect: false, bTestTerritory: false))
+                        {
+                            eHighestWonderCulture = eCulturePrereq;
+                        }
+                    }
+
+                }
+            }
+
+            return eHighestWonderCulture;
         }
 
 /*####### Better Old World AI - Base DLL #######
@@ -33,128 +74,152 @@ namespace BetterAI
             TeamType eTeam = getPlayerTeam(ePlayer);
             bool bPredicateTrue = predicate?.Invoke(pTile) ?? false;
 
-            int compareTiles(int iTile1, int iTile2)
+            using (var improvementsScoped = CollectionCache.GetListScoped<ImprovementType>())
             {
-                Tile pTile1 = tile(iTile1);
-                Tile pTile2 = tile(iTile2);
+                List<ImprovementType> aeImprovements = improvementsScoped.Value;
+                infos().Helpers.getUnitSpawnImprovements(eUnit, aeImprovements);
 
-                if (pTile.isWater())
+
+                int compareTiles(int iTile1, int iTile2)
                 {
-                    bool bSameWater1 = pTile1.isWater() && pTile1.getArea() == pTile.getArea();
-                    bool bSameWater2 = pTile2.isWater() && pTile2.getArea() == pTile.getArea();
-                    if (bSameWater1 != bSameWater2)
+                    Tile pTile1 = tile(iTile1);
+                    Tile pTile2 = tile(iTile2);
+
+                    if (pTile.isWater())
                     {
-                        return bSameWater1 ? -1 : 1;
-                    }
-                }
-                else
-                {
-                    bool bSameLandSection1 = pTile1.getLandSection() == pTile.getLandSection();
-                    bool bSameLandSection2 = pTile2.getLandSection() == pTile.getLandSection();
-                    if (bSameLandSection1 != bSameLandSection2)
-                    {
-                        return bSameLandSection1 ? -1 : 1;
-                    }
-                }
-
-                bool bSamePlayer1 = pTile1.getOwner() == ePlayer;
-                bool bSamePlayer2 = pTile2.getOwner() == ePlayer;
-                if (bSamePlayer1 != bSamePlayer2)
-                {
-                    return bSamePlayer1 ? -1 : 1;
-                }
-
-                bool bSameTeam1 = pTile1.getTeam() == eTeam;
-                bool bSameTeam2 = pTile2.getTeam() == eTeam;
-                if (bSameTeam1 != bSameTeam2)
-                {
-                    return bSameTeam1 ? -1 : 1;
-                }
-
-                if (ePlayer != PlayerType.NONE)
-                {
-                    bool bPathToCity1 = player(ePlayer).hasPathToCity(pTile1);
-                    bool bPathToCity2 = player(ePlayer).hasPathToCity(pTile2);
-                    if (bPathToCity1 != bPathToCity2)
-                    {
-                        return bPathToCity1 ? -1 : 1;
-                    }
-                }
-
-                bool bAdjacentHostile1 = pTile1.adjacentToHostileUnit(eTeam, eTribe, TeamType.NONE);
-                bool bAdjacentHostile2 = pTile2.adjacentToHostileUnit(eTeam, eTribe, TeamType.NONE);
-                if (bAdjacentHostile1 != bAdjacentHostile2)
-                {
-                    return bAdjacentHostile2 ? -1 : 1;
-                }
-
-                bool bDamageTile1 = pTile1.terrain().miUnitDamage > 0;
-                bool bDamageTile2 = pTile2.terrain().miUnitDamage > 0;
-                if (bDamageTile1 != bDamageTile2)
-                {
-                    return bDamageTile2 ? -1 : 1;
-                }
-
-                return pTile1.getID().CompareTo(pTile2.getID());
-            }
-            bool isValidTile(Tile pLoopTile)
-            {
-                if (pLoopTile == pAvoidTile)
-                {
-                    return false;
-                }
-                if (!pLoopTile.canPlaceUnit(eUnit, ePlayer, eTribe, eTeamAvoid, pTile, bSpecialTile, iRequiresArea, pRequiresCity, pIgnoreUnit))
-                {
-                    return false;
-                }
-                if (bPredicateTrue && !predicate(pLoopTile))
-                {
-                    return false;
-                }
-                if (pLoopTile.hasImprovement() && pLoopTile.improvement().mbBonus)
-                {
-                    return false;
-                }
-                return true;
-            }
-
-            if (bTestTile)
-            {
-                if (pTile.canPlaceUnit(eUnit, ePlayer, eTribe, eTeamAvoid, pTile, bSpecialTile, iRequiresArea, pRequiresCity, pIgnoreUnit))
-                {
-                    return pTile;
-                }
-            }
-
-            for (int iRange = 1; iRange < maxDistance(); ++iRange)
-            {
-                if (bPredicateTrue)
-                {
-                    if (iRange > (infos().unit(eUnit).miMovement * infos().unit(eUnit).miFatigue))
-                    {
-                        return null;
-                    }
-                }
-
-                using (var tilesScoped = CollectionCache.GetListScoped<int>())
-                {
-                    List<int> liTiles = tilesScoped.Value;
-                    pTile.getTilesAtDistance(iRange, liTiles);
-
-                    for (int iIndex = liTiles.Count - 1; iIndex >= 0; --iIndex)
-                    {
-                        if (!isValidTile(tile(liTiles[iIndex])))
+                        bool bSameWater1 = pTile1.isWater() && pTile1.getArea() == pTile.getArea();
+                        bool bSameWater2 = pTile2.isWater() && pTile2.getArea() == pTile.getArea();
+                        if (bSameWater1 != bSameWater2)
                         {
-                            liTiles.RemoveAt(iIndex);
+                            return bSameWater1 ? -1 : 1;
+                        }
+                    }
+                    else
+                    {
+                        bool bSameLandSection1 = pTile1.getLandSection() == pTile.getLandSection();
+                        bool bSameLandSection2 = pTile2.getLandSection() == pTile.getLandSection();
+                        if (bSameLandSection1 != bSameLandSection2)
+                        {
+                            return bSameLandSection1 ? -1 : 1;
                         }
                     }
 
-                    if (liTiles.Count > 0)
+                    bool bSamePlayer1 = pTile1.getOwner() == ePlayer;
+                    bool bSamePlayer2 = pTile2.getOwner() == ePlayer;
+                    if (bSamePlayer1 != bSamePlayer2)
                     {
-                        return tile(liTiles[liTiles.GetMinValueIndex(compareTiles)]);
+                        return bSamePlayer1 ? -1 : 1;
+                    }
+
+                    bool bSameTeam1 = pTile1.getTeam() == eTeam;
+                    bool bSameTeam2 = pTile2.getTeam() == eTeam;
+                    if (bSameTeam1 != bSameTeam2)
+                    {
+                        return bSameTeam1 ? -1 : 1;
+                    }
+
+                    if (ePlayer != PlayerType.NONE)
+                    {
+                        bool bPathToCity1 = player(ePlayer).hasPathToCity(pTile1);
+                        bool bPathToCity2 = player(ePlayer).hasPathToCity(pTile2);
+                        if (bPathToCity1 != bPathToCity2)
+                        {
+                            return bPathToCity1 ? -1 : 1;
+                        }
+                    }
+
+                    bool bAdjacentHostile1 = pTile1.adjacentToHostileUnit(eTeam, eTribe, TeamType.NONE);
+                    bool bAdjacentHostile2 = pTile2.adjacentToHostileUnit(eTeam, eTribe, TeamType.NONE);
+                    if (bAdjacentHostile1 != bAdjacentHostile2)
+                    {
+                        return bAdjacentHostile2 ? -1 : 1;
+                    }
+
+                    bool bDamageTile1 = pTile1.terrain().miUnitDamage > 0;
+                    bool bDamageTile2 = pTile2.terrain().miUnitDamage > 0;
+                    if (bDamageTile1 != bDamageTile2)
+                    {
+                        return bDamageTile2 ? -1 : 1;
+                    }
+
+                    bool bVacant1 = !pTile1.hasUnit();
+                    bool bVacant2 = !pTile2.hasUnit();
+                    if (bVacant1 != bVacant2)
+                    {
+                        return bVacant1 ? -1 : 1;
+                    }
+
+                    return pTile1.getID().CompareTo(pTile2.getID());
+                }
+                bool isValidTile(Tile pLoopTile, bool bEnforceVacant)
+                {
+                    if (pLoopTile == pAvoidTile)
+                    {
+                        return false;
+                    }
+                    if (bEnforceVacant && pLoopTile.hasUnit())
+                    {
+                        return false;
+                    }
+                    if (!pLoopTile.canPlaceUnit(eUnit, ePlayer, eTribe, eTeamAvoid, pTile, aeImprovements, iRequiresArea, pRequiresCity, pIgnoreUnit))
+                    {
+                        return false;
+                    }
+                    if (bPredicateTrue && !predicate(pLoopTile))
+                    {
+                        return false;
+                    }
+                    if (pLoopTile.hasImprovement() && pLoopTile.improvement().mbBonus)
+                    {
+                        TribeType eSettlementTribe = pLoopTile.getTribeSettlementOrRuins();
+                        if (eSettlementTribe == TribeType.NONE || eSettlementTribe != eTribe)
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+
+                if (bTestTile)
+                {
+                    if (pTile.canPlaceUnit(eUnit, ePlayer, eTribe, eTeamAvoid, pTile, aeImprovements, iRequiresArea, pRequiresCity, pIgnoreUnit))
+                    {
+                        return pTile;
+                    }
+                }
+
+                //there is no pRequiresHidden in this version if the method
+                for (int iRange = 1; iRange < maxDistance(); ++iRange)
+                {
+                    if (bPredicateTrue)
+                    {
+                        if (iRange > (infos().unit(eUnit).miMovement * infos().unit(eUnit).miFatigue))
+                        {
+                            return null;
+                        }
+                    }
+
+                    using (var tilesScoped = CollectionCache.GetListScoped<int>())
+                    {
+                        List<int> liTiles = tilesScoped.Value;
+                        pTile.getTilesAtDistance(iRange, liTiles);
+
+                        for (int iIndex = liTiles.Count - 1; iIndex >= 0; --iIndex)
+                        {
+                            if (!isValidTile(tile(liTiles[iIndex]), bEnforceVacant: false))
+                            {
+                                liTiles.RemoveAt(iIndex);
+                            }
+                        }
+
+                        if (liTiles.Count > 0)
+                        {
+                            return tile(liTiles[liTiles.GetMinValueIndex(compareTiles)]);
+                        }
                     }
                 }
             }
+
             return null;
         }
 /*####### Better Old World AI - Base DLL #######
@@ -174,6 +239,9 @@ namespace BetterAI
             ReligionType eBestReligion = ReligionType.NONE;
             City pBestCity = null;
 
+            using var hashSetScope = CollectionCache.GetHashSetScoped<PlayerType>();
+            HashSet<PlayerType> tiedPlayers = hashSetScope.Value;
+
             void checkBestValue(City pLoopCity, ReligionType eLoopReligion)
             {
                 int iValue = getReligionCityFoundValue(eLoopReligion, pLoopCity, bTestPrereq);
@@ -182,29 +250,44 @@ namespace BetterAI
                     eBestReligion = eLoopReligion;
                     iBestValue = iValue;
                     pBestCity = pLoopCity;
+                    tiedPlayers.Clear();
+                }
+                else if (iValue == iBestValue && pBestCity != null)
+                {
+                    if (pLoopCity.hasPlayer() && pLoopCity.getPlayer() != pBestCity.getPlayer())
+                    {
+                        tiedPlayers.Add(pLoopCity.getPlayer());
+                    }
                 }
             }
 
+            using var cityListScope = CollectionCache.GetListScoped<int>();
+            List<int> cityList = cityListScope.Value;
+
             for (ReligionType eLoopReligion = 0; eLoopReligion < infos().religionsNum(); ++eLoopReligion)
             {
-                if (ePlayer != PlayerType.NONE)
+                cityList.Clear();
+                foreach (City pLoopCity in getCities())
                 {
-                    foreach (int iCityID in player(ePlayer).getCities())
+                    if (ePlayer == PlayerType.NONE || ePlayer == pLoopCity.getPlayer())
                     {
-                        checkBestValue(city(iCityID), eLoopReligion);
+                        cityList.Add(pLoopCity.getID());
                     }
                 }
-                else
+                cityList.Shuffle(nextSeed());
+
+                foreach (int iCityID in cityList)
                 {
-                    foreach (City pLoopCity in getCities())
-                    {
-                        checkBestValue(pLoopCity, eLoopReligion);
-                    }
+                    checkBestValue(city(iCityID), eLoopReligion);
                 }
             }
             if (pBestCity != null)
             {
                 pBestCity.foundReligion(eBestReligion, bTestPrereq);
+                foreach (PlayerType eLoopPlayer in tiedPlayers)
+                {
+                    player(eLoopPlayer).doEventTrigger(infos().Globals.RELIGION_FOUNDED_TIE_LOST_EVENTTRIGGER, lTriggerSubjects: new() { pBestCity, eBestReligion });
+                }
             }
 
             return eBestReligion;
@@ -321,6 +404,31 @@ namespace BetterAI
 
             }
             return iValue;
+        }
+
+        //lines 12090-12154
+        protected override void postStart()
+        {
+            base.postStart();
+
+            foreach (BetterAICity pLoopCity in getCities().Cast<BetterAICity>())
+            {
+                pLoopCity.calculateCityBiome();
+            }
+
+        }
+
+        //lines 13155-13176
+        public override void doBorderFill()
+        {
+            base.doBorderFill();
+            if (!IsInitializing)
+            {
+                foreach (BetterAICity pLoopCity in getCities().Cast<BetterAICity>())
+                {
+                    pLoopCity.updateCityBiome();
+                }
+            }
         }
 
     }

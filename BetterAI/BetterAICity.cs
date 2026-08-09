@@ -23,6 +23,114 @@ namespace BetterAI
 {
     public class BetterAICity : City
     {
+
+        protected enum BetterAIDirtyType
+        {
+            FIRST,
+            miEnablesGovernorUnlock,
+            NUM_TYPES
+        };
+        [SkipCheckSaveConsistency] protected BitMaskMulti mBetterAIDirtyBits = new BitMaskMulti((int)BetterAIDirtyType.NUM_TYPES);
+
+
+        protected class BetterAINetworkData : NetworkData
+        {
+            public int miEnablesGovernorUnlock;
+
+            public BetterAINetworkData(Infos pInfos, Game pGame)
+                : base(pInfos, pGame)
+            {
+                miEnablesGovernorUnlock = 0;
+            }
+        }
+        protected override NetworkData createNetworkData()
+        {
+            return new BetterAINetworkData(infos(), game());
+        }
+
+
+        protected override bool isDirty(Enum eType)
+        {
+            if (!(eType is BetterAIDirtyType))
+            {
+                return base.isDirty(eType);
+            }
+            if (game().IsDirtyOverride)
+            {
+                return true;
+            }
+            return mBetterAIDirtyBits.GetBit((int)(BetterAIDirtyType)eType);
+        }
+        public override bool isAnyDirty()
+        {
+            if (base.isAnyDirty())
+            {
+                return true;
+            }
+            return !mBetterAIDirtyBits.IsEmpty();
+        }
+        protected override void makeDirty(Enum eType)
+        {
+            if (eType is BetterAIDirtyType)
+            {
+                mBetterAIDirtyBits.SetBit((int)(DirtyType)eType, true);
+            }
+            else
+            {
+                base.makeDirty(eType);
+            }
+        }
+        public override void clearDirty()
+        {
+            base.clearDirty();
+            mBetterAIDirtyBits.Clear();
+        }
+
+        public override void dirtyValuesIO(object pStream, bool bCurrent)
+        {
+            base.dirtyValuesIO(pStream, bCurrent);
+
+            BetterAINetworkData data = bCurrent ? (BetterAINetworkData)mpCurrentData : (BetterAINetworkData)mpLastUpdateData;
+
+            if (!game().IsDirtyOverride)
+            {
+                SimplifyIO.Data(pStream, ref mBetterAIDirtyBits);
+            }
+
+            if (isDirty(BetterAIDirtyType.miEnablesGovernorUnlock))
+            {
+                SimplifyIO.Data(pStream, ref data.miEnablesGovernorUnlock);
+            }
+        }
+
+        protected virtual int getEnablesGovernorUnlock()
+        {
+            return ((BetterAINetworkData)mpCurrentData).miEnablesGovernorUnlock;
+        }
+        public virtual bool isEnablesGovernor(int iExtraUnlock = 0)
+        {
+            return (getEnablesGovernorUnlock() + iExtraUnlock > 0);
+        }
+        public virtual void changeEnablesGovernorUnlock(int iChange)
+        {
+            if (iChange != 0)
+            {
+                updateLastData(BetterAIDirtyType.miEnablesGovernorUnlock, ((BetterAINetworkData)mpCurrentData).miEnablesGovernorUnlock, ref ((BetterAINetworkData)mpLastUpdateData).miEnablesGovernorUnlock);
+                ((BetterAINetworkData)mpCurrentData).miEnablesGovernorUnlock += iChange;
+            }
+        }
+        public override void changeEffectCityCount(EffectCityType eIndex, int iChange)
+        {
+            base.changeEffectCityCount(eIndex, iChange);
+
+            if (((BetterAIInfoEffectCity)infos().effectCity(eIndex)).mbEnablesGovernor)
+            {
+                changeEnablesGovernorUnlock(iChange);
+            }
+        }
+
+
+
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
@@ -30,47 +138,63 @@ namespace BetterAI
         protected bool mbTerritoryChanged = true;
         protected bool mbTerrainChanged = false;
 
-        public virtual CityBiomeType getCityBiome()
+        public virtual void updateCityBiome()
         {
             //calculate only on demand
             if (mbTerritoryChanged || mbTerrainChanged)
             {
                 calculateCityBiome();
             }
+        }
+
+        public virtual CityBiomeType getCityBiome()
+        {
+            updateCityBiome();
             return meCityBiome;
         }
 
-        protected virtual void calculateCityBiome()
+        public virtual void calculateCityBiome()
         {
-            int[] iaBiomeScore = new int[(int)((BetterAIInfos)infos()).cityBiomesNum()];
-            int iBiomeScoreTotal = 0;
-            foreach (int iTileID in getTerritoryTiles())
+            if ((int)((BetterAIInfos)infos()).cityBiomesNum() <= 1)
             {
-                if (game().tile(iTileID).impassable())
-                {
-                    continue;
-                }
+                meCityBiome = CityBiomeType.NONE;
+                return;
+            }
 
-                BetterAIInfoTerrain pLoopTileTerrainInfo = (BetterAIInfoTerrain)game().tile(iTileID).terrain();
-                for (CityBiomeType iBiome = 0; iBiome < ((BetterAIInfos)infos()).cityBiomesNum(); iBiome++)
-                {
-                    iaBiomeScore[(int)iBiome] += pLoopTileTerrainInfo.maiBiomePoints[iBiome];
-                    iBiomeScoreTotal += pLoopTileTerrainInfo.maiBiomePoints[iBiome];
-                }
-            }
-            int iBestBiome = 1; //Default to Temperate
-            int iBestBiomeScore = 0;
-            for (int iBiome = 0; iBiome < (int)((BetterAIInfos)infos()).cityBiomesNum(); iBiome++)
+            using (var biomeScoreScoped = CollectionCache.GetDictionaryScoped<CityBiomeType, int>())
             {
-                if (iaBiomeScore[iBiome] > iBestBiomeScore)
+                Dictionary<CityBiomeType, int> mapBiomeScores = biomeScoreScoped.Value;
+                int iBiomeScoreTotal = 0;
+                foreach (int iTileID in getTerritoryTiles())
                 {
-                    iBestBiome = iBiome;
-                    iBestBiomeScore = iaBiomeScore[iBiome];
+                    if (game().tile(iTileID).impassable())
+                    {
+                        continue;
+                    }
+
+                    BetterAIInfoTerrain pLoopTileTerrainInfo = (BetterAIInfoTerrain)game().tile(iTileID).terrain();
+                    for (CityBiomeType eBiome = 0; eBiome < ((BetterAIInfos)infos()).cityBiomesNum(); eBiome++)
+                    {
+                        int iCount = pLoopTileTerrainInfo.maiBiomePoints[eBiome];
+                        mapBiomeScores[eBiome] = mapBiomeScores.GetOrDefault(eBiome, 0) + iCount;
+                        iBiomeScoreTotal += iCount;
+                    }
                 }
+                CityBiomeType iBestBiome = (CityBiomeType)1; //Default to Temperate
+                int iBestBiomeScore = 0;
+                for (CityBiomeType eBiome = 0; eBiome < ((BetterAIInfos)infos()).cityBiomesNum(); eBiome++)
+                {
+                    if (mapBiomeScores[eBiome] > iBestBiomeScore)
+                    {
+                        iBestBiome = eBiome;
+                        iBestBiomeScore = mapBiomeScores[eBiome];
+                    }
+                }
+                meCityBiome = (CityBiomeType)iBestBiome;
+
+                mbTerritoryChanged = false;
+                mbTerrainChanged = false;
             }
-            mbTerritoryChanged = false;
-            mbTerrainChanged = false;
-            meCityBiome = (CityBiomeType)iBestBiome;
 
         }
 /*####### Better Old World AI - Base DLL #######
@@ -118,10 +242,6 @@ namespace BetterAI
             if (hasGovernor())
             {
                 pWriter.WriteElementString("GovernorID", getGovernorID().ToStringCached());
-            }
-            if (getGovernorTurn() != -1)
-            {
-                pWriter.WriteElementString("GovernorTurn", getGovernorTurn().ToStringCached());
             }
             if (getGiftedTurn() != -1)
             {
@@ -282,20 +402,6 @@ namespace BetterAI
             }
 
             {
-                pWriter.WriteStartElement("AgentTurn");
-
-                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game().getNumPlayers(); eLoopPlayer++)
-                {
-                    if (isAgentPlayer(eLoopPlayer))
-                    {
-                        pWriter.WriteElementString("P" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopPlayer).ToStringCached(), getAgentTurn(eLoopPlayer).ToStringCached());
-                    }
-                }
-
-                pWriter.WriteEndElement();
-            }
-
-            {
                 pWriter.WriteStartElement("AgentCharacterID");
 
                 for (PlayerType eLoopPlayer = 0; eLoopPlayer < game().getNumPlayers(); eLoopPlayer++)
@@ -303,20 +409,6 @@ namespace BetterAI
                     if (hasAgentCharacter(eLoopPlayer))
                     {
                         pWriter.WriteElementString("P" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopPlayer).ToStringCached(), getAgentCharacterID(eLoopPlayer).ToStringCached());
-                    }
-                }
-
-                pWriter.WriteEndElement();
-            }
-
-            {
-                pWriter.WriteStartElement("AgentTileID");
-
-                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game().getNumPlayers(); eLoopPlayer++)
-                {
-                    if (hasAgentTile(eLoopPlayer))
-                    {
-                        pWriter.WriteElementString("P" + Constants.TYPE_SPLIT_CHAR + ((int)eLoopPlayer).ToStringCached(), getAgentTileID(eLoopPlayer).ToStringCached());
                     }
                 }
 
@@ -375,6 +467,7 @@ namespace BetterAI
                 pWriter.WriteEndElement();
             }
 
+            if (getReligions().Count > 0)
             {
                 pWriter.WriteStartElement("Religion");
 
@@ -384,6 +477,30 @@ namespace BetterAI
                     {
                         pWriter.WriteElementString(infos().religion(eLoopReligion).mzType, "");
                     }
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            if (getBannedSpreadReligions().Count > 0)
+            {
+                pWriter.WriteStartElement("BannedReligion");
+
+                foreach (ReligionType eLoopReligion in getBannedSpreadReligions())
+                {
+                    pWriter.WriteElementString(infos().religion(eLoopReligion).mzType, "");
+                }
+
+                pWriter.WriteEndElement();
+            }
+
+            if (getAgentPlayers().Count > 0)
+            {
+                pWriter.WriteStartElement("AgentPlayers");
+
+                foreach (PlayerType eLoopPlayer in getAgentPlayers())
+                {
+                    pWriter.WriteElementString("Player", ((int)eLoopPlayer).ToStringCached());
                 }
 
                 pWriter.WriteEndElement();
@@ -465,34 +582,42 @@ namespace BetterAI
                 Character pOldGovernor = governor();
                 Character pNewGovernor = game().character(iNewValue);
 
-                if (pOldGovernor != null)
-                {
-                    pOldGovernor.setCityGovernorID(-1);
+                resetGovernorTraitEffectCity(-1);
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
   ##############################################*/
-                    ((BetterAICharacter)pOldGovernor).resetJobTraitEffectPlayer(infos().Globals.GOVERNOR_JOB, -1);
+                ((BetterAICharacter)pOldGovernor)?.resetJobTraitEffectPlayer(infos().Globals.GOVERNOR_JOB, -1);
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
   ##############################################*/
-                }
+                resetPlayerEffectCity(-1);
+
+                pOldGovernor?.setCityGovernorID(-1);
 
                 updateLastData(DirtyType.miGovernorID, mpCurrentData.miGovernorID, ref mpLastUpdateData.miGovernorID);
                 mpCurrentData.miGovernorID = iNewValue;
 
-                if (pNewGovernor != null)
-                {
-                    pNewGovernor.setCityGovernorID(getID());
+                pNewGovernor?.setCityGovernorID(getID());
+
+                resetPlayerEffectCity(1);
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
   ##############################################*/
-                    ((BetterAICharacter)pNewGovernor).resetJobTraitEffectPlayer(infos().Globals.GOVERNOR_JOB, 1);
+                ((BetterAICharacter)pNewGovernor)?.resetJobTraitEffectPlayer(infos().Globals.GOVERNOR_JOB, 1);
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
   ##############################################*/
-                }
+                resetGovernorTraitEffectCity(1);
+
+                pOldGovernor?.updateOpinionPlayer();
+                pOldGovernor?.updateFamilyOpinion();
+                pNewGovernor?.updateOpinionPlayer();
+                pNewGovernor?.updateFamilyOpinion();
+                game().updateLeaderOpinionAll();
+                pNewGovernor?.player()?.markDirtyGoals();
             }
         }
+
 
 
         public virtual int getImprovementModifierForGovernor(ImprovementType eIndex, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
@@ -578,38 +703,6 @@ namespace BetterAI
                 return iRate;
             }
         }
-
-//        public virtual int getImprovementClassModifierForGovernor(ImprovementClassType eIndex, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
-//        {
-//            if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
-//            {
-//                return base.getImprovementClassModifier(eIndex);
-//            }
-
-//            using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
-//            {
-//                int iRate = 0;
-//                getEffectCityCountsForGovernor(pGovernor, effectCityCountsScoped.Value);
-
-//                foreach (KeyValuePair<EffectCityType, int> p in effectCityCountsScoped.Value)
-//                {
-//                    iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eIndex] * p.Value;
-//                }
-
-///*####### Better Old World AI - Base DLL #######
-//  ### AI: Improvement Value            START ###
-//  ##############################################*/
-//                foreach (KeyValuePair<EffectCityType, int> p in dEffectCityExtraCounts)
-//                {
-//                    iRate += infos().effectCity(p.Key).maiImprovementClassModifier[eIndex] * p.Value;
-//                }
-///*####### Better Old World AI - Base DLL #######
-//  ### AI: Improvement Value              END ###
-//  ##############################################*/
-
-//                return iRate;
-//            }
-//        }
 
         //lines 4272-4282
         public override int getYieldTurnsLeft(YieldType eYield)
@@ -718,6 +811,8 @@ namespace BetterAI
         {
             if (iChange != 0)
             {
+                player()?.changeYieldTotal(eIndex, iChange);
+
                 YieldType eYield = eIndex;
 
                 if (infos().yield(eIndex).meSubtractFromYield != YieldType.NONE)
@@ -728,8 +823,7 @@ namespace BetterAI
 
                 if (eYield == infos().Globals.HAPPINESS_YIELD)
                 {
-
-
+                    //instead of: if (getHappinessLevel() < 0)
                     if (isDiscontent())
                     {
                         iChange *= -1;
@@ -913,6 +1007,12 @@ namespace BetterAI
                             setHappinessLevel(getHappinessLevel() + 1);
                         }
                     }
+
+                    if (iChange > 0)
+                    {
+                        player().incrementLeaderStat(infos().Globals.HAPPINESS_LEVEL_INCREASED_STAT);
+                    }
+
                 }
                 else if (iChange < 0)
                 {
@@ -977,28 +1077,7 @@ namespace BetterAI
             }
         }
 
-        //lines 7097-7110
-        protected override bool verifyBuildSpecialist(CityQueueData pBuild)
-        {
-            SpecialistType eSpecialist = (SpecialistType)(pBuild.miType);
-            Tile pTile = game().tile(pBuild.miData);
-
-/*####### Better Old World AI - Base DLL #######
-  ### Continue specialist on pillaged  START ###
-  ##############################################*/
-            //if (!(pTile.isSpecialistValid(eSpecialist, pTile.getImprovementFinished())) ||
-            if (!(pTile.isSpecialistValid(eSpecialist, ((BetterAITile)pTile).getImprovementFinishedorPillaged())) ||
-/*####### Better Old World AI - Base DLL #######
-  ### Continue specialist on pillaged    END ###
-  ##############################################*/
-                (pTile.getSpecialist() == eSpecialist) ||
-                (game().isSpecialistAncestor(eSpecialist, pTile.getSpecialist())))
-            {
-                return false;
-            }
-
-            return true;
-        }
+        //Continue specialist on pillaged: functionality is in base game now.
 
 /*####### Better Old World AI - Base DLL #######
   ### Limit Settler Numbers again      START ###
@@ -1065,7 +1144,7 @@ namespace BetterAI
 
                 if ((eCultureObsolete != CultureType.NONE) && (eImprovementObsolete != ImprovementType.NONE))
                 {
-                    if ((getCulture() >= eCultureObsolete) && (getFinishedImprovementCount(eImprovementObsolete) > 0))
+                    if ((getCulture() >= eCultureObsolete) && (getActiveImprovementCount(eImprovementObsolete) > 0))
                     {
                         return false;
                     }
@@ -1079,7 +1158,7 @@ namespace BetterAI
                 }
                 else if (eImprovementObsolete != ImprovementType.NONE)
                 {
-                    if (getFinishedImprovementCount(eImprovementObsolete) > 0)
+                    if (getActiveImprovementCount(eImprovementObsolete) > 0)
                     {
                         return false;
                     }
@@ -1091,9 +1170,12 @@ namespace BetterAI
 
                 if (eRequiresReligion != ReligionType.NONE)
                 {
-                    if (!isReligionHolyCity(eRequiresReligion) && (pPlayer.getStateReligion() != eRequiresReligion) && !(pPlayer.isBuildAllReligionsUnlock()))
+                    if (bTestEnabled || !isReligion(eRequiresReligion))
                     {
-                        return false;
+                        if (!isReligionHolyCity(eRequiresReligion) && (pPlayer.getStateReligion() != eRequiresReligion) && !(pPlayer.isBuildAllReligionsUnlock()) && !(isBuildAnyReligionUnitUnlock(eUnit)))
+                        {
+                            return false;
+                        }
                     }
                 }
             }
@@ -1104,7 +1186,7 @@ namespace BetterAI
 
                 if (eImprovementPrereq != ImprovementType.NONE)
                 {
-                    if (getFinishedImprovementCount(eImprovementPrereq) == 0)
+                    if (getActiveImprovementCount(eImprovementPrereq) == 0)
                     {
                         return false;
                     }
@@ -1352,33 +1434,20 @@ namespace BetterAI
                 {
                     List<(UnitType, int)> mapUnitDie = dieMapScoped.Value;
 
-                    int iTotalWeight = 0;
                     for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); ++eLoopUnit)
                     {
                         if (infos().unit(eLoopUnit).mbBarbRaid)
                         {
-                            if (!infos().unit(eLoopUnit).mbWater || pBestTile.isWater())
-                            {
-                                int iWeight = game().countUnits(x => x.getType() == eLoopUnit) + 1;
-                                mapUnitDie.Add((eLoopUnit, iWeight));
-                                iTotalWeight += iWeight;
-                            }
-                        }
-                    }
-
 /*####### Better Old World AI - Base DLL #######
   ### No Raider Ships                  START ###
   ##############################################*/
-                    if (pBestTile.isWater() && (((BetterAIInfoGlobals)(infos().Globals)).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS) == 0)
+                            if (!infos().unit(eLoopUnit).mbWater || (pBestTile.isWater() && (((BetterAIInfoGlobals)(infos().Globals)).BAI_RAIDER_WATER_PILLAGE_DELAY_TURNS) == 0))
 /*####### Better Old World AI - Base DLL #######
   ### No Raider Ships                    END ###
   ##############################################*/
-                    {
-                        for (UnitType eLoopUnit = 0; eLoopUnit < infos().unitsNum(); ++eLoopUnit)
-                        {
-                            if (!infos().unit(eLoopUnit).mbBarbRaid && infos().unit(eLoopUnit).mbWater && canBuildUnitPossible(eLoopUnit))
                             {
-                                mapUnitDie.Add((eLoopUnit, iTotalWeight));
+                                int iWeight = game().countUnits(x => x.getType() == eLoopUnit) + 1;
+                                mapUnitDie.Add((eLoopUnit, iWeight));
                             }
                         }
                     }
@@ -1538,23 +1607,23 @@ namespace BetterAI
   ### self-aaiEffectCityYieldRate      START ###
   ##############################################*/
         //lines 10420-10563
-        public override int getEffectCityYieldRate(EffectCityType eEffectCity, YieldType eYield, Character pGovernor, bool bComplete = false)
+        public override int getEffectCityYieldRate(EffectCityType eEffectCity, YieldType eYield, Character pGovernor, bool bComplete = false, Dictionary<EffectCityType, int> mapEffectCityChanges = null, Dictionary<SpecialistType, int> mapSpecialistChanges = null)
         {
-            int iRate = base.getEffectCityYieldRate(eEffectCity, eYield, pGovernor, bComplete: bComplete);
+            int iRate = base.getEffectCityYieldRate(eEffectCity, eYield, pGovernor, bComplete, mapEffectCityChanges, mapSpecialistChanges);
 
             if (bComplete)
             {
-                foreach (KeyValuePair<EffectCityType, int> p in getCurrentEffectCityCounts())
+                int iSelfRate = infos().effectCity(eEffectCity).maaiEffectCityYieldRate[eEffectCity, eYield];
+                if (iSelfRate > 0)
                 {
-                    EffectCityType eLoopEffectCity = p.Key;
-                    if (eLoopEffectCity == eEffectCity) //this is counted twice
+                    int iCount = getEffectCityCount(eEffectCity);
+                    if (mapEffectCityChanges != null && mapEffectCityChanges.TryGetValue(eEffectCity, out int iChange))
                     {
-                        int iCount = p.Value;
-                        {
-                            iRate -= (iCount * infos().effectCity(eLoopEffectCity).maaiEffectCityYieldRate[eEffectCity, eYield]);
-                        }
+                        iCount += iChange;
                     }
 
+                    //this is still counted twice
+                    iRate -= (iCount * iSelfRate);
                 }
             }
 
@@ -1568,13 +1637,15 @@ namespace BetterAI
   ### Early Unlock                     START ###
   ##############################################*/
         //Player.isImprovementUnlocked: lines 17320-17338
-        public virtual bool isImprovementUnlockedInCity(ImprovementType eImprovement, bool bTestEnabled = true, bool bTestTech = true)
+        public virtual bool isImprovementUnlockedInCity(ImprovementType eImprovement, bool bTestEnabled = true, bool bTestTech = true, bool bTestCulture = true)
         {
             BetterAIPlayer pOwner = (BetterAIPlayer)player();
             BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             if (pOwner == null || pImprovementInfo == null) return false;
             ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
             bool bPrimaryUnlock = true;
+
+            CultureType eCityCulture = bTestEnabled ? getCulture() : infos().Helpers.getNextCulture(getCulture());
 
             {
                 //primary unlock: class tech + culture
@@ -1586,7 +1657,7 @@ namespace BetterAI
 
                         if (eTechPrereq != TechType.NONE)
                         {
-                            if (!pOwner.isTechAcquired(eTechPrereq))
+                            if (!pOwner.isTechAcquired(eTechPrereq) && !isVoidTechPrereqUnlock(eImprovementClass))
                             {
                                 bPrimaryUnlock = false;
                             }
@@ -1594,14 +1665,18 @@ namespace BetterAI
                     }
                 }
 
-                CultureType eCulturePrereq = pImprovementInfo.meCulturePrereq;
-                if (eCulturePrereq != CultureType.NONE)
+                if (bTestCulture)
                 {
-                    if (( (bTestEnabled) ? (getCulture() < eCulturePrereq) : ((getCulture() + 1) < eCulturePrereq)))
+                    CultureType eCulturePrereq = pImprovementInfo.meCulturePrereq;
+                    if (eCulturePrereq != CultureType.NONE)
                     {
-                        bPrimaryUnlock = false;
+                        if (eCityCulture < eCulturePrereq)
+                        {
+                            bPrimaryUnlock = false;
+                        }
                     }
                 }
+
             }
 
             if (bPrimaryUnlock)
@@ -1623,15 +1698,20 @@ namespace BetterAI
                         bSecondaryUnlock = false;
                     }
                 }
-                CultureType eSecondaryUnlockCulturePrereq = pImprovementInfo.meSecondaryUnlockCulturePrereq;
-                if (eSecondaryUnlockCulturePrereq != CultureType.NONE)
+
+                if (bTestCulture)
                 {
-                    bAnySecondaryPrereqs = true;
-                    if (((bTestEnabled) ? (getCulture() < eSecondaryUnlockCulturePrereq) : ((getCulture() + 1) < eSecondaryUnlockCulturePrereq)))
+                    CultureType eSecondaryUnlockCulturePrereq = pImprovementInfo.meSecondaryUnlockCulturePrereq;
+                    if (eSecondaryUnlockCulturePrereq != CultureType.NONE)
                     {
-                        bSecondaryUnlock = false;
+                        bAnySecondaryPrereqs = true;
+                        if (eCityCulture < eSecondaryUnlockCulturePrereq)
+                        {
+                            bSecondaryUnlock = false;
+                        }
                     }
                 }
+
                 int iSecondaryUnlockPopulationPrereq = pImprovementInfo.miSecondaryUnlockPopulationPrereq;
                 if (iSecondaryUnlockPopulationPrereq > 0)
                 {
@@ -1698,15 +1778,20 @@ namespace BetterAI
                             bTertiaryUnlock = false;
                         }
                     }
-                    CultureType eTertiaryUnlockCulturePrereq = pImprovementInfo.meTertiaryUnlockCulturePrereq;
-                    if (eTertiaryUnlockCulturePrereq != CultureType.NONE)
+
+                    if (bTestCulture)
                     {
-                        bAnyTertiaryPrereqs = true;
-                        if (((bTestEnabled) ? (getCulture() < eTertiaryUnlockCulturePrereq) : ((getCulture() + 1) < eTertiaryUnlockCulturePrereq)))
+                        CultureType eTertiaryUnlockCulturePrereq = pImprovementInfo.meTertiaryUnlockCulturePrereq;
+                        if (eTertiaryUnlockCulturePrereq != CultureType.NONE)
                         {
-                            bTertiaryUnlock = false;
+                            bAnyTertiaryPrereqs = true;
+                            if (eCityCulture < eTertiaryUnlockCulturePrereq)
+                            {
+                                bTertiaryUnlock = false;
+                            }
                         }
                     }
+
                     EffectCityType eTertiaryUnlockEffectCityPrereq = pImprovementInfo.meTertiaryUnlockEffectCityPrereq;
                     if (eTertiaryUnlockEffectCityPrereq != EffectCityType.NONE)
                     {
@@ -1728,9 +1813,17 @@ namespace BetterAI
         }
 
         //Tile.canHaveImprovement: lines 4805-5098
-        public virtual bool canCityHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        //public virtual bool canHaveImprovement(ImprovementType eImprovement, City pCity = null, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestTerritory = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bTestResource = true, bool bUpgradeImprovement = false, bool bForceImprovement = false, bool bTestCulture = true, bool bTestImprovement = true, bool bTestTerrain = true)
+
+        //public virtual bool canCityHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+
+        public override bool canHaveImprovement(ImprovementType eImprovement)
         {
-            if (!bForceImprovement && !isImprovementUnlockedInCity(eImprovement, bTestEnabled, bTestTech: false)) //testing without tech
+            return canCityHaveImprovement(eImprovement, eTeamTerritory: TeamType.NONE, bTestEnabled: true, bTestTerritory: true, bTestReligion: true, bForceImprovement: false, bTestCulture: true, bTestImprovement: true);
+        }
+        public virtual bool canCityHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestTerritory = true, bool bTestReligion = true, bool bForceImprovement = false, bool bTestCulture = true, bool bTestImprovement = true)
+        {
+            if (!bForceImprovement && !isImprovementUnlockedInCity(eImprovement, bTestEnabled, bTestTech: false, bTestCulture: bTestCulture)) //testing without tech
             {
                 return false;
             }
@@ -1793,7 +1886,11 @@ namespace BetterAI
                 }
                 else if (eReligionPrereq != ReligionType.NONE)
                 {
-                    if (!hasPlayer() || player().getReligionCount(eReligionPrereq) == 0)
+                    if (!hasPlayer())
+                    {
+                        return false;
+                    }
+                    if (player().getReligionCount(eReligionPrereq) == 0 && !hasBuildAnyReligionUnitUnlock())
                     {
                         return false;
                     }
@@ -1807,9 +1904,12 @@ namespace BetterAI
                     }
                 }
 
-                if (pImprovementInfo.mbHolyCity && eReligionPrereq == ReligionType.NONE) //invalid Improvement Info
+                if (pImprovementInfo.mbHolyCity && eReligionPrereq == ReligionType.NONE) 
                 {
-                    return false;
+                    if (!isReligionHolyCityAny())  // this is now valid
+                    {
+                        return false;
+                    }
                 }
 
                 {
@@ -1833,15 +1933,29 @@ namespace BetterAI
                 {
 
                     //instad of culture, check unlock
-                    //CultureType eCulturePrereq = infos().improvement(eImprovement).meCulturePrereq;
-                    //if (eCulturePrereq != CultureType.NONE)
+                    //if (bTestCulture)
                     //{
-                    //    if (((bTestEnabled) ? (getCulture() < eCulturePrereq) : ((getCulture() + 1) < eCulturePrereq)))
+                    //    CultureType eCulturePrereq = infos().improvement(eImprovement).meCulturePrereq;
+                    //
+                    //    if (eCulturePrereq != CultureType.NONE)
                     //    {
-                    //        return false;
+                    //        if (pCityTerritory == null)
+                    //        {
+                    //            return false;
+                    //        }
+                    //
+                    //        CultureType eCulture = bTestEnabled ? pCityTerritory.getCulture() : infos().Helpers.getNextCulture(pCityTerritory.getCulture());
+                    //        if (eCulture != CultureType.NONE)
+                    //        {
+                    //            if (infos().Helpers.isCultureHigher(eCulturePrereq, eCulture))
+                    //            {
+                    //                return false;
+                    //            }
+                    //        }
                     //    }
                     //}
 
+                    if (bTestImprovement)
                     {
                         ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
 
@@ -1852,7 +1966,7 @@ namespace BetterAI
                             //    return false;
                             //}
 
-                            int iCount = getFinishedImprovementCount(eImprovementPrereq);
+                            int iCount = getActiveImprovementCount(eImprovementPrereq);
 
                             if (iCount == 0)
                             {
@@ -1927,13 +2041,15 @@ namespace BetterAI
                 //{
                 //    return false;
                 //}
-
-                if (eTeamTerritory != TeamType.NONE)
+                if (bTestTerritory)
                 {
-                    //partially tile-specificif ((getTeam() != eTeamTerritory) && !(getTeam() == TeamType.NONE && getOwnerTribe() == TribeType.NONE && !infos().improvement(eImprovement).mbTerritoryOnly))
-                    if ((getTeam() != eTeamTerritory))
+                    if (eTeamTerritory != TeamType.NONE)
                     {
-                        return false;
+                        //partially tile-specificif ((getTeam() != eTeamTerritory) && !(getTeam() == TeamType.NONE && getOwnerTribe() == TribeType.NONE && !infos().improvement(eImprovement).mbTerritoryOnly))
+                        if ((getTeam() != eTeamTerritory))
+                        {
+                            return false;
+                        }
                     }
                 }
 
@@ -1947,7 +2063,7 @@ namespace BetterAI
                 //}
 
                 //tile-specific
-                //if (hasImprovementFinished())
+                //if (hasActiveImprovement())
                 //{
                 //    if (improvement().mbPermanent)
                 //    {
@@ -2018,19 +2134,6 @@ namespace BetterAI
                     //        }
                     //    }
 
-                    //    if (!bUpgradeImprovement)
-                    //    {
-                    //        ImprovementClassType eAdjacentImprovementClassPrereq = infos().improvement(eImprovement).meAdjacentImprovementClassPrereq;
-
-                    //        if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
-                    //        {
-                    //            if (!adjacentToCityImprovementClassFinished(eAdjacentImprovementClassPrereq))
-                    //            {
-                    //                return false;
-                    //            }
-                    //        }
-                    //    }
-
                     //    if (eImprovementClass != ImprovementClassType.NONE)
                     //    {
                     //        if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !notAdjacentToImprovementClass(eImprovementClass))
@@ -2091,6 +2194,22 @@ namespace BetterAI
                                 }
                             }
                         }
+
+                        if (hasPlayer())
+                        {
+                            if (eImprovementClass == ImprovementClassType.NONE || !isNoImprovementClassMaxUnlock(eImprovementClass))
+                            {
+                                int iMaxPlayerCount = infos().improvement(eImprovement).miMaxPlayerCount;
+                                if (iMaxPlayerCount > 0)
+                                {
+                                    if (player().getImprovementCount(eImprovement) >= iMaxPlayerCount)
+                                    {
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+
                     }
                 }
 

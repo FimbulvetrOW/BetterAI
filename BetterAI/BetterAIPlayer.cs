@@ -82,10 +82,48 @@ namespace BetterAI
   ### Does improvement spread borders    END ###
   ##############################################*/
 
+/*####### Better Old World AI - Base DLL #######
+  ### Law: remaining Techs to research START ###
+  ##############################################*/
+        public virtual void getUnlockTechCount(TechType eTech, ref int iCount, ref bool bInvalid)
+        {
+            if (!isTechValid(eTech, true) || isTechTrashed(eTech) || isTechLocked(eTech))
+            {
+                bInvalid = true;
+                return;
+            }
+            if (isTechAcquired(eTech))
+            {
+                return;
+            }
+
+            iCount++;
+            //in-hand || discard pile || draw pile
+            if (isTechAvailable(eTech) || isTechPassed(eTech) || canMakeTechAvailable(eTech))
+            {
+                return;
+            }
+            //else
+
+            for (TechType eLoopTech = 0; eLoopTech < infos().techsNum(); eLoopTech++)
+            {
+                if (game().isTechPrereq(eTech, eLoopTech))
+                {
+                    getUnlockTechCount(eTech, ref iCount, ref bInvalid);
+                }
+            }
+
+            return;
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Law: remaining Techs to research   END ###
+  ##############################################*/
+
+
         //lines 8855-9323
         public override void changeEffectPlayerCount(EffectPlayerType eIndex, int iChange)
         {
-            if (iChange != 0)
+            if (iChange != 0 && eIndex != EffectPlayerType.NONE)
             {
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
@@ -145,6 +183,14 @@ namespace BetterAI
   ### Alternative GV bonuses             END ###
   ###  EffectPlayer combinations             ###
   ##############################################*/
+
+                        {
+                            int iValue = infos().effectPlayer(eIndex).miLegitimacy;
+                            if (iValue != 0 && game().isCharacters())
+                            {
+                                changeLegitimacyBase(iValue * iChange);
+                            }
+                        }
                         {
                             int iValue = infos().effectPlayer(eIndex).miMaxOrders;
                             if (iValue != 0)
@@ -242,6 +288,14 @@ namespace BetterAI
                         }
 
                         {
+                            int iValue = infos().effectPlayer(eIndex).miWorldReligionSpread;
+                            if (iValue != 0)
+                            {
+                                changeWorldReligionSpread(iValue * iChange);
+                            }
+                        }
+
+                        {
                             int iValue = infos().effectPlayer(eIndex).miVisionChange;
                             if (iValue != 0)
                             {
@@ -265,7 +319,7 @@ namespace BetterAI
                             }
                         }
 
-                        if (infos().effectPlayer(eIndex).miLeaderOpinionChange != 0)
+                        if (infos().effectPlayer(eIndex).miLeaderOpinionChange != 0 || infos().effectPlayer(eIndex).miLeaderDescendantOpinionChange != 0)
                         {
                             if (game().originalAllHumanTeams())
                             {
@@ -443,6 +497,11 @@ namespace BetterAI
                             changeYieldUpkeep(eLoopYield, iChange * infos().effectPlayer(eIndex).maiYieldUpkeep[eLoopYield]);
                         }
 
+                        for (YieldType eLoopYield = 0; eLoopYield < infos().yieldsNum(); eLoopYield++)
+                        {
+                            changeMissionYieldModifier(eLoopYield, iChange * infos().effectPlayer(eIndex).maiMissionYieldCostModifier[eLoopYield]);
+                        }
+
                         for (UnitTraitType eLoopUnitTrait = 0; eLoopUnitTrait < infos().unitTraitsNum(); eLoopUnitTrait++)
                         {
                             changeUnitTraitConsumptionModifier(eLoopUnitTrait, iChange * infos().effectPlayer(eIndex).maiUnitTraitConsumptionModifier[eLoopUnitTrait]);
@@ -456,6 +515,11 @@ namespace BetterAI
                         foreach (YieldType eLoopYield in infos().effectPlayer(eIndex).maeTradeYield)
                         {
                             changeYieldTradeUnlock(eLoopYield, iChange);
+                        }
+
+                        foreach (YieldType eLoopYield in infos().effectPlayer(eIndex).maeNoBuyYield)
+                        {
+                            changeYieldBuyLock(eLoopYield, iChange);
                         }
 
                         foreach (YieldType eLoopYield in infos().effectPlayer(eIndex).maeNoSellPenaltyYield)
@@ -546,6 +610,19 @@ namespace BetterAI
                             }
                         }
 
+                        if (infos().effectPlayer(eIndex).meNoGovernorEffectCity != EffectCityType.NONE)
+                        {
+                            foreach (int iCityID in getCities())
+                            {
+                                City pLoopCity = game().city(iCityID);
+
+                                if (!pLoopCity.hasGovernor())
+                                {
+                                    pLoopCity.changeEffectCityCount(infos().effectPlayer(eIndex).meNoGovernorEffectCity, iChange);
+                                }
+                            }
+                        }
+
                         if (infos().effectPlayer(eIndex).meStateReligionEffectCity != EffectCityType.NONE)
                         {
                             if (hasStateReligion())
@@ -557,6 +634,21 @@ namespace BetterAI
                                     if (pLoopCity.isReligion(getStateReligion()))
                                     {
                                         pLoopCity.changeEffectCityCount(infos().effectPlayer(eIndex).meStateReligionEffectCity, iChange);
+                                    }
+                                }
+                            }
+                        }
+
+                        {
+                            foreach (int iCityID in getCities())
+                            {
+                                City pLoopCity = game().city(iCityID);
+
+                                if (pLoopCity.hasFamily())
+                                {
+                                    if (infos().effectPlayer(eIndex).maeFamilyClassEffectCity[pLoopCity.getFamilyClass()] != EffectCityType.NONE)
+                                    {
+                                        pLoopCity.changeEffectCityCount(infos().effectPlayer(eIndex).maeFamilyClassEffectCity[pLoopCity.getFamilyClass()], iChange);
                                     }
                                 }
                             }
@@ -740,73 +832,7 @@ namespace BetterAI
         }
 
         //lines 9720-9755
-        public override void setCouncilCharacter(CouncilType eIndex, int iNewValue)
-        {
-            if (getCouncilCharacter(eIndex) != iNewValue)
-            {
-                bool bOldCouncil = hasCouncilCharacter(eIndex);
-                Character pOldCouncil = councilCharacter(eIndex);
-
-                updateLastData(DirtyType.maiCouncilCharacter, mpCurrentData.maiCouncilCharacter, ref mpLastUpdateData.maiCouncilCharacter);
-                mpCurrentData.maiCouncilCharacter[(int)eIndex] = iNewValue;
-
-                bool bNewCouncil = hasCouncilCharacter(eIndex);
-                Character pNewCouncil = councilCharacter(eIndex);
-
-                if (bOldCouncil != bNewCouncil) // need to test booleans because the characters will be null on load
-                {
-                    EffectPlayerType eEffectPlayer = infos().council(eIndex).meEffectPlayer;
-
-                    if (eEffectPlayer != EffectPlayerType.NONE)
-                    {
-                        changeEffectPlayerCount(eEffectPlayer, ((bNewCouncil) ? 1 : -1));
-                    }
-                }
-
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses           START ###
-  ##############################################*/
-                if (!game().IsInitializing)
-                {
-                    JobType eCouncilJob = JobType.NONE;
-                    for (JobType eLoopJob = 0; eLoopJob < infos().jobsNum(); eLoopJob++)
-                    {
-                        if (infos().job(eLoopJob).meCouncil == eIndex)
-                        {
-                            eCouncilJob = eLoopJob;
-                        }
-                    }
-
-                    if (((BetterAIInfoJob)infos().job(eCouncilJob)).bAnyTraitEffectPlayer)
-                    {
-                        if (bOldCouncil)
-                        {
-                            ((BetterAICharacter)pOldCouncil).resetJobTraitEffectPlayer(eCouncilJob, -1);
-                        }
-                        if (bNewCouncil)
-                        {
-                            ((BetterAICharacter)pNewCouncil).resetJobTraitEffectPlayer(eCouncilJob, 1);
-                        }
-                    }
-                }
-
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative GV bonuses             END ###
-  ##############################################*/
-
-                if (pOldCouncil != null)
-                {
-                    pOldCouncil.updateOpinionPlayer();
-                }
-                if (pNewCouncil != null)
-                {
-                    pNewCouncil.updateOpinionPlayer();
-                }
-
-                updateReligionOpinionAll();
-                updateFamilyOpinionAll();
-            }
-        }
+        //setCouncilCharacter: no longer needed, council job trait effects are handled in base game via trait.maeCouncilEffectPlayer
 
 
 /*####### Better Old World AI - Base DLL #######
@@ -883,6 +909,23 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Less development cities variation  END ###
   ##############################################*/
+
+
+        public virtual int countMinCultureCities(CultureType eCulture, bool bHolyCitiesOnly = false)
+        {
+            using var profileGame = new UnityProfileScope("Player.countMinCultureCities");
+
+            int iCount = 0;
+            foreach (int iCityID in getCities())
+            {
+                City pLoopCity = game().city(iCityID);
+                if ((!bHolyCitiesOnly || pLoopCity.isReligionHolyCityAny()) && pLoopCity.getCulture() >= eCulture)
+                {
+                    ++iCount;
+                }
+            }
+            return iCount;
+        }
 
 
 /*####### Better Old World AI - Base DLL #######
@@ -991,114 +1034,27 @@ namespace BetterAI
         //copy-paste END
 
         //lines 17320-17338
-        public override bool isImprovementUnlocked(ImprovementType eImprovement)
+        public override bool isImprovementUnlocked(ImprovementType eImprovement, City pCity)
         {
 
-            if (base.isImprovementUnlocked(eImprovement))
+            if (pCity == null)
             {
-                return true;
+                return base.isImprovementUnlocked(eImprovement, pCity);
             }
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                     START ###
   ##############################################*/
             else
             {
-                BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
-                if (pImprovementInfo.isAnySecondaryPrereq())
-                {
-                    TechType eTechSecondaryPrereq = pImprovementInfo.meSecondaryUnlockTechPrereq;
-                    if (eTechSecondaryPrereq != TechType.NONE)
-                    {
-                        if (isTechAcquired(eTechSecondaryPrereq))
-                        {
-                            return true;
-                        }
-                    }
-                    else
-                    {
-                        return true; //secondary unlock without tech
-                    }
-                }
-                if (pImprovementInfo.isAnyTertiaryPrereq())
-                {
-                    TechType eTechTertiaryPrereq = pImprovementInfo.meTertiaryUnlockTechPrereq;
-                    bool bHasTech = true;
-                    bool bHasFamily = true;
-                    if (eTechTertiaryPrereq != TechType.NONE)
-                    {
-                        if (!(isTechAcquired(eTechTertiaryPrereq)))
-                        {
-                            bHasTech = false;
-                        }
-                    }
-
-                    //check if player has the family
-                    FamilyClassType eTertiaryUnlockFamilyClassPrereq = pImprovementInfo.meTertiaryUnlockFamilyClassPrereq;
-                    if (eTertiaryUnlockFamilyClassPrereq != FamilyClassType.NONE)
-                    {
-                        bHasFamily = isFamilyClassStarted(eTertiaryUnlockFamilyClassPrereq);
-                    }
-
-                    return (bHasTech && bHasFamily);
-
-                }
-
-                return false;
+                return ((BetterAICity)pCity).isImprovementUnlockedInCity(eImprovement);
             }
 /*####### Better Old World AI - Base DLL #######
   ### Early Unlock                       END ###
   ##############################################*/
         }
 
-        //lines 17339-17393
-        public override bool canStartImprovement(ImprovementType eImprovement, City pCity, bool bTestTech = true, bool bForceImprovement = false)
-        {
-            if (base.canStartImprovement(eImprovement, pCity, bTestTech, bForceImprovement))
-/*####### Better Old World AI - Base DLL #######
-  ### Early Unlock                     START ###
-  ##############################################*/
-            {
-                if (bTestTech && pCity != null && !bForceImprovement)
-                {
-                    if (base.isImprovementUnlocked(eImprovement))
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        //when testing tech on a specific tile and unlock is not primary, check city for unlock conditions
-                        //check secondary unlock on pTile
-                        if (pCity != null)
-                        {
-                            //does city fulfill secondary prereqs?
-                            //tertiary?
-                            if (!(((BetterAICity)pCity).isImprovementUnlockedInCity(eImprovement, true, bTestTech)))
-                            {
-                                return false;
-                            }
 
-                            return true;
-                        }
-                        else
-                        {
-                            //secondary and tertiary unlocks are city-related
-                            return false;
-                        }
-                    }
-                }
-                else
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                return false;
-            }
-/*####### Better Old World AI - Base DLL #######
-  ### Early Unlock                       END ###
-  ##############################################*/
-        }
+        //canStartImprovement now calls the new isImprovementUnlocked with pCity as argument, so no more override necessary
 
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
@@ -1106,6 +1062,8 @@ namespace BetterAI
         //lines 18983-19002
         protected override Character addCourtier(CourtierType eType, GenderType eGender, FamilyType eFamily, Player pFromPlayer = null)
         {
+            RandomStruct pRandom = new RandomStruct(game().getNextCharacterID());
+
             if (eType == CourtierType.NONE)
             {
                 List<CourtierType> randomValidCourtiers = new List<CourtierType>();
@@ -1118,10 +1076,19 @@ namespace BetterAI
                 }
 
                 //eType = (CourtierType)(game().randomNext((int)infos().courtiersNum()));
-                eType = (CourtierType)(game().randomNext(randomValidCourtiers.Count));
+                eType = (CourtierType)(pRandom.Next(randomValidCourtiers.Count));
             }
 
-            return base.addCourtier(eType, eGender, eFamily, pFromPlayer);
+            Character pCharacter = game().createNewCharacter(infos().Globals.COURTIER_AGE, getPlayer(), eGender, NameType.NONE, eFamily, TribeType.NONE, ((pFromPlayer != null) ? pFromPlayer.getNation() : NationType.NONE), null, pRandom.NextSeed());
+            pCharacter.setCourtier(eType);
+            pCharacter.generateRatingsCourtier(eType);
+            pCharacter.assignNickname();
+
+            doEventTrigger(infos().Globals.COURTIER_EVENTTRIGGER, pTriggerSubject: pCharacter);
+
+            pushLogData(() => TextManager.TEXT("TEXT_GAME_COURTIER_JOINED_POPUP", HelpText.buildCharacterLinkVariable(pCharacter, this)), GameLogType.COURTIER, infos().courtier(eType), pCharacter.getID());
+
+            return pCharacter;
         }
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers    END ###

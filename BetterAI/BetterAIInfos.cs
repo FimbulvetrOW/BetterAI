@@ -46,6 +46,10 @@ namespace BetterAI
 
             bool thisPass(XmlDataListItemBase item)
             {
+                if (item.GetFlags().HasFlag(XmlDataListFlags.SeparatePassOnly))
+                {
+                    return items.Count == 1;
+                }
                 if (!mModSettings.ModPath.IsStrictMode())
                 {
                     return !deferredPass;
@@ -131,7 +135,7 @@ namespace BetterAI
                   ### modmod fix                         END ###
                   ##############################################*/
 
-                mModSettings.XMLLoader.GetValidator().EndReadValidation(validationNodes, item.GetFileName(), currentType, mTypeDictionary, mRemovedXMLTypes.Keys);
+                mModSettings.InfoValidator.EndReadValidation(validationNodes, item.GetFileName(), currentType, mTypeDictionary, mRemovedXMLTypes.Keys);
             }
 
             Stopwatch stopwatch = new Stopwatch();
@@ -285,6 +289,36 @@ namespace BetterAI
                 }
             }
 
+            //cascading bonus adjacent improvments is forbidden
+            for (ImprovementType eLoopImprovement = 0; eLoopImprovement < improvementsNum(); eLoopImprovement++)
+            {
+                BetterAIInfoImprovement pLoopImprovementInfo = ((BetterAIInfoImprovement)improvement(eLoopImprovement));
+                if (pLoopImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                {
+                    pLoopImprovementInfo.meBonusAdjacentImprovement = ImprovementType.NONE; //just to be sure
+                    foreach (ImprovementType eClassInprovement in ((BetterAIInfoImprovementClass)improvementClass(pLoopImprovementInfo.meBonusAdjacentImprovementClass)).maeImprovementTypes)
+                    {
+                        ((BetterAIInfoImprovement)improvement(eClassInprovement)).meBonusAdjacentImprovement = ImprovementType.NONE;
+                    }
+                }
+                else if (pLoopImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
+                {
+                    ((BetterAIInfoImprovement)improvement(pLoopImprovementInfo.meBonusAdjacentImprovement)).meBonusAdjacentImprovement = ImprovementType.NONE;
+                }
+            }
+
+            for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < effectCitiesNum(); eLoopEffectCity++)
+            {
+                BetterAIInfoEffectCity pLoopEffectCity = ((BetterAIInfoEffectCity)effectCity(eLoopEffectCity));
+                foreach (ImprovementClassType epSkipTechImprovementClass in pLoopEffectCity.maeVoidTechPrereqImprovementClass)
+                {
+                    BetterAIInfoImprovementClass pSkipTechImprovementClassInfo = ((BetterAIInfoImprovementClass)improvementClass(epSkipTechImprovementClass));
+                    pSkipTechImprovementClassInfo.maeVoidTechPrereqFromEffectCities.Add(eLoopEffectCity);
+                }
+            }
+
+
+
             for (UnitType eLoopUnit = 0; eLoopUnit < unitsNum(); eLoopUnit++)
             {
                 BetterAIInfoUnit pLoopUnitInfo = (BetterAIInfoUnit)unit(eLoopUnit);
@@ -342,9 +376,26 @@ namespace BetterAI
             {
                 for (JobType eLoopJob = 0; eLoopJob < jobsNum(); eLoopJob++)
                 {
-                    if (((BetterAIInfoTrait)trait(eLoopTrait)).maeJobEffectPlayer[eLoopJob] != EffectPlayerType.NONE)
+                    BetterAIInfoTrait pLoopInfoTrait = ((BetterAIInfoTrait)trait(eLoopTrait));
+
+                    if (pLoopInfoTrait.maeJobEffectPlayer[eLoopJob] != EffectPlayerType.NONE)
                     {
-                        ((BetterAIInfoJob)job(eLoopJob)).bAnyTraitEffectPlayer = true;
+                        BetterAIInfoJob pLoopInfoJob = ((BetterAIInfoJob)job(eLoopJob));
+                        if (pLoopInfoJob.meCouncil != CouncilType.NONE)
+                        {
+                            if (pLoopInfoTrait.maeCouncilEffectPlayer[pLoopInfoJob.meCouncil] != EffectPlayerType.NONE)
+                            {
+                                UnityEngine.Debug.Log("Trait " + pLoopInfoTrait.mzType + " has both job effect and council effect for the same job. council effect will be overwritten");
+                            }
+                            //For council jobs, this is the most elegant solution: using base game field maeCouncilEffectPlayer
+                            pLoopInfoTrait.maeCouncilEffectPlayer[pLoopInfoJob.meCouncil] = pLoopInfoTrait.maeJobEffectPlayer[eLoopJob];
+                            pLoopInfoTrait.maeJobEffectPlayer[eLoopJob] = EffectPlayerType.NONE;
+                        }
+                        else
+                        {
+                            pLoopInfoJob.bAnyTraitEffectPlayer = true;
+                        }
+
                     }
                 }
             }
@@ -420,6 +471,39 @@ namespace BetterAI
                             setAllAnyEffectPlayerEffectPlayers(eOuterLoopEffectPlayer);
                             setAllAnyEffectPlayerEffectPlayers(eInnerLoopEffectPlayer);
                         }
+                    }
+                }
+            }
+
+            if (((BetterAIInfoGlobals)Globals).BAI_NO_DELAY == 1)
+            {
+                foreach (InfoBonus pLoopBonus in bonuses())
+                {
+                    if (pLoopBonus.maiTraitProbDelay.Count > 0 && pLoopBonus.maiTraitProb.Count == 0)
+                    {
+                        foreach (KeyValuePair<TraitType, int> probTrait in pLoopBonus.maiTraitProbDelay)
+                        {
+                            pLoopBonus.maiTraitProb[probTrait.Key] = probTrait.Value;
+                        }
+                        pLoopBonus.maiTraitProbDelay.Clear();
+                    }
+
+                    if (pLoopBonus.maeRandomTraitDelay.Count > 0 && pLoopBonus.maeRandomTrait.Count == 0)
+                    {
+                        foreach (TraitType randTrait in pLoopBonus.maeRandomTraitDelay)
+                        {
+                            pLoopBonus.maeRandomTrait.Add(randTrait);
+                        }
+                        pLoopBonus.maeRandomTraitDelay.Clear();
+                    }
+
+                    if (pLoopBonus.maeRandomLeaderRelationshipDelay.Count > 0 && pLoopBonus.maeRandomLeaderRelationship.Count == 0)
+                    {
+                        foreach (RelationshipType randRelation in pLoopBonus.maeRandomLeaderRelationshipDelay)
+                        {
+                            pLoopBonus.maeRandomLeaderRelationship.Add(randRelation);
+                        }
+                        pLoopBonus.maeRandomLeaderRelationshipDelay.Clear();
                     }
                 }
             }
@@ -507,6 +591,15 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers    END ###
   ##############################################*/
+
+        
+        protected List<BetterAIInfoEffectCity> maBetterAIEffectCities;
+
+        public override InfoEffectCity effectCity(EffectCityType eIndex) => maBetterAIEffectCities.GetOrDefault((int)eIndex);
+        public override EffectCityType effectCitiesNum() => (EffectCityType)maBetterAIEffectCities.Count;
+        public override List<InfoEffectCity> effectCities() => new List<InfoEffectCity>(maBetterAIEffectCities);
+        public virtual List<BetterAIInfoEffectCity> BetterAIeffectCities() => maBetterAIEffectCities;
+
 
 
 /*####### Better Old World AI - Base DLL #######
@@ -666,6 +759,7 @@ namespace BetterAI
             base.BuildListOfInfoFiles();
 
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/courtier"));
+            mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/effectCity"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/effectPlayer"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/effectUnit"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/improvement"));
@@ -677,6 +771,7 @@ namespace BetterAI
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/unit"));
 
             mInfoList.Add(new XmlDataListItem<BetterAIInfoCourtier, CourtierType>("Infos/courtier", readInfoTypes<BetterAIInfoCourtier, CourtierType>, ref maBetterAICourtiers));
+            mInfoList.Add(new XmlDataListItem<BetterAIInfoEffectCity, EffectCityType>("Infos/effectCity", readInfoTypes<BetterAIInfoEffectCity, EffectCityType>, ref maBetterAIEffectCities));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoEffectPlayer, EffectPlayerType>("Infos/effectPlayer", readInfoTypes<BetterAIInfoEffectPlayer, EffectPlayerType>, ref maBetterAIEffectPlayers));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoEffectUnit, EffectUnitType>("Infos/effectUnit", readInfoTypes<BetterAIInfoEffectUnit, EffectUnitType>, ref maBetterAIEffectUnits));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoImprovement, ImprovementType>("Infos/improvement", readInfoTypes<BetterAIInfoImprovement, ImprovementType>, ref maBetterAIImprovements));
@@ -717,6 +812,15 @@ namespace BetterAI
   ##############################################*/
 
 
+    public class BetterAIInfoEffectCity : InfoEffectCity
+    {
+        public bool mbEnablesGovernor = false;
+        public override void Read(Infos infos, Infos.ReadContext ctx)
+        {
+            base.Read(infos, ctx);
+            infos.readBool(ctx, "bEnablesGovernor", ref mbEnablesGovernor);
+        }
+    }
 
 
 /*####### Better Old World AI - Base DLL #######
@@ -888,6 +992,7 @@ namespace BetterAI
     public class BetterAIInfoImprovementClass : InfoImprovementClass
     {
         public List<ImprovementType> maeImprovementTypes = new List<ImprovementType>();
+        public List<EffectCityType> maeVoidTechPrereqFromEffectCities = new List<EffectCityType>();
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
@@ -1032,12 +1137,14 @@ namespace BetterAI
         public int BAI_NUM_IMPROVEMENT_FINISHED_UNITS = 1;
         public int BAI_ALT_CHARACTER_SORT = 0;
         public int BAI_CITIES_IMMUNE_TO_CRITICAL = 0;
+        public int BAI_NO_DELAY = 0;
 
         public int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 0;
         public int AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = 0;
         public int AI_TRAINING_CITY_SPECIALIZATION_MODIFIER = 0;
         public int AI_FAMILY_OPINION_VALUE_PER = 0;
         public int AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE = 0;
+        public int AI_CITY_GOVERNOR_VALUE = 0;
 
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
@@ -1081,12 +1188,15 @@ namespace BetterAI
             BAI_NUM_IMPROVEMENT_FINISHED_UNITS = infos.getGlobalInt("BAI_NUM_IMPROVEMENT_FINISHED_UNITS");
             BAI_ALT_CHARACTER_SORT = infos.getGlobalInt("BAI_ALT_CHARACTER_SORT");
             BAI_CITIES_IMMUNE_TO_CRITICAL = infos.getGlobalInt("BAI_CITIES_IMMUNE_TO_CRITICAL");
+            BAI_NO_DELAY = infos.getGlobalInt("BAI_NO_DELAY");
 
             AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");
             AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_CIVICS_CITY_SPECIALIZATION_MODIFIER");
             AI_TRAINING_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_TRAINING_CITY_SPECIALIZATION_MODIFIER");
             AI_FAMILY_OPINION_VALUE_PER = infos.getGlobalAI("AI_FAMILY_OPINION_VALUE_PER");
             AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE = infos.getGlobalAI("AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE");
+            AI_CITY_GOVERNOR_VALUE = infos.getGlobalAI("AI_CITY_GOVERNOR_VALUE");
+            
         }
     }
 /*####### Better Old World AI - Base DLL #######

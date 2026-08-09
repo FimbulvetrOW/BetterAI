@@ -53,7 +53,7 @@ namespace BetterAI
             return bCloser;
         }
 
-        public virtual bool isPathShorterToOtherTiles(Tile pStartTile, HashSet<Tile> otherTiles)
+        public virtual bool isPathShorterToOtherTiles(Tile pStartTile, HashSet<Tile> otherTiles, TeamType eWaterControlTeam, bool bWaterUnit)
         {
             if (otherTiles == null || otherTiles.Count == 0)
             {
@@ -67,7 +67,7 @@ namespace BetterAI
             {
                 foreach (Tile pOtherTile in otherTiles)
                 {
-                    if (game().findPathDistance(pathfinderScoped.Value, pStartTile, pOtherTile, true, out int iValue))
+                    if (game().findPathDistance(pathfinderScoped.Value, pStartTile, pOtherTile, bLandRoute: !bWaterUnit, bWaterRoute: bWaterUnit, eWaterControlTeam: eWaterControlTeam, out int iValue))
                     {
                         if (iValue <= iMinStartTileDistance ||
                             (iValue == iMinStartTileDistance && pStartTile.distanceTile(pOtherTile) < pStartTile.distanceTile(pNearestCityTile)))
@@ -80,10 +80,10 @@ namespace BetterAI
 
                 if (pNearestCityTile != null)
                 {
-                    game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iDistance);
+                    game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, bLandRoute: !bWaterUnit, bWaterRoute: bWaterUnit, eWaterControlTeam: eWaterControlTeam, out int iDistance);
                     //original, to be restored when bounce on founding and city owner change is fixed:
                     //if (game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iValue) && iValue - (iDistance / 2) <= iMinStartTileDistance)
-                    if (game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, true, out int iValue) && iValue - ((iDistance - 2) / 2) - 1 <= iMinStartTileDistance)
+                    if (game().findPathDistance(pathfinderScoped.Value, this, pNearestCityTile, bLandRoute: !bWaterUnit, bWaterRoute: bWaterUnit, eWaterControlTeam: eWaterControlTeam, out int iValue) && iValue - ((iDistance - 2) / 2) - 1 <= iMinStartTileDistance)
                     {
                         return true;
                     }
@@ -100,8 +100,13 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
-        public virtual CityBiomeType getCityBiome()
+        public virtual CityBiomeType getCityBiome(BetterAICity pCity = null)
         {
+            if (pCity != null)
+            {
+                return pCity.getCityBiome();
+            }
+
             BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
 
             if (pCityTerritory != null)
@@ -112,10 +117,10 @@ namespace BetterAI
         }
 
         //lines 3077-3121
-        public override void setTerrain(TerrainType eNewValue, bool bValidateVegetation = false)
+        public override void setTerrain(TerrainType eNewValue, bool bValidateVegetation = false, bool bBuildAreas = true)
         {
             TerrainType eOldTerrain = getTerrain();
-            base.setTerrain(eNewValue);
+            base.setTerrain(eNewValue, bValidateVegetation: bValidateVegetation, bBuildAreas: bBuildAreas);
             if (eOldTerrain != eNewValue)
             {
                 BetterAICity pCityTerritory = (BetterAICity)cityTerritory();
@@ -125,26 +130,6 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                         END ###
   ##############################################*/
-
-/*####### Better Old World AI - Base DLL #######
-  ### Continue specialist on pillaged  START ###
-  ##############################################*/
-        //refering getImprovementFinished() lines 4504-4514
-        public virtual ImprovementType getImprovementFinishedorPillaged()
-        {
-            if (isImprovementUnfinished() && !isPillaged())
-            {
-                return ImprovementType.NONE;
-            }
-            else
-            {
-                return getImprovement();
-            }
-        }
-/*####### Better Old World AI - Base DLL #######
-  ### Continue specialist on pillaged    END ###
-  ##############################################*/
-
 
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
@@ -235,7 +220,7 @@ namespace BetterAI
                 {
                     if (pAdjacentTile.getTeam() == pCity.getTeam())
                     {
-                        if (pAdjacentTile.getImprovementClassFinished() == eImprovementClass)
+                        if (pAdjacentTile.getActiveImprovementClass() == eImprovementClass)
                         {
                             return true;
                         }
@@ -244,13 +229,6 @@ namespace BetterAI
             }
 
             return false;
-        }
-
-        //canHaveImprovement: lines 4805-5098
-        public override bool canCityHaveImprovement(City pCityTerritory, ImprovementType eImprovement, bool bForceImprovement)
-        {
-            if (pCityTerritory == null) return canUnownedTileHaveImprovement(eImprovement, eTeamTerritory: TeamType.NONE, bTestTerritory: false, bTestEnabled: true, bTestAdjacent: true, bTestReligion: true, bUpgradeImprovement: false, bForceImprovement);
-            return ((BetterAICity)pCityTerritory).canCityHaveImprovement(eImprovement, bForceImprovement: bForceImprovement);
         }
 
         public virtual bool canUnownedTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
@@ -300,6 +278,53 @@ namespace BetterAI
                     return false;
                 }
 
+                if (pImprovementInfo.mbNoVegetation && hasVegetation() && vegetation().mbRequiresUnlock)
+                {
+                    return false;
+                }
+
+
+                if (!bUpgradeImprovement)
+                {
+                    ImprovementType eAdjacentImprovementPrereq = pImprovementInfo.meAdjacentImprovementPrereq;
+
+                    if (eAdjacentImprovementPrereq != ImprovementType.NONE)
+                    {
+                        if (!adjacentToImprovementFinished(eAdjacentImprovementPrereq))
+                        {
+                            return false;
+                        }
+                    }
+
+                    SpecialistType eAdjacentSpecialistPrereq = pImprovementInfo.meAdjacentSpecialistPrereq;
+
+                    if (eAdjacentSpecialistPrereq != SpecialistType.NONE)
+                    {
+                        if (!adjacentToSpecialist(eAdjacentSpecialistPrereq))
+                        {
+                            return false;
+                        }
+                    }
+
+                    foreach (ImprovementClassType eClassPrereq in pImprovementInfo.maeAdjacentImprovementClassAllPrereq)
+                    {
+                        if (!adjacentToImprovementClassFinished(eClassPrereq))
+                        {
+                            return false;
+                        }
+                    }
+
+                }
+
+                ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
+                if (eImprovementClass != ImprovementClassType.NONE)
+                {
+                    if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !notAdjacentToImprovementClass(eImprovementClass))
+                    {
+                        return false;
+                    }
+                }
+
             }
 
             if (bTestTerritory)
@@ -313,7 +338,7 @@ namespace BetterAI
             return true;
         }
 
-        public virtual bool canCityTileHaveImprovement(BetterAICity pCity, ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public virtual bool canCityTileHaveImprovement(BetterAICity pCity, ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestTerritory = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bTestResource = true, bool bUpgradeImprovement = false, bool bForceImprovement = false, bool bTestCulture = true, bool bTestImprovement = true, bool bTestTerrain = true)
         {
             if (!isImprovementValid(eImprovement, pCity, bTestEnabled))
             {
@@ -333,7 +358,7 @@ namespace BetterAI
                     //    return false;
                     //}
 
-                    int iCount = pCity.getFinishedImprovementCount(eImprovementPrereq);
+                    int iCount = pCity.getActiveImprovementCount(eImprovementPrereq);
 
                     //if (iCount == 0)
                     //{
@@ -346,6 +371,22 @@ namespace BetterAI
                         {
                             return false;
                         }
+                    }
+                }
+            }
+
+            if (bTestTerrain)
+            {
+
+                if (infos().improvement(eImprovement).mbNoVegetation && hasVegetation() && vegetation().mbRequiresUnlock)
+                {
+                    //if (pCityTerritory == null)
+                    //{
+                    //    return false;
+                    //}
+                    if (pCity.hasPlayer() && !pCity.player().isRemoveAllVegetationUnlock())
+                    {
+                        return false;
                     }
                 }
             }
@@ -439,19 +480,6 @@ namespace BetterAI
                         }
                     }
 
-                    if (!bUpgradeImprovement)
-                    {
-                        ImprovementClassType eAdjacentImprovementClassPrereq = pImprovementInfo.meAdjacentImprovementClassPrereq;
-
-                        if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
-                        {
-                            if (!adjacentToImprovementClassFinished(eAdjacentImprovementClassPrereq))
-                            {
-                                return false;
-                            }
-                        }
-                    }
-
                     if (eImprovementClass != ImprovementClassType.NONE)
                     {
                         if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !notAdjacentToImprovementClass(eImprovementClass))
@@ -496,14 +524,14 @@ namespace BetterAI
                 ImprovementType eTestImprovement = ImprovementType.NONE;
                 if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
                 {
-                    if (pCity.player() == null || pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true) || !pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement: false, bForceImprovement: true))
+                    if (pCity.player() == null || pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true) || !pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory, bTestTerritory: bTestTerritory, bTestReligion: bTestReligion, bForceImprovement: true))
                     {
                         //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 3");
                         return false;
                     }
                     eTestImprovement = pImprovementInfo.meBonusAdjacentImprovement;
                 }
-                else if (eTestImprovement == ImprovementType.NONE && pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
+                else if (pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
                 {
                     bool bFound = false;
 
@@ -511,7 +539,7 @@ namespace BetterAI
                     {
                         if (infos().improvement(eLoopImprovement).meClass == pImprovementInfo.meBonusAdjacentImprovementClass)
                         {
-                            if (pCity.player() != null && pCity.player().canStartImprovement(eLoopImprovement, pCity, bTestTech: false, bForceImprovement: true) && pCity.canCityHaveImprovement(eLoopImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement: false, bForceImprovement: true))
+                            if (pCity.player() != null && pCity.player().canStartImprovement(eLoopImprovement, pCity, bTestTech: false, bForceImprovement: true) && pCity.canCityHaveImprovement(eImprovement, eTeamTerritory, bTestTerritory: bTestTerritory, bTestReligion: bTestReligion, bForceImprovement: true))
                             {
                                 bFound = true;
                                 eTestImprovement = eLoopImprovement;
@@ -546,7 +574,7 @@ namespace BetterAI
         }
 
         //canHaveImprovement: lines 4805-5098
-        public virtual bool canGeneralTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        public virtual bool canGeneralTileHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestTerritory = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bTestResource = true, bool bUpgradeImprovement = false, bool bForceImprovement = false, bool bTestCulture = true, bool bTestImprovement = true, bool bTestTerrain = true)
         {
             if (getTerrain() == TerrainType.NONE)
             {
@@ -559,7 +587,7 @@ namespace BetterAI
             }
 
             //we need this part after all
-            if (getCityTerritory() == -1 && !isImprovementValid(eImprovement, null, bTestEnabled))
+            if (getCityTerritory() == -1 && !isImprovementValid(eImprovement, null, bTestEnabled: bTestEnabled, bTestResource: bTestResource, bTestTerrain: bTestTerrain))
             {
                 return false;
             }
@@ -601,7 +629,7 @@ namespace BetterAI
                 }
             }
 
-            if (hasImprovementFinished())
+            if (hasActiveImprovement())
             {
                 if (improvement().mbPermanent)
                 {
@@ -645,57 +673,53 @@ namespace BetterAI
 
                 if (bTestAdjacent && !bSkipAdjacentCheck)
                 {
-                    if (bTestReligion && eReligionPrereq != ReligionType.NONE)
+
+                    if (!canHaveImprovementAdjacentTest(eImprovement, bTestReligion, bUpgradeImprovement))
                     {
-                        if (pImprovementInfo.mbNoAdjacentReligion)
-                        {
-                            if (adjacentToOtherImprovementReligion(eReligionPrereq))
-                            {
-                                return false;
-                            }
-                        }
+                        return false;
                     }
 
-                    if (!bUpgradeImprovement)
-                    {
-                        ImprovementType eAdjacentImprovementPrereq = pImprovementInfo.meAdjacentImprovementPrereq;
+                    //if (bTestReligion && eReligionPrereq != ReligionType.NONE)
+                    //{
+                    //    if (pImprovementInfo.mbNoAdjacentReligion)
+                    //    {
+                    //        if (adjacentToOtherImprovementReligion(eReligionPrereq))
+                    //        {
+                    //            return false;
+                    //        }
+                    //    }
+                    //}
 
-                        if (eAdjacentImprovementPrereq != ImprovementType.NONE)
-                        {
-                            if (!adjacentToImprovementFinished(eAdjacentImprovementPrereq))
-                            {
-                                return false;
-                            }
-                        }
-                    }
+                    //if (!bUpgradeImprovement)
+                    //{
+                    //    ImprovementType eAdjacentImprovementPrereq = pImprovementInfo.meAdjacentImprovementPrereq;
 
-                    if (!bUpgradeImprovement)
-                    {
-                        ImprovementClassType eAdjacentImprovementClassPrereq = pImprovementInfo.meAdjacentImprovementClassPrereq;
+                    //    if (eAdjacentImprovementPrereq != ImprovementType.NONE)
+                    //    {
+                    //        if (!adjacentToImprovementFinished(eAdjacentImprovementPrereq))
+                    //        {
+                    //            return false;
+                    //        }
+                    //    }
+                    //}
 
-                        if (eAdjacentImprovementClassPrereq != ImprovementClassType.NONE)
-                        {
-                            if (!adjacentToImprovementClassFinished(eAdjacentImprovementClassPrereq))
-                            {
-                                return false;
-                            }
-                        }
-                    }
-
-                    if (eImprovementClass != ImprovementClassType.NONE)
-                    {
-                        if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !notAdjacentToImprovementClass(eImprovementClass))
-                        {
-                            return false;
-                        }
-                    }
+                    //if (eImprovementClass != ImprovementClassType.NONE)
+                    //{
+                    //    if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !notAdjacentToImprovementClass(eImprovementClass))
+                    //    {
+                    //        return false;
+                    //    }
+                    //}
                 }
             }
             return true;
         }
 
         //lines 4805-5098
-        public override bool canHaveImprovement(ImprovementType eImprovement, City pCity = null, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+        //old vs new: + bTestResource + TestCulture + bTestImprovement + bTestTerrain
+        //public override bool canHaveImprovement(ImprovementType eImprovement, City pCity = null, TeamType eTeamTerritory = TeamType.NONE, bool bTestTerritory = true, bool bTestEnabled = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bUpgradeImprovement = false, bool bForceImprovement = false)
+
+        public override bool canHaveImprovement(ImprovementType eImprovement, City pCity = null, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestTerritory = true, bool bTestAdjacent = true, bool bTestReligion = true, bool bTestResource = true, bool bUpgradeImprovement = false, bool bForceImprovement = false, bool bTestCulture = true, bool bTestImprovement = true, bool bTestTerrain = true)
         {
             //split into 3:
             //tile.canGeneralTileHaveImprovement (not tied to city)
@@ -714,12 +738,15 @@ namespace BetterAI
             BetterAICity pCityTerritory = (BetterAICity)pCity ?? (BetterAICity)cityTerritory();
             if (pCityTerritory != null)
             {
-                if (!(pCityTerritory.canCityHaveImprovement(eImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestReligion, bUpgradeImprovement, bForceImprovement)))
+                if (!(pCityTerritory.canCityHaveImprovement(eImprovement, eTeamTerritory, bTestEnabled: bTestEnabled, bTestTerritory: bTestTerritory, bTestReligion: bTestReligion, 
+                    bForceImprovement: bForceImprovement, bTestCulture: bTestCulture, bTestImprovement: bTestImprovement)))
                 {
                     return false;
                 }
 
-                if (!(canCityTileHaveImprovement(pCityTerritory, eImprovement, eTeamTerritory, bTestTerritory, bTestEnabled, bTestAdjacent, bTestReligion, bUpgradeImprovement, bForceImprovement)))
+                if (!(canCityTileHaveImprovement(pCityTerritory, eImprovement, eTeamTerritory, bTestEnabled: bTestEnabled, bTestTerritory: bTestTerritory, 
+                    bTestAdjacent: bTestAdjacent, bTestReligion: bTestReligion, bTestResource: bTestResource, bUpgradeImprovement: bUpgradeImprovement, 
+                    bForceImprovement: bForceImprovement, bTestCulture: bTestCulture, bTestImprovement: bTestImprovement, bTestTerrain: bTestTerrain)))
                 {
                     return false;
                 }
@@ -739,11 +766,11 @@ namespace BetterAI
         }
 
         //lines 4991-
-        public override bool isImprovementValid(ImprovementType eImprovement, City pCityTerritory, bool bTestEnabled = true, bool bTestVegetationGrow = false, bool bFutureCity = false)
+        public override bool isImprovementValid(ImprovementType eImprovement, City pCityTerritory, bool bTestEnabled = true, bool bTestVegetationGrow = false, bool bTestResource = true, bool bFutureCity = false, bool bTestTerrain = true)
         {
             BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
 
-            if (!(base.isImprovementValid(eImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity)))
+            if (!(base.isImprovementValid(eImprovement, pCityTerritory, bTestEnabled: bTestEnabled, bTestVegetationGrow: bTestVegetationGrow, bTestResource: bTestResource, bFutureCity: bFutureCity, bTestTerrain: bTestTerrain)))
             {
                 return false;
             }
@@ -770,7 +797,7 @@ namespace BetterAI
                         {
                             if (pAdjacentTile.cityTerritory() == pCityTerritory || pAdjacentTile.cityTerritory() == null)
                             {
-                                if (pAdjacentTile.isImprovementValid(pImprovementInfo.meBonusAdjacentImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity))
+                                if (pAdjacentTile.isImprovementValid(pImprovementInfo.meBonusAdjacentImprovement, pCityTerritory, bTestEnabled: bTestEnabled, bTestVegetationGrow: bTestVegetationGrow, bTestResource: bTestResource, bFutureCity: bFutureCity, bTestTerrain: bTestTerrain))
                                 {
                                     bFound = true;
                                     break;
@@ -800,7 +827,7 @@ namespace BetterAI
                                 {
                                     if (pAdjacentTile.cityTerritory() == pCityTerritory || pAdjacentTile.cityTerritory() == null)
                                     {
-                                        if (pAdjacentTile.isImprovementValid(eLoopImprovement, pCityTerritory, bTestEnabled, bTestVegetationGrow, bFutureCity))
+                                        if (pAdjacentTile.isImprovementValid(eLoopImprovement, pCityTerritory, bTestEnabled: bTestEnabled, bTestVegetationGrow: bTestVegetationGrow, bTestResource: bTestResource, bFutureCity: bFutureCity, bTestTerrain: bTestTerrain))
                                         {
                                             bFound = true;
                                             break;
@@ -890,15 +917,18 @@ namespace BetterAI
 
             if (improvement().mbUrban)
             {
-                List<TileText> azTileTexts = null;
-                makeUrban(getOwner(), ref azTileTexts);
-                if (azTileTexts != null)
+                using var tileTextScoped = CollectionCache.GetListScoped<TileText>();
+                List<TileText> azTileTexts = tileTextScoped.Value;
+                makeUrban(getOwner(), azTileTexts);
+                foreach (TileText tileText in azTileTexts)
                 {
-                    foreach (TileText tileText in azTileTexts)
-                    {
-                        game().sendTileText(tileText);
-                    }
+                    game().sendTileText(tileText);
                 }
+            }
+
+            if (improvement().mbRoadFree)
+            {
+                setRoad(true);
             }
 
             if (improvement().mbWonder)
@@ -922,6 +952,7 @@ namespace BetterAI
                     if ((pCityTerritory != null) && (eImprovementClass != ImprovementClassType.NONE))
                     {
                         changeImprovementDevelopTurns(pCityTerritory.getImprovementClassDevelopChange(eImprovementClass));
+                        updateDevelopImprovement();
                     }
 
                     {
@@ -935,6 +966,7 @@ namespace BetterAI
                         if (iRand > 0)
                         {
                             changeImprovementDevelopTurns(game().randomNext(iRand));
+                            updateDevelopImprovement();
                         }
                     }
                 }
@@ -1085,7 +1117,7 @@ namespace BetterAI
   ### Units from improvement completion  END ###
   ##############################################*/
 
-                owner().doEventTrigger(infos().Globals.IMPROVEMENT_FINISHED_EVENTTRIGGER, cityTerritory(), this, (int)getImprovement());
+                owner().doEventTrigger(infos().Globals.IMPROVEMENT_FINISHED_EVENTTRIGGER, (int)getImprovement(), lTriggerSubjects: new() { cityTerritory(), this });
 
                 owner().incrementLeaderStat(infos().Globals.IMPROVEMENT_FINISHED_STAT);
 
@@ -1118,10 +1150,6 @@ namespace BetterAI
 
                 game().markDirtyGoalsAll(); // mark all dirty because of Wonder goals
 
-                if (improvement().miVP != 0)
-                {
-                    game().doVictory();
-                }
             }
 
             //END base.doImprovementFinished();
@@ -1207,9 +1235,8 @@ namespace BetterAI
   ### No immediate unit from improvement END ###
   ##############################################*/
 
-
-        //lines 8928-8992
-        public override bool isDirectionHostileZOC(DirectionType eDirection, Unit pUnit, TeamType eTeam, TribeType eTribe, TeamType eTeamVisibility, bool bIgnoreRiver)
+        //lines 9991-10060
+        public virtual bool isDirectionHostileZOC(DirectionType eDirection, Unit pUnit, TeamType eTeamVisibility, bool bIgnoreRiver = false)
         {
             Tile pAdjacentTile = tileAdjacent(eDirection);
             if (pAdjacentTile == null)
@@ -1220,35 +1247,16 @@ namespace BetterAI
             {
                 return false;
             }
-/*####### Better Old World AI - Base DLL #######
-  ### Land Unit Water Movement         START ###
-  ##############################################*/
-            //ZOC of units with mbAmphibiousEmbark extends over river
-            //if (!bIgnoreRiver && isRiver(eDirection))
-            //{
-            //    return false;
-            //}
 
-            bool bNoAttacker = ((eTeam == TeamType.NONE) && (eTribe == TribeType.NONE));
-
-            if (pAdjacentTile.hasCity() && isLand())
+            if (pAdjacentTile.isRevealedCity(eTeamVisibility) && isLand() && !pAdjacentTile.isNeutralOrFriendly(pUnit?.getTeam() ?? eTeamVisibility, pUnit?.getTribe() ?? TribeType.NONE, eTeamVisibility))
             {
-                if (bNoAttacker || pAdjacentTile.isHostileCity(eTeam, eTribe))
+                if ((pUnit == null) || pUnit.info().mbWater != isWater() || !(pUnit.hasIgnoreZOC()))
                 {
-                    if ((pUnit == null) || !(pUnit.hasIgnoreZOC(this)))
-                    {
-                        if (pAdjacentTile.city().getTribe() != infos().Globals.ANARCHY_TRIBE)
-                        {
-                            if (bIgnoreRiver || !isRiver(eDirection)) //BAI: only without river
-                            {
-                                return true;
-                            }
-                        }
-                    }
+                    return true;
                 }
             }
 
-            if (pAdjacentTile.hasUnit())
+            if (pAdjacentTile.hasUnit() && pAdjacentTile.isVisible(eTeamVisibility))
             {
                 using (var unitListScoped = CollectionCache.GetListScoped<int>())
                 {
@@ -1256,51 +1264,123 @@ namespace BetterAI
 
                     foreach (int iUnitID in unitListScoped.Value)
                     {
+
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement         START ###
+  ##############################################*/
+                        //Unit pAdjacentUnit = game().unit(iUnitID);
                         BetterAIUnit pAdjacentUnit = (BetterAIUnit)game().unit(iUnitID);
                         if (bIgnoreRiver || !isRiver(eDirection) || (pAdjacentUnit.mbAmphibiousEmbark && ((BetterAIInfoGlobals)infos().Globals).BAI_AMPHIBIOUS_ZOC_CROSSES_RIVER == 1)) //BAI: without river or with mbAmphibiousEmbark
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement         START ###
+  ##############################################*/
                         {
-                            if (pAdjacentUnit.hasZOC() && !(pAdjacentUnit.isHiddenFrom(eTeamVisibility)))
+                            if (pAdjacentUnit.hasZOC(pUnit?.getType() ?? UnitType.NONE) && pAdjacentUnit.info().mbWater == isWater() && !(pAdjacentUnit.isHiddenFrom(eTeamVisibility)))
                             {
-                                if (bNoAttacker || game().isHostileUnit(eTeam, eTribe, pAdjacentUnit))
+                                if (pUnit == null || !(pUnit.isHiddenTileFrom(eTeamVisibility, this)))
                                 {
-                                    if (pUnit == null)
+                                    if (game().isHostileUnit(pUnit?.getTeam() ?? eTeamVisibility, pUnit?.getTribe() ?? TribeType.NONE, pAdjacentUnit))
                                     {
-                                        return true;
-                                    }
-                                    if (!(pUnit.hasIgnoreZOC(this)))
-                                    {
-                                        return true;
-                                    }
-                                    if (pAdjacentUnit.isUnitTraitZOC(pUnit.getType()))
-                                    {
-                                        return true;
+                                        if (pUnit == null)
+                                        {
+                                            return true;
+                                        }
+                                        if (isWater())
+                                        {
+                                            if (!game().isWaterUnit(pUnit.getType(), pUnit.getPlayer(), TribeType.NONE)) // land tribe units can't ignore water ZOC, even raiders
+                                            {
+                                                return true;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (pUnit.info().mbWater)
+                                            {
+                                                return true;
+                                            }
+                                        }
+                                        if (!(pUnit.hasIgnoreZOC()))
+                                        {
+                                            return true;
+                                        }
+                                        if (pAdjacentUnit.isUnitZoc(pUnit.getType()))
+                                        {
+                                            return true;
+                                        }
                                     }
                                 }
                             }
                         }
+
+
+
                     }
                 }
             }
             return false;
         }
+        
+        //lines 10061-10097
+        public override bool isHostileZOC(Unit pUnit, TeamType eTeamVisibility, bool bIgnoreRiver = false, Dictionary<(int, DirectionType), bool> zocMap = null)
+        {
+            using var profileScope = new UnityProfileScope("Tile.isHostileZOC");
+
+            if (impassable())
+            {
+                return false;
+            }
+
+            if (hasCity())
+            {
+                return false;
+            }
+
+            if (hasActiveImprovement() && improvement().mbIgnoreZOC)
+            {
+                return false;
+            }
+
+            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+            {
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement         START ###
+  ##############################################*/
+                //if (bIgnoreRiver || !isRiver(eLoopDirection))
+                {
+                    if (zocMap == null || !zocMap.TryGetValue((getID(), eLoopDirection), out bool bZoc))
+                    {
+                        bZoc = isDirectionHostileZOC(eLoopDirection, pUnit, eTeamVisibility, bIgnoreRiver);
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
   ##############################################*/
+                        zocMap?.Add((getID(), eLoopDirection), bZoc);
+                    }
+                    if (bZoc)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
 
 /*####### Better Old World AI - Base DLL #######
   ### AI: Improvement Value            START ###
   ##############################################*/
         //lines 12161-12258 (Test v1.0.70827) but with added dEffectCityExtraCounts
-        public virtual int yieldOutputForGovernor(ImprovementType eImprovement, SpecialistType eSpecialist, YieldType eYield, City pCity, bool bCityEffects, bool bBaseOnly, bool bCost, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
+        public virtual int yieldOutputForGovernor(ImprovementType eImprovement, SpecialistType eSpecialist, YieldType eYield, City pCity, bool bCityEffects, bool bBaseOnly, bool bCost, Character pGovernor, bool bTheology = true, Dictionary<int, ImprovementType> newImprovements = null, Dictionary<EffectCityType, int> dEffectCityExtraCounts = null)
         {
             //using var profileScope = new UnityProfileScope("Game.tileYieldOutput");
 
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
-                return base.yieldOutputForGovernor(eImprovement, eSpecialist, eYield, pCity, bCityEffects, bBaseOnly, bCost, pGovernor);
+                return base.yieldOutputForGovernor(eImprovement, eSpecialist, eYield, pCity, bCityEffects, bBaseOnly, bCost, pGovernor, bTheology, newImprovements);
+
             }
 
-            int iOutput = yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor, dEffectCityExtraCounts);
+            int iOutput = yieldBaseForGovernor(eImprovement, eSpecialist, bTheology, eYield, pCity, pGovernor, newImprovements, dEffectCityExtraCounts);
+            //int iOutput = yieldBaseForGovernor(eImprovement, eSpecialist, bTheology, eYield, pCity, pGovernor, newImprovements);
 
             if (eImprovement != ImprovementType.NONE)
             {
@@ -1308,7 +1388,7 @@ namespace BetterAI
                 {
                     if (!bBaseOnly)
                     {
-                        iOutput = infos().utils().modify(iOutput, yieldModifierNoSpecialist(eImprovement, eYield, pCity, pGovernor, dEffectCityExtraCounts));
+                        iOutput = infos().utils().modify(iOutput, yieldModifierNoSpecialist(eImprovement, eYield, pCity, pGovernor, newImprovements, dEffectCityExtraCounts));
                     }
 
                     if (eSpecialist != SpecialistType.NONE)
@@ -1319,6 +1399,11 @@ namespace BetterAI
                             iOutput = infos().utils().modify(iOutput, infos().specialist(eSpecialist).maiImprovementClassModifier[eImprovementClass]);
                         }
                     }
+                }
+
+                if (!bBaseOnly)
+                {
+                    iOutput = infos().utils().modify(iOutput, getBaseYieldModifier());
                 }
 
                 if (!bBaseOnly && bCost)
@@ -1332,77 +1417,17 @@ namespace BetterAI
                 iOutput += yieldOutputCityEffects(eImprovement, eSpecialist, eYield, pGovernor, bBaseOnly, pCity);
             }
 
-            if (game().isOccurrenceActive(ePlayer: getOwner()))
-            {
-                for (int i = 0; i < game().getNumOccurrences(); ++i)
-                {
-                    OccurrenceData pLoopData = game().getOccurrenceDataAt(i);
-                    if (game().isOccurrenceActive(pLoopData.miID))
-                    {
-                        if (infos().occurrence(pLoopData.meType).mbNoYieldsOnCoast)
-                        {
-                            if (isSaltCoastLand() || isSaltCoastWater())
-                            {
-                                return 0;
-                            }
-                        }
-                        if (infos().occurrence(pLoopData.meType).mbNoYieldsOnFlatRiver)
-                        {
-                            if (isFreshWaterAccess() && isFlat())
-                            {
-                                return 0;
-                            }
-                        }
-                        if (infos().occurrence(pLoopData.meType).miBaseYieldCoastModifier != 0)
-                        {
-                            if (isSaltCoastLand() || isSaltCoastWater())
-                            {
-                                return infos().utils().modify(iOutput, infos().occurrence(pLoopData.meType).miBaseYieldCoastModifier);
-                            }
-                        }
-                        if (infos().occurrence(pLoopData.meType).miBaseYieldRiverModifier != 0)
-                        {
-                            if (isRiver())
-                            {
-                                return infos().utils().modify(iOutput, infos().occurrence(pLoopData.meType).miBaseYieldRiverModifier);
-                            }
-                        }
-                        if (infos().occurrence(pLoopData.meType).miTileBaseYieldModifier != 0)
-                        {
-                            if (pLoopData.isAffectedTile(getID()))
-                            {
-                                return infos().utils().modify(iOutput, infos().occurrence(pLoopData.meType).miTileBaseYieldModifier);
-                            }
-                        }
-                        if (infos().occurrence(pLoopData.meType).miTileBaseYieldModifierAdjacent != 0)
-                        {
-                            for (DirectionType eDirection = 0; eDirection < DirectionType.NUM_TYPES; ++eDirection)
-                            {
-                                Tile pAdjacent = tileAdjacent(eDirection, true);
-                                if (pAdjacent != null)
-                                {
-                                    if (pLoopData.isAffectedTile(pAdjacent.getID()))
-                                    {
-                                        return infos().utils().modify(iOutput, infos().occurrence(pLoopData.meType).miTileBaseYieldModifierAdjacent);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             return iOutput;
         }
 
         //lines 12366-12479 (Test v1.0.70827)
-        public virtual int yieldBaseForGovernor(ImprovementType eImprovement, YieldType eYield, City pCity, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
+        public virtual int yieldBaseForGovernor(ImprovementType eImprovement, SpecialistType eSpecialist, bool bTheology, YieldType eYield, City pCity, Character pGovernor, Dictionary<int, ImprovementType> newImprovements = null, Dictionary<EffectCityType, int> dEffectCityExtraCounts = null)
         {
             //using var profileScope = new UnityProfileScope("Game.tileYieldBaseOutputNoSpecialist");
 
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
-                return base.yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor);
+                return base.yieldBaseForGovernor(eImprovement, eSpecialist, bTheology, eYield, pCity, pGovernor, newImprovements);
             }
 
             ResourceType eResource = getResource();
@@ -1423,15 +1448,30 @@ namespace BetterAI
 
             int iOutput = 0;
 
-            infos().Helpers.yieldOutputImprovement(eImprovement, eYield, eResource, game(), ref iOutput);
+            infos().Helpers.yieldOutputImprovement(eImprovement, eYield, eResource, ref iOutput);
 
             iOutput += infos().improvement(eImprovement).maaiTerrainYieldOutput[getTerrain(), eYield];
+
+            if (bTheology)
+            {
+                ReligionType eReligionPrereq = infos().improvement(eImprovement).meReligionPrereq;
+                if (eReligionPrereq != ReligionType.NONE)
+                {
+                    for (TheologyType eLoopTheology = 0; eLoopTheology < infos().theologiesNum(); eLoopTheology++)
+                    {
+                        if (game().isReligionTheology(eReligionPrereq, eLoopTheology))
+                        {
+                            infos().Helpers.yieldOutputTheologySpecialist(eSpecialist, eYield, eLoopTheology, ref iOutput);
+                        }
+                    }
+                }
+            }
 
             {
                 int iValue = infos().improvement(eImprovement).maiAdjacentWonderYieldOutput[eYield];
                 if (iValue != 0)
                 {
-                    iOutput += (iValue * countTeamAdjacentWonders());
+                    iOutput += (iValue * countTeamAdjacentWonders(newImprovements));
                 }
             }
 
@@ -1460,12 +1500,21 @@ namespace BetterAI
             for (DirectionType eDirection = 0; eDirection < DirectionType.NUM_TYPES; ++eDirection)
             {
                 Tile pAdjacent = tileAdjacent(eDirection, true);
-                if (pAdjacent != null)
+                if (pAdjacent != null && pAdjacent.getTeam() == getTeam())
                 {
-                    ImprovementClassType eAdjacentImprovementClass = pAdjacent.getImprovementClassFinished();
-                    if (eAdjacentImprovementClass != ImprovementClassType.NONE)
+                    ImprovementType eAdjacentImprovement = pAdjacent.getActiveImprovement();
+                    if (newImprovements != null && newImprovements.TryGetValue(pAdjacent.getID(), out ImprovementType eNewImprovement))
                     {
-                        iOutput += infos().improvement(eImprovement).maaiAdjacentImprovementClassYield[eAdjacentImprovementClass, eYield];
+                        eAdjacentImprovement = eNewImprovement;
+                    }
+                    if (eAdjacentImprovement != ImprovementType.NONE)
+                    {
+                        iOutput += infos().improvement(eImprovement).maaiAdjacentImprovementYield[eAdjacentImprovement, eYield];
+
+                        if (infos().improvement(eAdjacentImprovement).meClass != ImprovementClassType.NONE)
+                        {
+                            iOutput += infos().improvement(eImprovement).maaiAdjacentImprovementClassYield[infos().improvement(eAdjacentImprovement).meClass, eYield];
+                        }
                     }
                 }
             }
@@ -1511,7 +1560,7 @@ namespace BetterAI
         }
 
         //lines 12481-12559 (Test v1.0.70827)
-        public virtual int yieldModifierNoSpecialist(ImprovementType eImprovement, YieldType eYield, City pCity, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
+        public virtual int yieldModifierNoSpecialist(ImprovementType eImprovement, YieldType eYield, City pCity, Character pGovernor, Dictionary<int, ImprovementType> newImprovements = null, Dictionary<EffectCityType, int> dEffectCityExtraCounts = null)
         {
             //using var profileScope = new UnityProfileScope("Game.tileYieldModifierNoSpecialist");
             if (eImprovement == ImprovementType.NONE)
@@ -1521,7 +1570,7 @@ namespace BetterAI
 
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
-                return base.yieldBaseForGovernor(eImprovement, eYield, pCity, pGovernor);
+                return base.yieldModifierNoSpecialist(eImprovement, eYield, pCity, pGovernor, newImprovements);
             }
 
             int iModifier = 0;
@@ -1562,8 +1611,6 @@ namespace BetterAI
                 }
             }
 
-            ImprovementClassType eImprovementClass = infos().improvement(eImprovement).meClass;
-
             for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
             {
                 Tile pAdjacentTile = tileAdjacent(eLoopDirection, true);
@@ -1574,18 +1621,14 @@ namespace BetterAI
 
                     if (pAdjacentTile.getTeam() == getTeam())
                     {
-                        ImprovementType eAdjacentImprovement = pAdjacentTile.getImprovementFinished();
-
+                        ImprovementType eAdjacentImprovement = pAdjacentTile.getActiveImprovement();
+                        if (newImprovements != null)
+                        {
+                            eAdjacentImprovement = newImprovements.GetOrDefault(pAdjacentTile.getID(), eAdjacentImprovement);
+                        }
                         if (eAdjacentImprovement != ImprovementType.NONE)
                         {
-                            ImprovementClassType eAdjacentImprovementClass = infos().improvement(eAdjacentImprovement).meClass;
-
-                            iModifier += infos().improvement(eAdjacentImprovement).maiAdjacentImprovementModifier[eImprovement];
-                            if ((eAdjacentImprovementClass != ImprovementClassType.NONE) && (eImprovementClass != ImprovementClassType.NONE))
-                            {
-                                iModifier += infos().improvement(eAdjacentImprovement).maiAdjacentImprovementClassModifier[eImprovementClass];
-                                iModifier += infos().improvementClass(eAdjacentImprovementClass).maiAdjacentImprovementClassModifier[eImprovementClass];
-                            }
+                            iModifier += infos().Helpers.adjacentYieldOutputImprovementModifier(eImprovement, eAdjacentImprovement);
                         }
                     }
                 }

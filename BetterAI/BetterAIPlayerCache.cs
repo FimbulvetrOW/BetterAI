@@ -11,25 +11,26 @@ namespace BetterAI
     {
         //does not inherit from PlayerCache and is supposed to be used in addition to it, not instead
 
-        protected ConcurrentDictionary<(YieldType, int), long> mdCityYieldValuesFlat = new ConcurrentDictionary<(YieldType, int), long>();
+        ConcurrentDictionary<(YieldType, int), int> mdCityYieldSpecializationModifiers = new ConcurrentDictionary<(YieldType, int), int>();
 
         public virtual void clear()
         {
-            mdCityYieldValuesFlat.Clear();
+            mdCityYieldSpecializationModifiers.Clear();
         }
 
         public BetterAIPlayerCache()
         {
         }
 
-        public virtual bool getCityYieldValueFlat(YieldType eYield, int iCityID, out long iValue)
+        public virtual bool getCityYieldSpecializationModifier(YieldType eYield, int iCityID, out int iModifier)
         {
-            return mdCityYieldValuesFlat.TryGetValue((eYield, iCityID), out iValue);
+            return mdCityYieldSpecializationModifiers.TryGetValue((eYield, iCityID), out iModifier);
         }
 
-        public virtual void setCityYieldValueFlat(YieldType eYield, int iCityID, long iValue)
+        public virtual void setCityYieldSpecializationModifier(YieldType eYield, int iCityID, int iModifier)
         {
-            mdCityYieldValuesFlat[(eYield, iCityID)] = iValue;
+            mdCityYieldSpecializationModifiers[(eYield, iCityID)] = iModifier;
         }
+
     }
 }

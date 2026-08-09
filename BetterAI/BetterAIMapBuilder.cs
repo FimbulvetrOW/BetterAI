@@ -57,10 +57,13 @@ namespace BetterAI
                 return;
             }
 
+            int iNumActiveCitySites = pGame.countCitySites(x => x.isCitySiteActive());
+
 /*####### Better Old World AI - Base DLL #######
   ### Less development cities variation START ##
   ##############################################*/
             int iMaxAIStartingCities = ((100 + ((BetterAIInfoGlobals)(pGame.infos().Globals)).BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT) * pGame.development().miAvgCities) / 100;
+            iMaxAIStartingCities = Math.Min(iMaxAIStartingCities, iNumActiveCitySites / pGame.getNumPlayersInt());
 
             // place cities (not necessarily the same number for each player)
             for (int i = 0; i < azSortedCitySites.Count && iNumTargetCities > 0; ++i)

@@ -83,7 +83,10 @@ namespace BetterAI
                                             {
                                                 if (infos().bonus(infos().eventPlayer(eLoopEventPlayer).meBonus).maiRatings[eBestRating] > 0)
                                                 {
-                                                    doBonus(infos().eventPlayer(eLoopEventPlayer).meBonus);
+                                                    for (int i = 0; i < iRatingsCount; i += infos().bonus(infos().eventPlayer(eLoopEventPlayer).meBonus).maiRatings[eBestRating])
+                                                    {
+                                                        doBonus(infos().eventPlayer(eLoopEventPlayer).meBonus);
+                                                    }
                                                     return;
                                                 }
                                             }

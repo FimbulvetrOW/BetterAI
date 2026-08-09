@@ -23,19 +23,89 @@ namespace BetterAI
 {
     public partial class BetterAIUnit : Unit
     {
+
+        //lines 1682-1734
+        //restoring version from before v1.0.84365: faster spawning after tribe unit killing
+        protected override void makeDead()
+        {
+            if (isAlive())
+            {
+                loadAlive(false);
+
+                Character pGeneral = general();
+                int iGeneralHopFrom = -1;
+
+                if (pGeneral != null)
+                {
+                    if (hasGeneralHopping())
+                    {
+                        iGeneralHopFrom = getTileID();
+                    }
+                    else
+                    {
+                        pGeneral.addTrait(infos().Globals.UNAVAILABLE_TRAIT);
+                    }
+                }
+
+                clearGeneral();
+
+                Character pExplorer = explorer();
+
+                if (pExplorer != null)
+                {
+                    pExplorer.addTrait(infos().Globals.UNAVAILABLE_TRAIT);
+                }
+
+                clearExplorer();
+
+                for (PlayerType eLoopPlayer = 0; eLoopPlayer < game().getNumPlayers(); eLoopPlayer++)
+                {
+                    setPlayerFamily(eLoopPlayer, FamilyType.NONE);
+                }
+
+                if (isTribe())
+                {
+                    Tile pBarbarianTile = game().findNearestTribeSettlement(tile(), getTribe());
+
+                    if (pBarbarianTile != null)
+                    {
+                        if (pBarbarianTile.getImprovementUnitTurns() > 4)
+                        {
+                            pBarbarianTile.setImprovementUnitTurns((pBarbarianTile.getImprovementUnitTurns() * 4) / 5);
+                        }
+                    }
+                }
+
+                setTileID(-1, player());
+
+                if (hasPlayer())
+                {
+                    if (canDamage())
+                    {
+                        game().updateLeaderOpinionAll();
+                    }
+
+                    if (iGeneralHopFrom != -1 && pGeneral != null)
+                    {
+                        pGeneral.makeGeneralOfClosestUnit(iGeneralHopFrom, false, true);
+                    }
+                }
+            }
+        }
+
         //lines 2052-2080
 
         protected override void setGeneralID(int iNewValue)
         {
+
             if (getGeneralID() != iNewValue)
             {
-                int iDeltaCriticalChance = 0;
+                Character pOldGeneral = general();
 
-                if (hasGeneral())
+                if (pOldGeneral != null)
                 {
-                    iDeltaCriticalChance -= general().getRatingCriticalChanceTotal();
-                    general().resetAllTraitEffectUnit(-1);
-                    general().setUnitGeneralID(-1);
+                    pOldGeneral.resetAllTraitEffectUnit(-1);
+                    pOldGeneral.setUnitID(-1);
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
   ##############################################*/
@@ -50,8 +120,7 @@ namespace BetterAI
 
                 if (hasGeneral())
                 {
-                    iDeltaCriticalChance += general().getRatingCriticalChanceTotal();
-                    general().setUnitGeneralID(getID());
+                    general().setUnitID(getID());
                     general().resetAllTraitEffectUnit(1);
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
@@ -62,11 +131,20 @@ namespace BetterAI
   ##############################################*/
                 }
 
-                if (iDeltaCriticalChance != 0)
+                if (pOldGeneral != null)
                 {
-                    resetCriticalHit();
+                    foreach (TraitType eTrait in pOldGeneral.getTraits())
+                    {
+                        clearSelfApplyBonusEffects(infos().trait(eTrait).meGeneralEffectUnit);
+                        clearSelfApplyBonusEffects(infos().trait(eTrait).meLeaderEffectUnit);
+                    }
+                    if (infos().Globals.LEADER_GENERAL_EFFECTUNIT != EffectUnitType.NONE)
+                    {
+                        clearSelfApplyBonusEffects(infos().Globals.LEADER_GENERAL_EFFECTUNIT);
+                    }
                 }
             }
+
         }
 
 
@@ -108,9 +186,9 @@ namespace BetterAI
   ### No Family for Enlisted Units     START ###
   ##############################################*/
         //lines 4438-4473
-        public override Unit convert(PlayerType ePlayer, TribeType eTribe, bool bEnlisted = false)
+        public override Unit convert(PlayerType ePlayer, TribeType eTribe)
         {
-            Unit pUnit = base.convert(ePlayer, eTribe, bEnlisted);
+            Unit pUnit = base.convert(ePlayer, eTribe);
             if (pUnit != null)
             {
                 if ((ePlayer != PlayerType.NONE) && ((BetterAIInfoGlobals)infos().Globals).BAI_ENLIST_NO_FAMILY == 1)
@@ -132,7 +210,7 @@ namespace BetterAI
 
         //lines 6143-6233
         // used by pathfinder
-        public override int getMovementCost(Tile pFromTile, Tile pToTile, int iCostSoFar)
+        public override int getMovementCost(Tile pFromTile, Tile pToTile, int iCostSoFar, bool bForceWaterControl)
         {
             //using var profileScope = new UnityProfileScope("Unit.getMovementCost");
             //using (new UnityProfileScope("Unit.getMovementCost"))
@@ -162,10 +240,12 @@ namespace BetterAI
                             }
                         }
                     }
-                    if (getTeam() != TeamType.NONE)
+
+                    if (bForceWaterControl || pToTile.isWaterMovement(getTeam(), getTribe(), TeamType.NONE))
                     {
-                        if (pToTile.isWaterMovement(getTeam(), getTribe(), TeamType.NONE))
+                        if (pToTile.getMovementCostExtra() == 0)
                         {
+                            //return movement();
                             return Math.Max(iCost, movement());
                         }
                     }
@@ -175,9 +255,6 @@ namespace BetterAI
                 }
 
                 DirectionType eDirection = pFromTile.getDirection(pToTile);
-
-                bool bFriendly = (!(pFromTile.isHostileUnit(this)) && !(pToTile.isHostileUnit(this)));
-                bool bRiver = pFromTile.isRiver(eDirection);
 
                 //moved to top
                 //int iCost = 0;
@@ -192,7 +269,7 @@ namespace BetterAI
                     iCost += pToTile.height().miMovementCost;
                 }
 
-                if (pToTile.hasVegetation())
+                if (pToTile.hasVegetation() && !hasIgnoreVegetationCost(pToTile.getVegetation()))
                 {
                     iCost += infos().vegetation(pToTile.getVegetation()).miMovementCost;
                 }
@@ -200,7 +277,7 @@ namespace BetterAI
                 iCost += game().getTerrainCostBonus(pToTile.getTerrain());
                 iCost += pToTile.getMovementCostExtra();
 
-                bool bRiverCrossing = (bRiver && !pFromTile.isBridge(pToTile, getPlayer()));
+                bool bRiverCrossing = (pFromTile.isRiver(eDirection) && !pFromTile.isBridge(pToTile, getPlayer()));
                 if (bRiverCrossing)
                 {
                     iCost += infos().Globals.RIVER_CROSSING_COST_EXTRA;
@@ -237,7 +314,7 @@ namespace BetterAI
                     iCost += game().getRiverCostBonus();
                 }
 
-                if (bFriendly)
+                if (pFromTile.isNeutralOrFriendly(getTeam(), getTribe()) && pToTile.isNeutralOrFriendly(getTeam(), getTribe()))
                 {
                     if (infos().Globals.RIVER_MOVEMENT_COST != -1)
                     {
@@ -284,7 +361,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Better bounce tile search        START ###
   ##############################################*/
-        public virtual bool isHiddenTileFrom(TeamType eTeam, Tile pTile, bool bSameArea)
+        public virtual bool isHiddenTileFrom(TeamType eTeam, Tile pTile, bool bSameArea, bool bIncludeTemp = true)
         {
 
             if (bSameArea && pTile.getArea() != tile().getArea())
@@ -292,7 +369,7 @@ namespace BetterAI
                 return false;
             }
 
-            return base.isHiddenTileFrom(eTeam, pTile);
+            return base.isHiddenTileFrom(eTeam, pTile, bIncludeTemp: bIncludeTemp);
         }
         public virtual bool isHiddenTileFromAndCloser(TeamType eTeam, Tile pTestTile, HashSet<Tile> otherTiles, bool bSameArea = false)
         {
@@ -345,7 +422,7 @@ namespace BetterAI
 
                 //no check for team territory here. Could have somewhat undesired results if city territory crosses blockers but that should be extremely rare.
 
-                if (!(((BetterAITile)pTestTile).isPathShorterToOtherTiles(tile(), otherTiles)))
+                if (!(((BetterAITile)pTestTile).isPathShorterToOtherTiles(tile(), otherTiles, eTeam, info().mbWater)))
                 {
                     return false;
                 }
@@ -461,7 +538,8 @@ namespace BetterAI
                         if (pTile != null) return pTile;
 
                         //units won't jump to different land masses/water bodies if there is any tile available, even if it's further away.
-                        pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, pRequiresHidden: null, pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
+                        //pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, pRequiresHidden: null, pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
+                        pTile = ((BetterAIGame)game()).findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, iRequiresArea, null, null, pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
                         if (pTile != null) return pTile;
                     }
                 } while (switchOffAreaLimit());
@@ -470,7 +548,8 @@ namespace BetterAI
   ### Better bounce tile search          END ###
   ##############################################*/
 
-                pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, -1, null, pRequiresHidden: null, pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
+                //pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, false, -1, null, pRequiresHidden: null, pAvoidTile: pAvoidTile, pIgnoreUnit: pIgnoreUnit);
+                pTile = game().findUnitTileNearby(getType(), tile(), getPlayer(), getTribe(), eTeamTerritoryAvoid, false, null, -1, null, null, pAvoidTile, pIgnoreUnit);
 
                 return pTile;
             }
@@ -493,32 +572,36 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Cities immune to critial         START ###
   ##############################################*/
+        //this is now in base game, and infos().Globals.ALLOW_CITY_CRITICAL_HITS is 0 by default
         //lines 8210-8218
-        public override int attackCityDamage(Tile pFromTile, City pToCity, bool bCritical, int iPercent = 100, int iExtraDamage = 0, bool bCheckOurUnits = true, int iExtraModifier = 0)
-        {
-            int iDamage = infos().Helpers.getAttackDamage(attackCityStrength(pFromTile, pToCity, bCheckOurUnits, iExtraModifier), pToCity.strength(), iPercent);
-            if (bCritical && (((BetterAIInfoGlobals)infos().Globals).BAI_CITIES_IMMUNE_TO_CRITICAL != 1))
-            {
-                iDamage *= 2;
-            }
-            return Math.Min(iDamage, pToCity.getHP() - iExtraDamage);
-        }
+        //public override int attackCityDamage(Tile pFromTile, City pToCity, TeamType eVisibilityTeam, bool bCritical, int iPercent = 100, int iExtraDamage = 0, bool bCheckOurUnits = true, int iExtraModifier = 0)
+        //{
+        //    int iDamage = infos().Helpers.getAttackDamage(attackCityStrength(pFromTile, pToCity, eVisibilityTeam, bCheckOurUnits, iExtraModifier), pToCity.strength(), iPercent);
+        //    if (bCritical && (((BetterAIInfoGlobals)infos().Globals).BAI_CITIES_IMMUNE_TO_CRITICAL != 1))
+        //    {
+        //        iDamage *= 2;
+        //    }
+        //    return Math.Min(iDamage, pToCity.getHP() - iExtraDamage);
+        //}
 /*####### Better Old World AI - Base DLL #######
   ### Cities immune to critial           END ###
   ##############################################*/
 
+        //there are no real changes here but I got null ref errors before so this stays
         //lines 8219-8534
         public override void attackUnitOrCity(Tile pToTile, Player pActingPlayer)
         {
+
             MohawkAssert.Assert(canAttackUnitOrCity(pToTile, pActingPlayer));
 
             bool bSettlementAttack = pToTile.hasImprovementTribeSite();
             bool bCityAttack = canDamageCity(pToTile);
             bool bOwnerActing = pActingPlayer != null && pActingPlayer == player();
 
-            BetterAIUnit pDefendingUnit = (BetterAIUnit)pToTile.defendingUnit();
-            List<int> aiAdditionalDefendingUnits = null;
-            List<AttackOutcome> aeAdditionalDefendingUnitOutcomes = null;
+            Unit pDefendingUnit = pToTile.defendingUnit();
+            Character pToGeneral = pDefendingUnit?.general();
+            using var defendingUnitsScoped = CollectionCache.GetListScoped<Attack>();
+            List<Attack> apDefendingTileOutcomes = defendingUnitsScoped.Value;
             City pCity = pToTile.city();
 
             int cityHpBeforeAttacked = -1;
@@ -557,20 +640,12 @@ namespace BetterAI
                 }
             }
 
-            bool bEvent = false;
+            using var tileTextScoped = CollectionCache.GetListScoped<TileText>();
+            List<TileText> azTileTexts = tileTextScoped.Value;
 
-            List<TileText> azTileTexts = null;
+            int iCounterDamage = getCounterAttackDamage(pDefendingUnit, pToTile, TeamType.NONE);
 
-            int iCounterDamage = getCounterAttackDamage((bCityAttack) ? null : pDefendingUnit, pToTile);
-
-            int iKills = attackTile(pFromTile, pToTile, true, 100, pActingPlayer, ref azTileTexts, out AttackOutcome eOutcome, ref bEvent);
-
-            if (bOwnerActing && (pDefendingUnit != null) && (eOutcome == AttackOutcome.NORMAL) && !bEvent)
-            {
-                bEvent = player().doEventTrigger(((isWaterAttack(pDefendingUnit)) ? infos().Globals.UNIT_COMBAT_WATER_EVENTTRIGGER : infos().Globals.UNIT_COMBAT_EVENTTRIGGER), this, pDefendingUnit);
-            }
-
-            bool bAdvance = canAdvanceAfterAttack(pFromTile, pToTile, pDefendingUnit, (iKills > 0), true, pActingPlayer);
+            int iKills = attackTile(pFromTile, pToTile, true, 100, pActingPlayer, azTileTexts, apDefendingTileOutcomes);
 
             for (AttackType eLoopAttack = 0; eLoopAttack < infos().attacksNum(); eLoopAttack++)
             {
@@ -587,90 +662,87 @@ namespace BetterAI
 
                             if (canDamageUnitOrCity(pLoopTile) && pLoopTile.isVisible(getTeam()))
                             {
-                                BetterAIUnit pLoopDefendingUnit = (BetterAIUnit)pLoopTile.defendingUnit();
+                                Unit pLoopDefendingUnit = pLoopTile.defendingUnit();
 
-                                iKills += attackTile(pFromTile, pLoopTile, false, attackPercent(eLoopAttack), pActingPlayer, ref azTileTexts, out AttackOutcome eLoopOutcome, ref bEvent);
-
-                                if (pLoopDefendingUnit != null)
-                                {
-                                    if (aiAdditionalDefendingUnits == null)
-                                    {
-                                        aiAdditionalDefendingUnits = new List<int>();
-                                    }
-                                    aiAdditionalDefendingUnits.Add(pLoopDefendingUnit.getID());
-                                    if (aeAdditionalDefendingUnitOutcomes == null)
-                                    {
-                                        aeAdditionalDefendingUnitOutcomes = new List<AttackOutcome>();
-                                    }
-                                    aeAdditionalDefendingUnitOutcomes.Add(eLoopOutcome);
-                                }
+                                iKills += attackTile(pFromTile, pLoopTile, false, attackPercent(eLoopAttack), pActingPlayer, azTileTexts, apDefendingTileOutcomes);
                             }
                         }
                     }
                 }
             }
 
-            changeDamageText(iCounterDamage, ref azTileTexts);
+            changeDamageText(iCounterDamage, azTileTexts);
 
-            if (info().mbMelee && pDefendingUnit != null)
+            if (iKills > 0 && hasHealKill())
+            {
+                heal(pActingPlayer, bActive: false);
+            }
+
+            if (info().mbMelee && pDefendingUnit != null && pToTile.isWater() == pFromTile.isWater())
             {
                 if (pDefendingUnit.isFortify())
                 {
-                    pDefendingUnit.changeFortifyTurns(-1);
+                    ((BetterAIUnit)pDefendingUnit).changeFortifyTurns(-1);
                 }
-                if (pDefendingUnit.isTestudo())
+                if (pDefendingUnit.isFormation())
                 {
-                    pDefendingUnit.changeTestudoTurns(-1);
-                }
-            }
-
-            if (hasStun(pToTile))
-            {
-                if ((pDefendingUnit != null) && pDefendingUnit.isAlive())
-                {
-                    pDefendingUnit.doCooldown(infos().Globals.STUNNED_COOLDOWN, bTestTurn: true, bForce: true);
-
-                    game().addTileTextAllPlayers(ref azTileTexts, pToTile.getID(), () => TextManager.TEXT("TEXT_GAME_UNIT_STUNNED"));
+                    ((BetterAIUnit)pDefendingUnit).changeFormationTurns(-1);
                 }
             }
 
-            if (hasPush(pToTile))
+            if (!bCityAttack && pDefendingUnit != null && pDefendingUnit.isAlive())
             {
-                using (var unitListScoped = CollectionCache.GetListScoped<int>())
+                if (hasStun(pDefendingUnit, pToTile))
                 {
-                    pToTile.getAliveUnits(unitListScoped.Value);
+                    pDefendingUnit.doCooldown(infos().Globals.STUNNED_COOLDOWN, bTestTurn: true, bForce: true, bOwnAction: false);
+                    game().addTileTextAllPlayers(azTileTexts, pToTile.getID(), () => TextManager.TEXT("TEXT_GAME_UNIT_STUNNED"));
+                }
 
-                    foreach (int iLoopUnit in unitListScoped.Value)
+                if (hasImmobilize(pDefendingUnit))
+                {
+                    pDefendingUnit.doCooldown(infos().Globals.IMMOBILE_COOLDOWN, bTestTurn: true, bForce: true, bOwnAction: false);
+                    game().addTileTextAllPlayers(azTileTexts, pToTile.getID(), () => TextManager.TEXT("TEXT_GAME_IMMOBILE"));
+                }
+
+                if (hasPush(pDefendingUnit))
+                {
+                    using (var unitListScoped = CollectionCache.GetListScoped<int>())
                     {
-                        BetterAIUnit pLoopUnit = (BetterAIUnit)game().unit(iLoopUnit);
+                        pToTile.getAliveUnits(unitListScoped.Value);
 
-                        if (canDamageUnit(pLoopUnit))
+                        foreach (int iLoopUnit in unitListScoped.Value)
                         {
-                            Tile pPushTile = getPushTile(pLoopUnit, pFromTile, pToTile);
-                            if (pPushTile != null)
-                            {
-                                pLoopUnit.setTileID(pPushTile.getID(), true, true, pActingPlayer, ref azTileTexts);
+                            Unit pLoopUnit = game().unit(iLoopUnit);
 
-                                if ((pLoopUnit.getCooldown() == infos().Globals.UNLIMBERED_COOLDOWN) ||
-                                    (pLoopUnit.getCooldown() == infos().Globals.ANCHORED_COOLDOWN))
+                            if (canDamageUnit(pLoopUnit))
+                            {
+                                Tile pPushTile = getPushTile(pLoopUnit, pFromTile, pToTile);
+                                if (pPushTile != null)
                                 {
-                                    pLoopUnit.doCooldown(infos().Globals.ATTACKED_COOLDOWN, bForce: true);
-                                }
+                                    ((BetterAIUnit)pLoopUnit).setTileID(pPushTile.getID(), true, true, pActingPlayer, azTileTexts);
+
+                                    if ((pLoopUnit.getCooldown() == infos().Globals.UNLIMBERED_COOLDOWN) || (pLoopUnit.getCooldown() == infos().Globals.ANCHORED_COOLDOWN))
+                                    {
+                                        pLoopUnit.doCooldown(infos().Globals.ATTACKED_COOLDOWN, bForce: true);
+                                    }
+
 
 /*####### Better Old World AI - Base DLL #######
   ### Protect against Null Ref         START ###
   ##############################################*/
-                                //game().addTileTextAllPlayers(ref azTileTexts, pLoopUnit.getTileID(), () => TextManager.TEXT(infos().effectUnit(getPushEffectUnit()).mName));
-                                game().addTileTextAllPlayers(ref azTileTexts, pLoopUnit.getTileID(), () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC"));
+                                    //game().addTileTextAllPlayers(ref azTileTexts, pLoopUnit.getTileID(), () => TextManager.TEXT(infos().effectUnit(getPushEffectUnit()).mName));
+                                    //game().addTileTextAllPlayers(azTileTexts, pLoopUnit.getTileID(), () => TextManager.TEXT(infos().effectUnit(getPushEffect()).mName));
+                                    game().addTileTextAllPlayers(azTileTexts, pLoopUnit.getTileID(), () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC"));
 /*####### Better Old World AI - Base DLL #######
   ### Protect against Null Ref           END ###
   ##############################################*/
-                            }
-                            else
-                            {
-                                pLoopUnit.doCooldown(infos().Globals.STUNNED_COOLDOWN, bTestTurn: true, bForce: true);
 
-                                game().addTileTextAllPlayers(ref azTileTexts, pLoopUnit.getTileID(), () => TextManager.TEXT("TEXT_GAME_UNIT_STUNNED"));
+
+                                }
+                                else if (infos().Globals.PANIC_NO_ESCAPE_EFFECTUNIT != EffectUnitType.NONE)
+                                {
+                                    pLoopUnit.applyEffectUnitTurns(infos().Globals.PANIC_NO_ESCAPE_EFFECTUNIT, 1, infos().Globals.PANIC_NO_ESCAPE_EFFECTUNIT_TURNS, azTileTexts);
+                                }
                             }
                         }
                     }
@@ -681,33 +753,31 @@ namespace BetterAI
 
             if (getHP() > 0)
             {
-                doXP(iKills, ref azTileTexts);
+                doCombatXP(iKills, azTileTexts);
 
-                if (bAdvance)
+                if (apDefendingTileOutcomes.Count > 0 && apDefendingTileOutcomes[0].eOutcome.HasFlag(AttackOutcome.ADVANCE))
                 {
-                    setTileID(pToTile.getID(), true, true, pActingPlayer, ref azTileTexts);
+                    setTileID(pToTile.getID(), true, true, pActingPlayer, azTileTexts);
                 }
 
-                if ((pDefendingUnit != null) && (pDefendingUnit.getHP() == 0) && (bAdvance ? canHaveRoutCooldown(pToTile, pToTile, pDefendingUnit, pActingPlayer) : canRoutAfterNoAdvance(pToTile, pFromTile, pDefendingUnit, pActingPlayer)))
+                if (apDefendingTileOutcomes.Count > 0 && apDefendingTileOutcomes[0].eOutcome.HasFlag(AttackOutcome.ROUT))
                 {
                     doCooldown(infos().Globals.ROUT_COOLDOWN);
-
                     if (hasPlayer())
                     {
                         changeRoutChain(1, pActingPlayer);
-                        if (bOwnerActing)
-                        {
-                            player().doEventTrigger(infos().Globals.UNIT_ROUT_EVENTTRIGGER, this);
-                        }
                     }
+
 /*####### Better Old World AI - Base DLL #######
   ### Protect against Null Ref         START ###
   ##############################################*/
-                    //game().addTileTextAllPlayers(ref azTileTexts, pFromTile.getID(), () => TextManager.TEXT(infos().effectUnit(getRoutEffectUnit()).mName));
-                    game().addTileTextAllPlayers(ref azTileTexts, pFromTile.getID(), () => TextManager.TEXT("TEXT_EFFECTUNIT_ROUT"));
+                    //game().addTileTextAllPlayers(ref azTileTexts, pLoopUnit.getTileID(), () => TextManager.TEXT(infos().effectUnit(getPushEffectUnit()).mName));
+                    //game().addTileTextAllPlayers(azTileTexts, pFromTile.getID(), () => TextManager.TEXT(infos().effectUnit(getDefenderRoutEffectUnit(pDefendingUnit)).mName));
+                    game().addTileTextAllPlayers(azTileTexts, pFromTile.getID(), () => TextManager.TEXT("TEXT_EFFECTUNIT_PANIC"));
 /*####### Better Old World AI - Base DLL #######
   ### Protect against Null Ref           END ###
   ##############################################*/
+
                 }
                 else
                 {
@@ -720,7 +790,6 @@ namespace BetterAI
 
                     doCooldown(infos().Globals.ATTACK_COOLDOWN, bTestTurn: true);
                 }
-
             }
             else
             {
@@ -740,11 +809,11 @@ namespace BetterAI
 
                     if (pDefendingUnit.isTribe())
                     {
-                        player().addMemoryTribe(infos().Globals.TRIBE_ATTACKED_UNIT_MEMORY, pDefendingUnit.getTribe());
+                        player().addMemory(infos().Globals.TRIBE_ATTACKED_UNIT_MEMORY, eTribe: pDefendingUnit.getTribe());
                     }
                     else
                     {
-                        player().addMemoryPlayer(infos().Globals.PLAYER_ATTACKED_UNIT_MEMORY, pDefendingUnit.getPlayer());
+                        player().addMemory(infos().Globals.PLAYER_ATTACKED_UNIT_MEMORY, ePlayer: pDefendingUnit.getPlayer());
                     }
 
                     if (pDefendingUnit.isTribe())
@@ -785,7 +854,7 @@ namespace BetterAI
                             {
                                 if (game().isHostileUnit(TeamType.NONE, eLoopTribe, pDefendingUnit))
                                 {
-                                    player().addMemoryTribe(infos().Globals.TRIBE_ATTACKED_ENEMY_MEMORY, eLoopTribe);
+                                    player().addMemory(infos().Globals.TRIBE_ATTACKED_ENEMY_MEMORY, eTribe: eLoopTribe);
                                 }
                             }
                         }
@@ -796,11 +865,11 @@ namespace BetterAI
                 {
                     if (pCity.isTribe())
                     {
-                        player().addMemoryTribe(infos().Globals.TRIBE_ATTACKED_SETTLEMENT_MEMORY, pCity.getTribe());
+                        player().addMemory(infos().Globals.TRIBE_ATTACKED_SETTLEMENT_MEMORY, eTribe: pCity.getTribe());
                     }
                     else
                     {
-                        player().addMemoryPlayer(infos().Globals.PLAYER_ATTACKED_CITY_MEMORY, pCity.getPlayer());
+                        player().addMemory(infos().Globals.PLAYER_ATTACKED_CITY_MEMORY, ePlayer: pCity.getPlayer());
                     }
 
                     if (!(pCity.isTribe()))
@@ -825,7 +894,7 @@ namespace BetterAI
                             {
                                 if (game().isHostileCity(TeamType.NONE, eLoopTribe, pCity))
                                 {
-                                    player().addMemoryTribe(infos().Globals.TRIBE_ATTACKED_ENEMY_MEMORY, eLoopTribe);
+                                    player().addMemory(infos().Globals.TRIBE_ATTACKED_ENEMY_MEMORY, eTribe: eLoopTribe);
                                 }
                             }
                         }
@@ -833,9 +902,74 @@ namespace BetterAI
                 }
             }
 
-            game().sendUnitBattleAction(this, pDefendingUnit, pFromTile, pToTile, pDefendingUnit?.tile(), eOutcome, azTileTexts, pActingPlayer?.getPlayer() ?? PlayerType.NONE, bSettlementAttack, cityHpBeforeAttacked, aiAdditionalDefendingUnits, aeAdditionalDefendingUnitOutcomes);    // send asap, since unit may have been removed
-            game().doNetwork(); // to update health bars
-            game().sendPendingClientMessages();
+            for (int i = 0; i < apDefendingTileOutcomes.Count; ++i)
+            {
+                if (doAttackEvents(apDefendingTileOutcomes[i], i == 0, pActingPlayer))
+                {
+                    break;
+                }
+            }
+
+            // Ordering note: do not move this check before doAttackEvents because the events we may trigger
+            // depend on whether the unit routed naturally. so this is a followup check specifically for advancing the attacker
+            if (getHP() > 0 && pDefendingUnit != null && pDefendingUnit.isDead())
+            {
+                for (int i = 0; i < apDefendingTileOutcomes.Count; ++i)
+                {
+                    Attack zAttack = apDefendingTileOutcomes[i];
+                    if (zAttack.pUnit != pDefendingUnit)
+                    {
+                        continue;
+                    }
+                    if (!zAttack.eOutcome.HasFlag(AttackOutcome.KILL) && !zAttack.eOutcome.HasFlag(AttackOutcome.CAPTURED) && !zAttack.eOutcome.HasFlag(AttackOutcome.ADVANCE)
+                        && canAdvanceAfterAttack(pFromTile, pToTile, pDefendingUnit, true, bTestUnits: true, pActingPlayer))
+                    {
+                        setTileID(pToTile.getID(), true, true, pActingPlayer, azTileTexts);
+                        zAttack.eOutcome |= AttackOutcome.ADVANCE;
+
+                        if (canHaveRoutCooldown(pToTile, pToTile, pDefendingUnit, pActingPlayer))
+                        {
+                            zAttack.eOutcome |= AttackOutcome.ROUT;
+                            doCooldown(infos().Globals.ROUT_COOLDOWN, bForce: true);
+                            if (hasPlayer())
+                            {
+                                changeRoutChain(1, pActingPlayer);
+                            }
+                            game().addTileTextAllPlayers(azTileTexts, pFromTile.getID(), () => TextManager.TEXT(infos().effectUnit(getDefenderRoutEffectUnit(pDefendingUnit)).mName));
+                        }
+
+                        apDefendingTileOutcomes[i] = zAttack;
+                    }
+                    break;
+                }
+            }
+
+
+            if (hasPlayer())
+            {
+                if (!(pToTile.hasNotHiddenUnit(getTeam())))
+                {
+                    if (pToTile.hasImprovementTribeSite())
+                    {
+                        player().addMemory(infos().Globals.TRIBE_ATTACKED_SETTLEMENT_MEMORY, eTribe: pToTile.getImprovementTribeSite());
+
+                        player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CAMP_DESTROYED_LOG_DATA", HelpText.buildTribeLinkVariable(pToTile.getImprovementTribeSite(), game()), HelpText.buildImprovementLinkVariable(pToTile.getImprovement(), game(), pToTile)), GameLogType.CAMP_DESTROYED, getTileID());
+                    }
+
+                    if (pActingPlayer != null)
+                    {
+                        game().doTileTexts(mapBuilders => pToTile.doImprovementBonus(mapBuilders, this, pActingPlayer, bOwnerActing), pToTile.getID(), azTileTexts, ePlayer => game().areTeamsAllied(game().player(ePlayer).getTeam(), pActingPlayer.getTeam()));
+                    }
+                }
+            }
+
+            if (apDefendingTileOutcomes.Count > 0)
+            {
+                game().sendUnitBattleAction(this, pDefendingUnit, pFromTile, pToTile, pDefendingUnit?.tile(), apDefendingTileOutcomes, azTileTexts, pActingPlayer?.getPlayer() ?? PlayerType.NONE, bSettlementAttack, cityHpBeforeAttacked);    // send asap, since unit may have been removed
+                game().doNetwork(); // to update health bars
+                game().sendPendingClientMessages();
+            }
+
         }
 
         //lines 8432-8470
@@ -911,174 +1045,13 @@ namespace BetterAI
 
 
         //lines 8904-9037
-        protected override int attackTile(Tile pFromTile, Tile pToTile, bool bTargetTile, int iAttackPercent, Player pActingPlayer, ref List<TileText> azTileTexts, out AttackOutcome eOutcome, ref bool bEvent)
-        {
-            int iKills = 0;
-            City pTargetCity = null;
-            bool bOwnerActing = pActingPlayer != null && pActingPlayer == player();
+        //attackTile: Cities immune to critial no longer needed
 
-            bool bCritical = false;
+
+
 /*####### Better Old World AI - Base DLL #######
-  ### Cities immune to critial         START ###
+  ### Attack Heal                      START ###
   ##############################################*/
-            //if (hasPlayer() && iAttackPercent > 0 && bTargetTile)
-            //{
-            //    bCritical = game().isGameOption(infos().Globals.GAMEOPTION_CRITICAL_HIT_PREVIEW) ? isCriticalHit() : randomPercent(criticalChance());
-            //}
-/*####### Better Old World AI - Base DLL #######
-  ### Cities immune to critial           END ###
-  ##############################################*/
-
-            if (canDamageCity(pToTile))
-            {
-/*####### Better Old World AI - Base DLL #######
-  ### Cities immune to critial         START ###
-  ##############################################*/
-                if (hasPlayer() && iAttackPercent > 0 && bTargetTile && (((BetterAIInfoGlobals)infos().Globals).BAI_CITIES_IMMUNE_TO_CRITICAL != 1))
-                {
-                    bCritical = game().isGameOption(infos().Globals.GAMEOPTION_CRITICAL_HIT_PREVIEW) ? isCriticalHit() : randomPercent(criticalChance());
-                }
-/*####### Better Old World AI - Base DLL #######
-  ### Cities immune to critial           END ###
-  ##############################################*/
-
-                pTargetCity = pToTile.city();
-
-                int iDamage = attackCityDamage(pFromTile, pTargetCity, bCritical, (iAttackPercent * 1));
-
-                game().addTileTextAllPlayers(ref azTileTexts, pTargetCity.getTileID(), () => TextManager.TEXT("TEXT_GAME_UNIT_ATTACK_DAMAGE", TEXTVAR(iDamage)));
-
-                pTargetCity.changeDamage(iDamage);
-
-                if (pTargetCity.hasPlayer())
-                {
-                    Player pTargetPlayer = pTargetCity.player();
-
-                    pTargetCity.processYield(infos().Globals.DISCONTENT_YIELD, infos().Globals.CITY_ATTACKED_DISCONTENT);
-
-                    pTargetPlayer.pushLogData(() => TextManager.TEXT("TEXT_GAME_CITY_ATTACKED_LOG_DATA", HelpText.buildCityLinkVariable(pTargetCity, pTargetPlayer), HelpText.buildUnitOwnerLinkVariable(this, game(), pTargetPlayer), HelpText.buildUnitLinkVariable(this, pTargetPlayer), HelpText.buildYieldValueIconLinkVariable(infos().Globals.DISCONTENT_YIELD, infos().Globals.CITY_ATTACKED_DISCONTENT, true, false, Constants.YIELDS_MULTIPLIER)), GameLogType.CITY_ATTACKED, pTargetCity.getTileID(), infos().unit(getType()), pFromTile.getID());
-                }
-
-                iAttackPercent = 0;
-
-                if (!(pTargetCity.isVulnerable()))
-                {
-                    if (bOwnerActing && !bEvent)
-                    {
-                        bEvent = player().doEventTrigger(infos().Globals.ATTACKED_CITY_EVENTTRIGGER, pTargetCity, this);
-                    }
-
-                    if (pTargetCity.hasPlayer())
-                    {
-                        pTargetCity.player().doEventTrigger(infos().Globals.CITY_ATTACKED_EVENTTRIGGER, pTargetCity, pActingPlayer?.getPlayer() ?? PlayerType.NONE);
-                    }
-                }
-            }
-
-            Unit pDefendingUnit = pToTile.defendingUnit();
-            AttackOutcome eDefendingOutcome = AttackOutcome.NONE;
-
-            if (pDefendingUnit != null && canDamageUnit(pDefendingUnit))
-            {
-/*####### Better Old World AI - Base DLL #######
-  ### Cities immune to critial         START ###
-  ##############################################*/
-                if (hasPlayer() && iAttackPercent > 0 && bTargetTile && criticalChanceVs(pDefendingUnit) > 0)
-                {
-                    bCritical = game().isGameOption(infos().Globals.GAMEOPTION_CRITICAL_HIT_PREVIEW) ? isCriticalHit() : randomPercent(criticalChanceVs(pDefendingUnit));
-                }
-/*####### Better Old World AI - Base DLL #######
-  ### Cities immune to critial           END ###
-  ##############################################*/
-
-                iKills += attackUnit(pDefendingUnit, pFromTile, bTargetTile, iAttackPercent, bCritical && criticalChanceVs(pDefendingUnit) > 0, pActingPlayer, ref azTileTexts, out eDefendingOutcome, ref bEvent);
-
-                if (pDefendingUnit.hasPlayer())
-                {
-                    Player pDefendingPlayer = pDefendingUnit.player();
-
-                    if (eDefendingOutcome == AttackOutcome.CAPTURED)
-                    {
-                        pDefendingPlayer.pushLogData(() => TextManager.TEXT("TEXT_GAME_UNIT_CAPTURED_LOG_DATA", HelpText.buildUnitTypeLinkVariable(pDefendingUnit.getType(), game(), pUnit: pDefendingUnit, bIncludePromotions: true), HelpText.buildUnitOwnerLinkVariable(this, game(), pDefendingPlayer, bCrest: false), HelpText.buildUnitLinkVariable(this, pDefendingPlayer)), GameLogType.UNIT_CAPTURED, pToTile.getID(), infos().unit(getType()), pFromTile.getID());
-                    }
-                    else if (eDefendingOutcome == AttackOutcome.KILL)
-                    {
-                        pDefendingPlayer.pushLogData(() => TextManager.TEXT("TEXT_GAME_UNIT_LOST_LOG_DATA", HelpText.buildUnitTypeLinkVariable(pDefendingUnit.getType(), game(), pUnit: pDefendingUnit, bIncludePromotions: true), HelpText.buildUnitOwnerLinkVariable(this, game(), pDefendingPlayer, bCrest: false), HelpText.buildUnitLinkVariable(this, pDefendingPlayer)), GameLogType.UNIT_LOST, pToTile.getID(), infos().unit(getType()), pFromTile.getID());
-                    }
-                    else if (eDefendingOutcome == AttackOutcome.CRITICAL)
-                    {
-                        pDefendingPlayer.pushLogData(() => TextManager.TEXT("TEXT_GAME_UNIT_CRITICAL_LOG_DATA", HelpText.buildUnitTypeLinkVariable(pDefendingUnit.getType(), game(), pDefendingUnit), HelpText.buildUnitOwnerLinkVariable(this, game(), pDefendingPlayer), HelpText.buildUnitLinkVariable(this, pDefendingPlayer), pDefendingUnit.getHP()), GameLogType.UNIT_ATTACKED, pToTile.getID(), infos().unit(getType()), pFromTile.getID());
-                    }
-                    else if (bTargetTile)
-                    {
-                        pDefendingPlayer.pushLogData(() => TextManager.TEXT("TEXT_GAME_UNIT_ATTACKED_LOG_DATA", HelpText.buildUnitTypeLinkVariable(pDefendingUnit.getType(), game(), pDefendingUnit), HelpText.buildUnitOwnerLinkVariable(this, game(), pDefendingPlayer), HelpText.buildUnitLinkVariable(this, pDefendingPlayer), pDefendingUnit.getHP()), GameLogType.UNIT_ATTACKED, pToTile.getID(), infos().unit(getType()), pFromTile.getID());
-                    }
-                }
-
-                if (eDefendingOutcome == AttackOutcome.KILL)
-                {
-                    pActingPlayer?.pushLogData(() => TextManager.TEXT("TEXT_GAME_UNIT_KILLED_LOG_DATA", HelpText.buildUnitTypeLinkVariable(pDefendingUnit.getType(), game(), pUnit: pDefendingUnit, bIncludePromotions: true), HelpText.buildUnitOwnerLinkVariable(pDefendingUnit, game(), pActingPlayer, bCrest: false), HelpText.buildTileLinkVariable(pToTile)), GameLogType.UNIT_KILLED, pToTile.getID(), pDefendingUnit.info());
-                }
-            }
-
-            if (bCritical)
-            {
-                resetCriticalHit();
-                setNextCriticalModifier(0);
-
-                game().addTileTextAllPlayers(ref azTileTexts, pToTile.getID(), () => TextManager.TEXT("TEXT_GAME_UNIT_ATTACK_CRITICAL"));
-            }
-
-            using (var unitListScoped = CollectionCache.GetListScoped<int>())
-            {
-                pToTile.getAliveUnits(unitListScoped.Value);
-
-                foreach (int iUnitID in unitListScoped.Value)
-                {
-                    Unit pLoopUnit = game().unit(iUnitID);
-
-                    if ((pLoopUnit != pDefendingUnit) && canDamageUnit(pLoopUnit))
-                    {
-                        iKills += attackUnit(pLoopUnit, pFromTile, bTargetTile, 0, false, pActingPlayer, ref azTileTexts, out AttackOutcome eUnitOutcome, ref bEvent);
-                    }
-                }
-            }
-
-            if (pTargetCity != null)
-            {
-                eOutcome = AttackOutcome.CITY;
-            }
-            else
-            {
-                eOutcome = eDefendingOutcome;
-            }
-
-            if (hasPlayer())
-            {
-                if (!(pToTile.hasNotHiddenUnit(getTeam())))
-                {
-                    if (pToTile.hasImprovementTribeSite())
-                    {
-                        player().addMemoryTribe(infos().Globals.TRIBE_ATTACKED_SETTLEMENT_MEMORY, pToTile.getImprovementTribeSite());
-
-                        player().pushLogData(() => TextManager.TEXT("TEXT_GAME_CAMP_DESTROYED_LOG_DATA", HelpText.buildTribeLinkVariable(pToTile.getImprovementTribeSite(), game()), HelpText.buildImprovementLinkVariable(pToTile.getImprovement(), game(), pToTile)), GameLogType.CAMP_DESTROYED, getTileID());
-                    }
-
-                    if (pActingPlayer != null)
-                    {
-                        game().doTileTexts(mapBuilders => pToTile.doImprovementBonus(mapBuilders, this, pActingPlayer, bOwnerActing), pToTile.getID(), ref azTileTexts, ePlayer => game().areTeamsAllied(game().player(ePlayer).getTeam(), pActingPlayer.getTeam()));
-                    }
-                }
-            }
-
-            return iKills;
-        }
-
-
-
-        /*####### Better Old World AI - Base DLL #######
-          ### Attack Heal                      START ###
-          ##############################################*/
         public virtual int getAttackHeal(Tile pFromTile, Tile pToTile)
         {
             int iValue = 0;
@@ -1100,22 +1073,14 @@ namespace BetterAI
   ##############################################*/
 
         //lines 8844-8898
-        public override int getCounterAttackDamage(Tile pFromTile, Unit pToUnit, Tile pToTile)
+        public override int getCounterAttackDamage(Tile pFromTile, Unit pToUnit, Tile pToTile, TeamType eVisibilityTeam, bool bCheckHostileCity = true)
         {
             //slightly rearranged to fit in Attack Heal
-            if (pToUnit != null)
+
+            if (!info().mbMelee)
             {
-                if (pToUnit.info().mbWater != info().mbWater)
-                {
-                    return 0;
-                }
-
-                if (!(pToUnit.canDamage()))
-                {
-                    return 0;
-                }
+                return 0;
             }
-
             if (getHP() == 0)
             {
                 return 0;
@@ -1123,49 +1088,47 @@ namespace BetterAI
 
             int iValue = 0;
 
-            if (pToUnit == null)
+            if (canDamageCity(pToTile, bCheckHostileCity))
             {
-                if (!(info().mbMelee))
-                {
-                    return 0;
-                }
-
                 iValue += infos().Globals.COUNTER_CITY_DAMAGE;
             }
-            else if (info().mbMelee)
+            else if (pToUnit != null)
             {
-                if ((pToUnit.info().mbUnlimber) ? pToUnit.isUnlimbered() : true)
+
+                if (pToUnit.info().mbWater == info().mbWater && ((BetterAIUnit)pToUnit).canCounterattack(pToTile, this, pFromTile, eVisibilityTeam))
                 {
-                    if (pToUnit.hasMeleeCounter() ||
-                        pToUnit.isFortifyMax() ||
-                        pToUnit.isTestudoMax())
+                    int iPercentAttack = ((BetterAIUnit)pToUnit).getCounterPercentOfAttack();
+                    if (iPercentAttack > 0)
                     {
-                        iValue += pToUnit.attackUnitDamage(pFromTile, pToTile, this, false);
+                        iValue += pToUnit.attackUnitDamage(pFromTile, pToTile, this, getTeam(), false) * iPercentAttack / 100;
                     }
                     else
                     {
                         iValue += pToUnit.counterAttackMelee();
                     }
-                }
-            }
-
-            if (getCooldown() == infos().Globals.ROUT_COOLDOWN)
-            {
-                iValue += infos().Globals.COUNTER_ROUT_DAMAGE;
-            }
-
+                    
+                    if (getCooldown() == infos().Globals.ROUT_COOLDOWN)
+                    {
+                        iValue += infos().Globals.COUNTER_ROUT_DAMAGE;
+                    }
 /*####### Better Old World AI - Base DLL #######
   ### Attack Heal                      START ###
   ##############################################*/
-            int iAttackHeal = getAttackHeal(pFromTile, pToTile);
-            if (iAttackHeal != 0)
-            {
-                iValue -= iAttackHeal;
-                iValue = Math.Max(iValue, getHP() - getHPMax());
-            }
+                    //not while routing, only for melee
+                    else
+                    {
+                        int iAttackHeal = getAttackHeal(pFromTile, pToTile);
+                        if (iAttackHeal != 0)
+                        {
+                            iValue -= iAttackHeal;
+                            iValue = Math.Max(iValue, getHP() - getHPMax());
+                        }
+                    }
 /*####### Better Old World AI - Base DLL #######
   ### Attack Heal                        END ###
   ##############################################*/
+                }
+            }
 
             return Math.Min(iValue, (getHP() - 1));
         }
@@ -1253,11 +1216,7 @@ namespace BetterAI
             MohawkAssert.Assert(canCreateAgentNetwork(tile(), pCity, pActingPlayer));
 
             pActingPlayer.changeMoneyWhole(-(getAgentNetworkCost(pCity)));
-
-            pCity.setAgentTurn(getPlayer(), getAgentNetworkTurns());
-            pCity.setAgentTileID(getPlayer(), getTileID());
-
-            kill();
+            makeAgent(pCity);
         }
 /*####### Better Old World AI - Base DLL #######
   ### Agent Network Cost Scaling         END ###

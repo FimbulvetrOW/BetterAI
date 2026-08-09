@@ -1,20 +1,21 @@
-﻿using System.Linq;
+﻿using Mohawk.SystemCore;
+using Mohawk.UIInterfaces;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using TenCrowns.AppCore;
+using TenCrowns.ClientCore;
 using TenCrowns.GameCore;
 using TenCrowns.GameCore.Text;
-using static TenCrowns.GameCore.Text.TextExtensions;
-using Constants = TenCrowns.GameCore.Constants;
-using Enum = System.Enum;
-using TenCrowns.ClientCore;
-using Mohawk.SystemCore;
-using Mohawk.UIInterfaces;
 using UnityEngine;
 using UnityEngine.UI;
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Collections.Concurrent;
+using static TenCrowns.GameCore.Text.TextExtensions;
+using static UnityEngine.UI.DefaultControls;
+using Constants = TenCrowns.GameCore.Constants;
+using Enum = System.Enum;
 
 namespace BetterAI
 {
@@ -28,7 +29,7 @@ namespace BetterAI
         private const string YIELD_NORMAL = "Sprites/GuitarPick";
         //copy-paste START
         //lines 9192-9436
-        protected override void updateCitySelection(City pSelectedCity)
+        protected override void updateCitySelection(City pSelectedCity, bool bUpdateActions)
         {
             //using (new UnityProfileScope("ClientUI.updateCitySelection"))
             {
@@ -117,8 +118,6 @@ namespace BetterAI
                                 iRate = pSelectedCity.calculateCurrentYield(eLoopYield, true);
                             }
 
-                            TextVariable rateVar = HelpText.buildYieldTextVariable(iRate, bRate: true, iMultiplier: Constants.YIELDS_MULTIPLIER);
-
                             cityYieldTag.SetTEXT("Rate", TextManager, HelpText.buildNetCityYieldTextVariable(pSelectedCity, eLoopYield, true));
 
                             if (ColorManager.GetColorHex(yield.meColor) == "#ffffffff" || yield.mbCanBuy)
@@ -203,8 +202,21 @@ namespace BetterAI
 
                             currentProgress /= yieldThreshold;
 
+                            //If discontent, + means more discontent, - means more happiness. This was already clear before
+                            //TextVariable rateText;
                             if (eLoopYield == Infos.Globals.HAPPINESS_YIELD)
                             {
+                                //if (iRate >= 0)
+                                //{
+                                //    rateText = HelpText.buildYieldIconTextVariable(eLoopYield, iRate, false, false, Constants.YIELDS_MULTIPLIER);
+                                //}
+                                //else
+                                //{
+                                //    rateText = HelpText.buildYieldIconTextVariable(Infos.Globals.DISCONTENT_YIELD, -iRate, false, false, Constants.YIELDS_MULTIPLIER);
+                                //}
+                                //
+                                //rateText = HelpText.buildColorTextOptionalVariable(rateText, iRate > 0, (iRate != 0));
+
 /*####### Better Old World AI - Base DLL #######
   ### Disconent Level 0                START ###
   ##############################################*/
@@ -224,8 +236,11 @@ namespace BetterAI
                                     eNextColor = (eDisplayYield == Infos.Globals.HAPPINESS_YIELD) ? Infos.yield(Infos.Globals.DISCONTENT_YIELD).meColor : Infos.yield(Infos.Globals.HAPPINESS_YIELD).meColor;
                                 }
                             }
-
-
+                            //else
+                            //{
+                            //    rateText = HelpText.buildYieldTextVariable(iRate, true, false, Constants.YIELDS_MULTIPLIER);
+                            //    rateText = HelpText.buildColorTextOptionalVariable(rateText, !(Infos.Helpers.yieldWarning(eDisplayYield, iRate)), (iRate != 0));
+                            //}
 
                             TextVariable rateText = HelpText.buildYieldTextVariable(iRate, true, false, Constants.YIELDS_MULTIPLIER);
                             rateText = HelpText.buildColorTextOptionalVariable(rateText, !(Infos.Helpers.yieldWarning(eDisplayYield, iRate)), (iRate != 0));
@@ -305,7 +320,7 @@ namespace BetterAI
                         mSelectedPanel.SetKey("City-Pacify-Type", ItemType.NONE.ToStringCached());
                     }
 
-                    using (var luxuryListScope = CollectionCache.GetStringBuilderScoped())
+                    using (var builder = TextBuilder.GetTextBuilder(TextManager))
                     {
                         //using var profileScope = new UnityProfileScope("ClientUI.updateCitySelection.updateLuxuryList");
 
@@ -313,77 +328,82 @@ namespace BetterAI
                         for (ResourceType eLoopResource = 0; eLoopResource < Infos.resourcesNum(); eLoopResource++)
                         {
                             bool hasLuxury = pSelectedCity.isLuxury(eLoopResource);
-                            bCanManageLuxuries |= pActivePlayer.canTradeCityLuxury(pSelectedCity, eLoopResource, !hasLuxury);
+                            bCanManageLuxuries |= pActivePlayer.canTradeCityLuxury(pSelectedCity, eLoopResource, !hasLuxury, false);
 
                             if (hasLuxury)
                             {
-                                HelpText.buildResourceIconLink(luxuryListScope.Value, eLoopResource);
+                                builder.Add(HelpText.buildLuxuryIconLinkVariable(eLoopResource, pSelectedCity.getID()), skipSeparator: true);
                             }
                         }
-                        if (luxuryListScope.Value.Length == 0)
+                        if (!builder.HasContent)
                         {
-                            TEXT(luxuryListScope.Value, "TEXT_MANAGE_LUXURIES");
+                            builder.AddTEXT("TEXT_MANAGE_LUXURIES");
                         }
-                        mSelectedPanel.SetKey("City-Luxuries", luxuryListScope.Value);
+                        mSelectedPanel.SetKey("City-Luxuries", builder.ProfiledToString());
                         mSelectedPanel.SetBool("City-CanSendLuxuries", bCanManageLuxuries);
                     }
                 }
 
                 lastSelectedCityID = pSelectedCity.getID();
-                ClientMgr.UI.updateExpansionPreview(null, null, false);
-                makeDirty(DirtyType.ACTION_PANEL);
+                updateExpansionPreview(null, null, false);
+
+                if (bUpdateActions)
+                {
+                    makeDirty(DirtyType.ACTION_PANEL);
+                }
             }
         }
         //copy-paste END
 
         //lines 10893-11081
-        protected override void updateReligionSelection(ReligionType eReligion)
+        protected override void updateReligionSelection(ReligionType eReligion, bool bUpdateActions)
         {
             //using var profileScope = new UnityProfileScope("ClientUI.updateReligionSelection");
 
             //damn protection levels
-            int maxSelectedReligionCharacterButtonsCount = (int)base.GetType().GetField("maxSelectedReligionCharacterButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
-            int maxSelectedReligionCityButtonsCount = (int)base.GetType().GetField("maxSelectedReligionCityButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
+            int maxSelectedCharacterButtonsCount = (int)base.GetType().GetField("maxSelectedCharacterButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
+            int maxSelectedCityButtonsCount = (int)base.GetType().GetField("maxSelectedCityButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
 
             if (eReligion != ReligionType.NONE)
             {
                 Player pActivePlayer = ClientMgr.activePlayer();
-                UIAttributeTag religionTag = mSelectedPanel.GetSubTag("-Religion");
                 InfoReligion infoReligion = Infos.religion(eReligion);
 
                 string name = getReligionName(eReligion);
 
                 if (pActivePlayer.getStateReligion() == eReligion)
                 {
-                    religionTag.SetTEXT("Name", TextManager, HelpText.buildEnclosedParenthesis(TEXTVAR(name), HelpText.buildStateReligionLinkVariable(eReligion, pActivePlayer)));
+                    mSelectedPanel.SetTEXT("Name", TextManager, HelpText.buildEnclosedParenthesis(TEXTVAR(name), HelpText.buildStateReligionLinkVariable(eReligion, pActivePlayer)));
                 }
                 else
                 {
-                    religionTag.SetKey("Name", name);
+                    mSelectedPanel.SetKey("Name", name);
                 }
 
                 bool hasHead = Game.hasReligionHead(eReligion);
                 if (hasHead)
                 {
-                    religionTag.SetInt("Head-ID", Game.getReligionHeadID(eReligion));
+                    mSelectedPanel.SetKey("CharacterLabel", "TEXT_UI_RELIGION_HEAD");
+                    mSelectedPanel.SetInt("HighlightCharacter-ID", Game.getReligionHeadID(eReligion));
                 }
-                religionTag.SetBool("Head-IsActive", hasHead);
+                mSelectedPanel.SetBool("HighlightCharacter-Inactive", !hasHead);
 
-                religionTag.SetKey("Rename-Data", infoReligion.SafeTypeString());
-                religionTag.SetBool("Rename-IsActive", Game.getReligionFounder(eReligion) == pActivePlayer.getPlayer());
-                religionTag.SetKey("Image", infoReligion.mzIconName);
-                religionTag.SetKey("ImageColor", getHolyCityHexString(eReligion));
+                mSelectedPanel.SetKey("Rename-Data", infoReligion.SafeTypeString());
+                mSelectedPanel.SetBool("Rename-IsActive", Game.getReligionFounder(eReligion) == pActivePlayer.getPlayer());
+                mSelectedPanel.SetKey("Image", infoReligion.mzIconName);
+                mSelectedPanel.SetKey("Image-Color", getHolyCityHexString(eReligion));
                 using (var iconScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_RELIGION), eReligion.ToStringCached()))
                 {
-                    religionTag.ItemType = iconScope.Type;
-                    religionTag.DataSB = iconScope.DataList;
+                    mSelectedPanel.ItemType = iconScope.Type;
+                    mSelectedPanel.DataSB = iconScope.DataList;
                 }
 
                 int iOpinion = pActivePlayer.getReligionOpinionRate(eReligion);
                 OpinionReligionType eOpinion = pActivePlayer.getReligionOpinion(eReligion);
                 string zColor = ColorManager.GetColorHex(Infos.opinionReligion(eOpinion).meColor);
                 TextVariable opinionText = TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", HelpText.buildOpinionReligionLinkVariable(eOpinion, eReligion, pActivePlayer.getPlayer()), HelpText.buildSignedTextVariable(iOpinion));
-                religionTag.SetTEXT("Opinion", TextManager, HelpText.buildColorTextVariable(opinionText, zColor));
+                mSelectedPanel.SetTEXT("Info", TextManager, HelpText.buildColorTextVariable(opinionText, zColor));
+                mSelectedPanel.SetBool("Info-IsActive", true);
 
                 bool bCanHaveTheology = infoReligion.mePaganNation == NationType.NONE;
                 if (bCanHaveTheology)
@@ -398,63 +418,88 @@ namespace BetterAI
 
                     for (int iLoopTier = 0; iLoopTier <= iMaxTier; iLoopTier++)
                     {
-                        UIAttributeTag theologyTag = religionTag.GetSubTag("-Theology", iLoopTier);
+                        UIAttributeTag theologyTag = mSelectedPanel.GetSubTag("-ListEntry", iLoopTier);
+                        theologyTag.SetBool("ShowType", true);
                         theologyTag.SetKey("TierLabel", TEXT("TEXT_UI_SELECTED_RELIGION_THEOLOGY", TEXTVAR(iLoopTier + 1)));
-                        theologyTag.SetTEXT("Label", TextManager, HelpText.buildAdoptTheologyTierLinkVariable(Game, eReligion, iLoopTier));
+                        theologyTag.SetTEXT("Label", TextManager, HelpText.buildAdoptTheologyTierLinkVariable(Game, eReligion, iLoopTier, pActivePlayer));
                     }
-                    religionTag.SetInt("Theologies-Count", iMaxTier + 1);
+                    mSelectedPanel.SetKey("ListEntries-Label", "TEXT_UI_SELECTED_RELIGION_THEOLOGIES");
+                    mSelectedPanel.SetInt("ListEntries-Count", iMaxTier + 1);
                 }
-                religionTag.SetBool("Theologies-IsVisible", bCanHaveTheology);
+                mSelectedPanel.SetBool("ListEntries-IsVisible", bCanHaveTheology);
 
-                bool bAnyFamily = false;
-                using (var familyScope = CollectionCache.GetStringBuilderScoped())
+                int memberIndex = 0;
                 {
-                    for (FamilyType eLoopFamily = 0; eLoopFamily < Infos.familiesNum(); eLoopFamily++)
+                    using (var familyScope = CollectionCache.GetStringBuilderScoped())
                     {
-                        if (pActivePlayer.isFamilyStarted(eLoopFamily) && pActivePlayer.getFamilyReligion(eLoopFamily) == eReligion)
+                        bool bAnyFamily = false;
+                        for (FamilyType eLoopFamily = 0; eLoopFamily < Infos.familiesNum(); eLoopFamily++)
                         {
-                            HelpText.buildFamilyCrestLink(familyScope.Value, eLoopFamily, Game).Append("  ");
-                            bAnyFamily = true;
-                        }
-                    }
-                    religionTag.SetKey("Families-Label", familyScope.Value.ProfiledToString());
-                    religionTag.SetBool("HasFamilies", bAnyFamily);
-                }
-
-                bool bAnyNation = false;
-                using (var nationScope = CollectionCache.GetStringBuilderScoped())
-                {
-                    foreach (Player pPlayer in Game.getPlayers())
-                    {
-                        if (pPlayer.isAlive())
-                        {
-                            if (pPlayer.getStateReligion() == eReligion)
+                            if (pActivePlayer.isFamilyStarted(eLoopFamily) && pActivePlayer.getFamilyReligion(eLoopFamily) == eReligion)
                             {
-                                HelpText.buildPlayerCrestLink(nationScope.Value, pPlayer.getPlayer(), Game, pActivePlayer).Append("  ");
-                                bAnyNation = true;
+                                HelpText.buildFamilyCrestLink(familyScope.Value, eLoopFamily, Game).Append("  ");
+                                bAnyFamily = true;
                             }
                         }
-                    }
-                    religionTag.SetKey("Nations-Label", nationScope.Value.ProfiledToString());
-                    religionTag.SetBool("HasNations", bAnyNation);
-                }
 
-                bool bAnyTribe = false;
-                using (var tribeScope = CollectionCache.GetStringBuilderScoped())
-                {
-                    for (TribeType eLoopTribe = 0; eLoopTribe < Infos.tribesNum(); eLoopTribe++)
-                    {
-                        if (Game.isDiplomacyTribeAlive(eLoopTribe))
+                        if (bAnyFamily)
                         {
-                            if (Game.getTribeReligion(eLoopTribe) == eReligion)
-                            {
-                                HelpText.buildTribeCrestLink(tribeScope.Value, eLoopTribe, Game).Append("  ");
-                                bAnyTribe = true;
-                            }
+                            UIAttributeTag entryTag = mSelectedPanelMembers.GetSubTag("-ListEntry", memberIndex);
+                            entryTag.SetKey("TypeLabel", "TEXT_UI_SELECTED_RELIGION_FOLLOWERS_FAMILIES");
+                            entryTag.SetKey("DescLabel", familyScope.Value.ProfiledToString());
+                            memberIndex++;
                         }
                     }
-                    religionTag.SetKey("Tribes-Label", tribeScope.Value.ProfiledToString());
-                    religionTag.SetBool("HasTribes", bAnyTribe);
+                    
+                    
+                    using (var nationScope = CollectionCache.GetStringBuilderScoped())
+                    {
+                        bool bAnyNation = false;
+                        foreach (Player pPlayer in Game.getPlayers())
+                        {
+                            if (pPlayer.isAlive())
+                            {
+                                if (pPlayer.getStateReligion() == eReligion)
+                                {
+                                    HelpText.buildPlayerCrestLink(nationScope.Value, pPlayer.getPlayer(), Game, pActivePlayer).Append("  ");
+                                    bAnyNation = true;
+                                }
+                            }
+                        }
+                        if (bAnyNation)
+                        {
+                            UIAttributeTag entryTag = mSelectedPanelMembers.GetSubTag("-ListEntry", memberIndex);
+                            entryTag.SetKey("TypeLabel", "TEXT_UI_SELECTED_RELIGION_FOLLOWERS_NATIONS");
+                            entryTag.SetKey("DescLabel", nationScope.Value.ProfiledToString());
+                            memberIndex++;
+                        }
+                    }
+
+                    
+                    using (var tribeScope = CollectionCache.GetStringBuilderScoped())
+                    {
+                        bool bAnyTribe = false;
+                        for (TribeType eLoopTribe = 0; eLoopTribe < Infos.tribesNum(); eLoopTribe++)
+                        {
+                            if (Game.isDiplomacyTribeAlive(eLoopTribe))
+                            {
+                                if (Game.getTribeReligion(eLoopTribe) == eReligion)
+                                {
+                                    HelpText.buildTribeCrestLink(tribeScope.Value, eLoopTribe, Game).Append("  ");
+                                    bAnyTribe = true;
+                                }
+                            }
+                        }
+                        if (bAnyTribe)
+                        {
+                            UIAttributeTag entryTag = mSelectedPanelMembers.GetSubTag("-ListEntry", memberIndex);
+                            entryTag.SetKey("TypeLabel", "TEXT_UI_SELECTED_RELIGION_FOLLOWERS_TRIBES");
+                            entryTag.SetKey("DescLabel", tribeScope.Value.ProfiledToString());
+                            memberIndex++;
+                        }
+                    }
+
+                    mSelectedPanel.SetInt("Members-ListEntries-Count", memberIndex);
                 }
 
                 int numCharacters = 0;
@@ -466,30 +511,30 @@ namespace BetterAI
                     foreach (int charID in activeCharacters)
                     {
                         Character pCharacter = Game.character(charID);
-                        if (pCharacter.getReligion() == eReligion)
+                        if (pCharacter.getReligion() == eReligion && !pCharacter.isReligionHead())
                         {
-                            UIAttributeTag characterTag = religionTag.GetSubTag("-Character", numCharacters);
+                            UIAttributeTag characterTag = mSelectedPanelMembers.GetSubTag("-Character", numCharacters);
                             characterTag.SetInt("ID", charID);
                             characterTag.IsActive = true;
                             numCharacters++;
                         }
                     }
 
-                    if (numCharacters > maxSelectedReligionCharacterButtonsCount)
+                    if (numCharacters > maxSelectedCharacterButtonsCount)
                     {
-                        maxSelectedReligionCharacterButtonsCount = numCharacters;
-                        religionTag.SetInt("Characters-Count", numCharacters);
+                        maxSelectedCharacterButtonsCount = numCharacters;
+                        mSelectedPanelMembers.SetInt("Characters-Count", numCharacters);
                     }
                     else
                     {
-                        for (int i = numCharacters; i < maxSelectedReligionCharacterButtonsCount; i++)
+                        for (int i = numCharacters; i < maxSelectedCharacterButtonsCount; i++)
                         {
-                            UIAttributeTag characterTag = religionTag.GetSubTag("-Character", i);
+                            UIAttributeTag characterTag = mSelectedPanelMembers.GetSubTag("-Character", i);
                             characterTag.IsActive = false;
                         }
                     }
                 }
-                religionTag.SetBool("Characters-IsVisible", numCharacters > 0);
+                mSelectedPanelMembers.SetBool("Characters-IsVisible", numCharacters > 0);
 
                 int numCities = 0;
 /*####### Better Old World AI - Base DLL #######
@@ -557,44 +602,51 @@ namespace BetterAI
                         City pCity = Game.city(iCity);
                         if (pCity.isReligion(eReligion))
                         {
-                            UIAttributeTag cityTag = religionTag.GetSubTag("-City", numCities);
+                            UIAttributeTag cityTag = mSelectedPanelMembers.GetSubTag("-City", numCities);
 /*####### Better Old World AI - Base DLL #######
   ### Rel. Improvements in City list   START ###
   ##############################################*/
                             //cityTag.SetTEXT("Name", TextManager, HelpText.buildCityLinkVariable(pCity, pActivePlayer, true, false));
-                            cityTag.SetTEXT("Name", TextManager, ((BetterAIHelpText)HelpText).buildCityLinkVariableWithReligiousImprovements(Game, pCity, pActivePlayer, eReligion, ImprovementTypes, ImprovementShortNames, true, false));
+                            //cityTag.SetTEXT("Label", TextManager, HelpText.buildCityTextVariable(pCity, pActivePlayer, true));
+                            cityTag.SetTEXT("Label", TextManager, ((BetterAIHelpText)HelpText).buildCityLinkVariableWithReligiousImprovements(Game, pCity, pActivePlayer, eReligion, ImprovementTypes, ImprovementShortNames, bCrest: true, bAddColor: false));
 /*####### Better Old World AI - Base DLL #######
   ### Rel. Improvements in City list     END ###
   ##############################################*/
 
-                            cityTag.SetInt("ID", pCity.getID());
                             cityTag.IsActive = true;
+                            using (var dataScope = new WidgetDataScope(nameof(ItemType.HELP_LINK), nameof(LinkType.HELP_CITY_SELECTED_RELIGION), eReligion.ToStringCached(), pCity.getID().ToStringCached()))
+                            {
+                                cityTag.DataSB = dataScope.DataList;
+                            }
                             numCities++;
                         }
                     }
 
-                    if (numCities > maxSelectedReligionCityButtonsCount)
+                    if (numCities > maxSelectedCityButtonsCount)
                     {
-                        maxSelectedReligionCityButtonsCount = numCities;
-                        religionTag.SetInt("Cities-Count", numCities);
+                        maxSelectedCityButtonsCount = numCities;
+                        mSelectedPanelMembers.SetInt("Cities-Count", numCities);
                     }
                     else
                     {
-                        for (int i = numCities; i < maxSelectedReligionCityButtonsCount; i++)
+                        for (int i = numCities; i < maxSelectedCityButtonsCount; i++)
                         {
-                            UIAttributeTag cityTag = religionTag.GetSubTag("-City", i);
+                            UIAttributeTag cityTag = mSelectedPanelMembers.GetSubTag("-City", i);
                             cityTag.IsActive = false;
                         }
                     }
                 }
-                religionTag.SetBool("Cities-IsVisible", numCities > 0);
+                mSelectedPanelMembers.SetBool("Cities-IsVisible", numCities > 0);
 
-                bool bAnyFollowers = bAnyFamily || bAnyNation || bAnyTribe || numCharacters > 0 || numCities > 0;
-                religionTag.SetBool("Members-IsVisible", bAnyFollowers);
+                bool bAnyFollowers = memberIndex > 0 || numCharacters > 0 || numCities > 0;
+                mSelectedPanel.SetBool("Members-IsVisible", bAnyFollowers);
 
-                makeDirty(DirtyType.ACTION_PANEL);
+                if (bUpdateActions)
+                {
+                    makeDirty(DirtyType.ACTION_PANEL);
+                }
 
-                religionTag.SetBool("ScrollRect-IsActive", bAnyFollowers || bCanHaveTheology);
+                mSelectedPanel.SetBool("ScrollRect-IsVisible", bAnyFollowers || bCanHaveTheology);
             }
         }
 
@@ -622,155 +674,160 @@ namespace BetterAI
                 {
                     bRunOriginal = false;
 
-                    {
-                        ImprovementType eBestImprovement = ImprovementType.NONE;
-                        Task.Run(() =>
-                        {
-                            lock (ClientMgr.TaskLock)
-                            {
-                                if (!pActivePlayer.AI.isBestTileImprovementsCached(pTile.cityTerritory()))
-                                {
-                                    pActivePlayer.AI.cacheCityImprovementValues(pTile.cityTerritory());
-                                }
-                                pActivePlayer.AI.getBestImprovement(pTile, pTile.cityTerritory(), ref eBestImprovement);
-                            }
-                            selectedWorkerRecommendedImprovementCallback(eBestImprovement);
-                        });
-                    }
+                    //{
+                    //    ImprovementType eBestImprovement = ImprovementType.NONE;
+                    //    Task.Run(() =>
+                    //    {
+                    //        lock (ClientMgr.TaskLock)
+                    //        {
+                    //            if (!pActivePlayer.AI.isBestTileImprovementsCached(pTile.cityTerritory()))
+                    //            {
+                    //                pActivePlayer.AI.cacheCityImprovementValues(pTile.cityTerritory());
+                    //            }
+                    //            pActivePlayer.AI.getBestImprovement(pTile, pTile.cityTerritory(), ref eBestImprovement);
+                    //        }
+                    //        selectedWorkerRecommendedImprovementCallback(eBestImprovement);
+                    //    });
+                    //}
 
-                    List<ResourceType> cityResources = new List<ResourceType>(); //only those without improvement
+                    //List<ResourceType> cityResources = new List<ResourceType>(); //only those without improvement
+
+                    //List<ResourceType> cityResourcesScope = new List<ResourceType>(); //only those without improvement
+                    using (var remainingTerrainTargetScope = CollectionCache.GetListScoped<TerrainTargetType>())
+                    using (var cityTerrainTargetSetScoped = CollectionCache.GetHashSetScoped<TerrainTargetType>())
+                    using (var cityResourcesScope = CollectionCache.GetHashSetScoped<ResourceType>())
                     {
-                        //make the resource list
-                        foreach (int iTileID in pCityTerritory.getTerritoryTiles())
                         {
-                            Tile tile = ClientMgr.GameClient.tile(iTileID);
-                            ResourceType tileResource = tile.getResource();
-                            if (tileResource != ResourceType.NONE)
+                            for (TerrainTargetType eLoopTerrainTarget = 0; eLoopTerrainTarget < Infos.terrainTargetsNum(); eLoopTerrainTarget++)
                             {
-                                //skip tiles with appropriate improvement
-                                ImprovementType tileImprovement = tile.getImprovement();
-                                if (tileImprovement != ImprovementType.NONE)
+                                remainingTerrainTargetScope.Value.Add(eLoopTerrainTarget);
+                            }
+                            //make the resource list
+                            foreach (int iTileID in pCityTerritory.getTerritoryTiles())
+                            {
+                                Tile tile = ClientMgr.GameClient.tile(iTileID);
+
+                                ResourceType eTileResource = tile.getResource();
+                                ImprovementType eTileImprovement = tile.getImprovement();
+
+                                if (eTileResource != ResourceType.NONE)
                                 {
-                                    if (Infos.Helpers.isImprovementResourceValid(tileImprovement, tileResource))
+                                    if (eTileImprovement == ImprovementType.NONE || Infos.Helpers.isImprovementResourceValid(eTileImprovement, eTileResource))
                                     {
                                         continue;
                                     }
+
+                                    cityResourcesScope.Value.Add(eTileResource);
                                 }
-                                bool bAlreadyInList = false;
-                                //check if it's in the list, if not, add it
-                                int iListIndex = 0;
-                                foreach (ResourceType resource in cityResources)
+
+                                if (eTileImprovement != ImprovementType.NONE || eTileResource != ResourceType.NONE)
                                 {
-                                    if (resource < tileResource)
+                                    for (int i = remainingTerrainTargetScope.Value.Count - 1; i >= 0; i--)
                                     {
-                                        iListIndex++;
-                                        continue;
-                                    }
-                                    else if (resource == tileResource)
-                                    {
-                                        bAlreadyInList = true;
-                                        break;
-                                    }
-                                    else if (resource > tileResource)
-                                    {
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        //should not happen
-                                        iListIndex++;
+                                        if (tile.isTerrainTarget(remainingTerrainTargetScope.Value[i]))
+                                        {
+                                            cityTerrainTargetSetScoped.Value.Add(remainingTerrainTargetScope.Value[i]);
+                                            remainingTerrainTargetScope.Value.RemoveAt(i);
+                                        }
                                     }
                                 }
-                                //add at index, so we get a sorted list
-                                if (!bAlreadyInList)
-                                {
-                                    cityResources.Insert(iListIndex, tileResource);
-                                }
+
                             }
                         }
-                    }
 
-                    for (ImprovementType eLoopImprovement = 0; eLoopImprovement < Infos.improvementsNum(); eLoopImprovement++)
-                    {
-                        bool bShowButton = false;
-                        InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
-                        if (pImprovementInfo == null) continue;
-                        if (!(pUnit.canBuildImprovementType(eLoopImprovement))) continue;
+                        for (ImprovementType eLoopImprovement = 0; eLoopImprovement < Infos.improvementsNum(); eLoopImprovement++)
+                        {
+                            bool bShowButton = false;
+                            InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
+                            if (pImprovementInfo == null) continue;
+                            if (!(pUnit.canBuildImprovementType(eLoopImprovement))) continue;
 
-                        if (pImprovementInfo.mbShowAlways && (pImprovementInfo.mbUrban == pTile.isUrban()))
-                        {
-                            bShowButton = true;
-                        }
-                        else if (pUnit.canBuildImprovement(pTile, eLoopImprovement, pActivePlayer, isBuyGoods(), bTestEnabled: false, bTestOrders: false, bTestGoods: false))
-                        {
-                            bShowButton = true;
-                        }
-                        else
-                        {
-                            if (pActivePlayer.canStartImprovement(eLoopImprovement, null))
+                            else if (pUnit.canBuildImprovement(pTile, eLoopImprovement, pActivePlayer, isBuyGoods(), bTestEnabled: false, bTestOrders: false, bTestGoods: false))
                             {
-                                if (!(pCityTerritory.canCityHaveImprovement(eLoopImprovement)))
-                                {
-                                    continue;
-                                }
-
-                                //check valids, including resources (resources have to be in the list)
-                                {
-
-                                    if (!(pImprovementInfo.mbFreshWaterValid
-                                        || pImprovementInfo.mbRiverValid
-                                        || pImprovementInfo.mbCoastLandValid
-                                        || pImprovementInfo.mbCoastWaterValid
-                                        || pImprovementInfo.mbCityValid
-                                        || pImprovementInfo.mbHolyCityValid))
-                                    {
-                                        bool bAnyValid = false;
-                                        for (TerrainType eLoopTerrain = 0; (eLoopTerrain < Infos.terrainsNum() && !(bAnyValid)); eLoopTerrain++)
-                                        {
-                                            bAnyValid = bAnyValid || pImprovementInfo.mabTerrainValid[(int)eLoopTerrain];
-                                        }
-
-                                        //height, heightadjacent, vegetation
-                                        for (HeightType eLoopHeight = 0; (eLoopHeight < Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
-                                        {
-                                            bAnyValid = bAnyValid || pImprovementInfo.mabHeightValid[(int)eLoopHeight];
-                                        }
-
-                                        for (HeightType eLoopHeight = 0; (eLoopHeight < Infos.heightsNum() && !(bAnyValid)); eLoopHeight++)
-                                        {
-                                            bAnyValid = bAnyValid || pImprovementInfo.mabHeightAdjacentValid[(int)eLoopHeight];
-                                        }
-
-                                        for (VegetationType eLoopVegetation = 0; (eLoopVegetation < Infos.vegetationNum() && !(bAnyValid)); eLoopVegetation++)
-                                        {
-                                            bAnyValid = bAnyValid || pImprovementInfo.mabVegetationValid[eLoopVegetation];
-                                        }
-
-                                        if (!(bAnyValid))
-                                        {
-                                            foreach (ResourceType cityResource in cityResources)
-                                            {
-                                                if (Infos.Helpers.isImprovementResourceValid(eLoopImprovement, cityResource))
-                                                {
-                                                    bAnyValid = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!bAnyValid)
-                                            {
-                                                continue;
-                                            }
-                                        }
-
-                                    }
-
-                                }
-
                                 bShowButton = true;
                             }
-                        }
+                            else
+                            {
+                                if (pActivePlayer.canStartImprovement(eLoopImprovement, null))
+                                {
+                                    if (!(pCityTerritory.canCityHaveImprovement(eLoopImprovement, bTestEnabled: false)))
+                                    {
+                                        continue;
+                                    }
 
-                        if (bShowButton) aeImprovements.Add(eLoopImprovement);
+                                    //check valids, including resources (resources have to be in the list)
+                                    {
+
+                                        if (!(pImprovementInfo.mbCityValid))
+                                        {
+                                            //bool bAnyValid = false;
+
+                                            if (pImprovementInfo.mbCityValid)
+                                            {
+                                                //bShowButton = true;
+                                                aeImprovements.Add(eLoopImprovement);
+                                                continue;
+                                            }
+
+                                            if (pImprovementInfo.mbHolyCityValid && pCityTerritory.isReligionHolyCityAny())
+                                            {
+                                                //bShowButton = true;
+                                                aeImprovements.Add(eLoopImprovement);
+                                                continue;
+                                            }
+
+                                            //for (int i = 0; i < pImprovementInfo.maeTerrainValid.Count; i++)
+                                            foreach (TerrainTargetType eLoopTerrainTarget in pImprovementInfo.maeTerrainValid)
+                                            {
+                                                if (cityTerrainTargetSetScoped.Value.Contains(eLoopTerrainTarget))
+                                                {
+                                                    //bShowButton = true;
+                                                    aeImprovements.Add(eLoopImprovement);
+                                                    continue;
+                                                }
+                                            }
+
+                                            ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
+                                            if (eImprovementClass != ImprovementClassType.NONE)
+                                            {
+                                                InfoImprovementClass pImprovementClassInfo = Infos.improvementClass(eImprovementClass);
+
+                                                foreach (ResourceType cityResource in cityResourcesScope.Value)
+                                                {
+                                                    if (pImprovementClassInfo.mabResourceValid[(int)cityResource])
+                                                    {
+                                                        bShowButton = true;
+                                                        aeImprovements.Add(eLoopImprovement);
+                                                        break;
+                                                    }
+                                                }
+                                                if (bShowButton) continue;
+
+                                                if (pImprovementClassInfo.mbAdjacentValid && pCityTerritory.getImprovementClassCount(eImprovementClass) > 0)
+                                                {
+                                                    //bShowButton = true;
+                                                    aeImprovements.Add(eLoopImprovement);
+                                                    continue;
+                                                }
+
+                                            }
+
+                                            //if (!bAnyValid)
+                                            //{
+                                            //    continue;
+                                            //}
+
+
+                                        }
+
+                                    }
+
+                                    //bShowButton = true;
+                                }
+                            }
+
+                            //if (bShowButton) aeImprovements.Add(eLoopImprovement);
+                        }
                     }
 
                 }
@@ -800,6 +857,8 @@ namespace BetterAI
                 //using (new UnityProfileScope("ClientUI.updateCharacters"))
                 {
                     Player pActivePlayer = ClientMgr.activePlayer();
+                    PlayerType eActivePlayer = pActivePlayer.getPlayer();
+                    miNumCouncil = 0;
 
                     if (pActivePlayer.hasLeader())
                     {
@@ -818,6 +877,7 @@ namespace BetterAI
                                 UIAttributeTag spouseSlotTag = leaderTag.GetSubTag("-Spouse", iLivingSpouses);
                                 updateCharacterSlotData(spouseSlotTag, pLoopCharacter, RoleType.SPOUSE, (pLoopCharacter != null));
                                 iLivingSpouses++;
+                                miNumCouncil++;
                             }
                         }
                         characterTabTag.SetInt("Spouse-Count", Math.Max(iLivingSpouses, 1));
@@ -834,6 +894,7 @@ namespace BetterAI
                             Character pNextLeader = pActivePlayer.heir();
                             UIAttributeTag heirSlotTag = leaderTag.GetSubTag("-Heir");
                             updateCharacterSlotData(heirSlotTag, pNextLeader, RoleType.HEIR, (pNextLeader != null));
+                            miNumCouncil++;
                         }
 
                         //Council
@@ -864,8 +925,6 @@ namespace BetterAI
 
                         if (updateCharacterList)
                         {
-                            bool showCharacters = false;
-
                             //Heirs
                             {
                                 int numHeirs = 0;
@@ -884,7 +943,6 @@ namespace BetterAI
                                 }
                                 characterTabTag.SetInt("Heir-Count", numHeirs);
                                 characterTabTag.SetBool("Heir-IsActive", numHeirs > 0);
-                                showCharacters |= numHeirs > 0;
                             }
 
                             //Court
@@ -911,7 +969,6 @@ namespace BetterAI
 
                                 characterTabTag.SetInt("Courtier-Count", numCourtiers);
                                 characterTabTag.SetBool("Courtier-IsActive", numCourtiers > 0);
-                                showCharacters |= numCourtiers > 0;
                             }
 
                             //Clergy
@@ -938,7 +995,6 @@ namespace BetterAI
 
                                 characterTabTag.SetInt("Clergy-Count", numClergy);
                                 characterTabTag.SetBool("Clergy-IsActive", numClergy > 0);
-                                showCharacters |= numClergy > 0;
                             }
 
                             //using (new UnityProfileScope("ClientUI.updateCharacters.addCharacterFamily"))
@@ -983,12 +1039,12 @@ namespace BetterAI
                                             {
                                                 orderedIDList.Insert(0, iLoopCharacter);
                                             }
-                                            else if (pLoopCharacter.isPinned())
+                                            else if (pLoopCharacter.isPinned(eActivePlayer))
                                             {
                                                 int iInsertIndex = orderedIDList.Count;
                                                 for (int i = orderedIDList.Count - 1; i >= 0; i--)
                                                 {
-                                                    if (Game.character(iLoopCharacter).getPinnedTurn() <= pLoopCharacter.getPinnedTurn())
+                                                    if (Game.character(iLoopCharacter).getPinnedTurn(eActivePlayer) <= pLoopCharacter.getPinnedTurn(eActivePlayer))
                                                     {
                                                         break;
                                                     }
@@ -1485,7 +1541,6 @@ namespace BetterAI
                                     }
                                 }
 
-                                mCharacters.IsActive = showCharacters;
                             }
 
                             mPlayerFamily.SetBool("CurrentNation-ShowNation", false);
@@ -1493,6 +1548,11 @@ namespace BetterAI
 
                         Interfaces?.CIQ?.SetToGameState();
                         Interfaces?.CIQ?.ProcessColor(pActivePlayer.getPrimaryPlayerColor(pActivePlayer));
+                    }
+                    else
+                    {
+                        UI.SetUIAttribute("TabPanel-Characters-IsVisible", false.ToStringCached());
+                        UI.SetUIAttribute("TabPanel-Characters-Court-IsVisible", false.ToStringCached());
                     }
                 }
             }
@@ -1522,7 +1582,7 @@ namespace BetterAI
                 queueTag.SetBool("Arrow-IsActive", true);
             }
 
-            const int numButtons = 5;
+            const int numButtons = 10;
             for (i = 2; i < Math.Min(pSelectedCity.getBuildCount(), numButtons); i++)
             {
                 queueTag = UI.GetUIAttributeTag("QueuePanel-Button", i.ToStringCached());

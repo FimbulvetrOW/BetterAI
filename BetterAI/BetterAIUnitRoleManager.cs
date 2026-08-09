@@ -82,10 +82,10 @@ namespace BetterAI
                     }
                 }
 
-                //lines 1016-1153
-                protected override bool assignAttackUnits(AttackTactics eTactics, AttackThreat eMinThreat, bool bExpansionOnly = false, bool bAllowFatigue = false, bool bPlayerOnly = false, bool bInPlaceOnly = false, int iMinPowerPercent = 0, int iMaxPowerPercent = int.MaxValue)
+
+                protected override bool assignAttackUnits(AttackTactics eTactics, AttackThreat eMinThreat, bool bExpansionOnly = false, bool bAllowFatigue = false, bool bPlayerOnly = false, bool bReinforce = false, bool bInPlaceOnly = false, int iMinPowerPercent = 0, int iMaxPowerPercent = int.MaxValue)
                 {
-                    //using var profileScope = new UnityProfileScope("UnitRoleManager.assignAttackUnits");
+                    using var profileScope = new UnityProfileScope("UnitRoleManager.assignAttackUnits");
 
                     using var tileSetScoped = CollectionCache.GetHashSetScoped<int>();
                     HashSet<int> targetsChecked = tileSetScoped.Value;
@@ -140,7 +140,7 @@ namespace BetterAI
                                 continue;
                             }
                         }
-                        if (val.IsFatigue && !bAllowFatigue)
+                        if (val.mbFatigue && !bAllowFatigue)
                         {
                             continue;
                         }
@@ -172,6 +172,14 @@ namespace BetterAI
                         {
                             PlayerType eDefendingPlayer = pTargetTile.defendingUnit()?.getPlayer() ?? pTargetTile.getOwner();
                             if (eDefendingPlayer == PlayerType.NONE || !BAI_AI.getEnemyPlayers().Contains(eDefendingPlayer))
+                            {
+                                continue;
+                            }
+                        }
+
+                        if (bReinforce)
+                        {
+                            if (!BAI_AI.mpAICache.isNoRetreatTarget(val.miTargetID))
                             {
                                 continue;
                             }
@@ -213,19 +221,30 @@ namespace BetterAI
                             }
                         }
 
+                        if (val.meApplyEffect != EffectUnitType.NONE)
+                        {
+                            if (eTactics != AttackTactics.Kill && eTactics != AttackTactics.Capture)
+                            {
+                                continue;
+                            }
+                            if (!pUnit.canApplyEffectUnitSelf(BAI_AI.player, val.meApplyEffect))
+                            {
+                                continue;
+                            }
+                        }
+
                         int iExtraDanger = 0;
                         if (eTactics == AttackTactics.Kill || eTactics == AttackTactics.Capture || eTactics == AttackTactics.Stun)
                         {
                             Unit pDefender = pTargetTile.defendingUnit();
-                            if (pDefender != null)
+                            if (pDefender != null && pDefender.canDamage())
                             {
-                                iExtraDanger -= pDefender.attackUnitStrength(pDefender.tile(), pMoveTile, null, false);
+                                iExtraDanger -= pDefender.attackUnitStrength(pDefender.tile(), pMoveTile, null, BAI_AI.Team, false);
                             }
                         }
-
-
                         if (iMinPowerPercent > 0)
                         {
+
 /*####### Better Old World AI - Base DLL #######
   ### AI must not be timid when expanding START#
   ##############################################*/
@@ -256,13 +275,12 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### AI must not be timid when expanding END###
   ##############################################*/
+
                             if (!pUnit.AI.isProtectedTile(pMoveTile, true, iMinPowerPercent, iExtraDanger))
                             {
                                 continue;
                             }
                         }
-
-
                         if (iMaxPowerPercent < int.MaxValue)
                         {
                             if (pUnit.AI.isProtectedTile(pMoveTile, true, iMaxPowerPercent, iExtraDanger))
@@ -274,11 +292,16 @@ namespace BetterAI
                         {
                             if (!pUnit.AI.isProtectedTile(pMoveTile, true, iMinPowerPercent, iExtraDanger))
                             {
-                                if (!bExpansionOnly && !pUnit.isHealPossibleTile(pMoveTile))
+                                if (!bExpansionOnly && !pUnit.isHealPossibleTile(pMoveTile, BAI_AI.Team))
                                 {
                                     continue;
                                 }
                             }
+                        }
+
+                        if (pUnit.info().mbWater && pTargetTile.isLand())
+                        {
+                            continue; // ships can support attacks, but not be the primary attackers (encouraging anchoring and land occupation)
                         }
 
                         targetsChecked.Add(iTargetTile);
@@ -289,6 +312,7 @@ namespace BetterAI
 
                             if (eTactics == AttackTactics.Capture || eTactics == AttackTactics.Kill || eTactics == AttackTactics.Push)
                             {
+                                assignBlockingUnits();
                                 return true;
                             }
                         }
@@ -296,6 +320,8 @@ namespace BetterAI
 
                     return false;
                 }
+
+
 
                 //line 5081-5189
                 //copy-paste START
@@ -331,7 +357,8 @@ namespace BetterAI
                         {
                             if (!(pCitySite.canBothUnitsOccupy(eFoundUnit, BAI_AI.getPlayer(), TribeType.NONE, pUnit))) //to prevent blocking a site with a Scout
                             {
-                                continue; //probably break, right
+                                //continue; //probably break, right? right
+                                break;
                             }
                         }
 /*####### Better Old World AI - Base DLL #######
@@ -354,7 +381,7 @@ namespace BetterAI
                                         Tile pTargetTile = Game.tile(iTargetTileID);
                                         if (pUnit.canTargetTile(pCitySite, pTargetTile))
                                         {
-                                            iStrength += pUnit.attackUnitStrength(pCitySite, pTargetTile, pTargetTile.defendingUnit());
+                                            iStrength += pUnit.attackUnitStrength(pCitySite, pTargetTile, pTargetTile.defendingUnit(), BAI_AI.Team);
                                         }
                                     }
 
@@ -393,7 +420,7 @@ namespace BetterAI
                                 {
                                     iSteps = 0;
                                 }
-                                else if (pUnit.canPathTo(pCitySite, iMaxSteps, true, false, false, BAI_AI.Team, pPathfinder))
+                                else if (pUnit.canPathTo(pCitySite, iMaxSteps, pPathfinder))
                                 {
                                     iSteps = pPathfinder.getNumStepsTo(pCitySite);
                                 }
@@ -415,8 +442,7 @@ namespace BetterAI
   ### Don't defend free City Sites       END ###
   ##############################################*/
 
-                                zValue.miOrders = pUnit.getNumOrdersForSteps(iSteps);
-                                zValue.miMoveOrders = iSteps > pUnit.getStepsToFatigue() ? pUnit.getStepsToFatigue() : zValue.miOrders;
+                                setUnitOrders(ref zValue, iSteps, pUnit, 0);
                                 zValue.miDistance = pUnit.tile().distanceTile(pCitySite);
                                 zValue.miTargetID = pCitySite.getID();
                                 zValue.miMoveTileID = pCitySite.getID();
@@ -461,7 +487,7 @@ namespace BetterAI
   ### Let Civilian units buy tiles too START ###
   ##############################################*/
                             //if (pUnit.canBuyTile(pTile, pCity, eYield, BAI_AI.player) && pUnit.canDamage()) // save civilian units - military units have already done their critical tasks
-                            if (pUnit.canBuyTile(pTile, pCity, eYield, BAI_AI.player) && pUnit.canDamage() || bAllowCivilian) // use civilian units if no military units available for the task
+                            if (pUnit.canBuyTile(pTile, pCity, eYield, BAI_AI.player) && (pUnit.canDamage() || bAllowCivilian)) // use civilian units if no military units available for the task
 /*####### Better Old World AI - Base DLL #######
   ### Let Civilian units buy tiles too   END ###
   ##############################################*/
@@ -472,7 +498,7 @@ namespace BetterAI
                                     {
                                         using var pathfinderScoped = Game.GetAreaPathFinderScoped();
 
-                                        if (Game.findPathDistance(pathfinderScoped.Value, pUnit.tile(), pTile, true, out int iPathLength))
+                                        if (Game.findPathDistance(pathfinderScoped.Value, pUnit.tile(), pTile, pTile.isLand(), pTile.isWater(), BAI_AI.Team, out int iPathLength))
                                         {
                                             int iValue = 10 / (iPathLength + 1);
 
@@ -510,8 +536,14 @@ namespace BetterAI
                     Unit pUnit = assignUnitToBuyTile(pTile, eYield, pCity, bAllowCivilian: false); //same result as original method
                     if (pUnit != null)
                     {
-                        AI.moveUnits(Unit.MovePriority.YieldExpenses, 0, pUnit);
-                        return true;
+                        for (int i = 0; AI.moveUnits(Unit.MovePriority.YieldExpenses, 0, pUnit); ++i)
+                        {
+                            if (i >= Unit.UnitAI.MAX_MOVE_ITERATIONS)
+                            {
+                                MohawkLog.LogError("[PlayerAI] Infinite loop detected in buyTile for " + pUnit.ToString());
+                                break;
+                            }
+                        }
                     }
 
 /*####### Better Old World AI - Base DLL #######
@@ -520,8 +552,14 @@ namespace BetterAI
                     pUnit = assignUnitToBuyTile(pTile, eYield, pCity, bAllowCivilian: true);
                     if (pUnit != null)
                     {
-                        AI.moveUnits(Unit.MovePriority.YieldExpenses, 0, pUnit);
-                        return true;
+                        for (int i = 0; AI.moveUnits(Unit.MovePriority.YieldExpenses, 0, pUnit); ++i)
+                        {
+                            if (i >= Unit.UnitAI.MAX_MOVE_ITERATIONS)
+                            {
+                                MohawkLog.LogError("[PlayerAI] Infinite loop detected in buyTile for " + pUnit.ToString());
+                                break;
+                            }
+                        }
                     }
 /*####### Better Old World AI - Base DLL #######
   ### Let Civilian units buy tiles too START ###

@@ -17,14 +17,14 @@ namespace BetterAI
         }
 
         //lines 1011-1018
-        public override void sendBuildQueue(City pCity, int iOldSlot, int iNewSlot)
+        public override bool sendBuildQueue(City pCity, int iOldSlot, int iNewSlot)
         {
 /*####### Better Old World AI - Base DLL #######
   ### Alternative Hurry                START ###
   ##############################################*/
             //can queued items even be dragged to position 0? idk, but better safe than sorry
             //intercepting invalid drag actions here, because I can't mod CityQueueList directly, since that class is in Assembly-CSharp
-            if (iOldSlot == iNewSlot) return;
+            if (iOldSlot == iNewSlot) return false;
             if (((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED > 0)
             {
                 if (iNewSlot == 0)
@@ -32,14 +32,14 @@ namespace BetterAI
                     if (pCity != null && pCity.getBuildQueueNode(0).mbHurried && (pCity.getBuildQueueNode(0).miProgress > 0))
                     {
                         iNewSlot = 1;
-                        if (iOldSlot == iNewSlot) return;
+                        if (iOldSlot == iNewSlot) return false;
                     }
                 }
                 else if (iOldSlot == 0)
                 {
                     if (pCity != null && pCity.getBuildQueueNode(0).mbHurried && (pCity.getBuildQueueNode(0).miProgress > 0))
                     {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -51,7 +51,7 @@ namespace BetterAI
             actionData.addValue(pCity.getID());
             actionData.addValue(iOldSlot);
             actionData.addValue(iNewSlot);
-            sendAction(actionData);
+            return sendAction(actionData);
         }
     }
 }

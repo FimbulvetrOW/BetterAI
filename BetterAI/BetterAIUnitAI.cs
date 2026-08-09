@@ -13,23 +13,30 @@ namespace BetterAI
         {
             static public int LAST_STAND_EXTRA_HP = 3;
 
+            public virtual bool isClosestCity(City pCity)
+            {
+                return pCity == ClosestCity;
+            }
+
+
+
             //re-enabling pillaging on water by tribal land units if delay turns are set
             //lines 1019-1064
             public override bool shouldTribePillage(Tile pTile)
             {
-                //using var profileScope = new UnityProfileScope("UnitAI.shouldPillage");
+                //using var profileScope = new UnityProfileScope("UnitAI.shouldTribePillage");
 
                 if (!pTile.canUnitOccupy(unit, TeamType.NONE, bTestTheirUnits: false, bTestOurUnits: false, bFinalMoveTile: true, bBump: false))
                 {
                     return false;
                 }
 
-                if (!unit.canPillage(pTile, ActingPlayer))
+                if (!canPillage(pTile))
                 {
                     return false;
                 }
 
-                City pCityTerritory = pTile.revealedCityTerritory(getTeam());
+                City pCityTerritory = pTile.revealedCityTerritory(ActingTeam);
 
                 if (pCityTerritory != null)
                 {
@@ -71,9 +78,9 @@ namespace BetterAI
 
             //lines 1828-2063
             //there is a lot more to be done here
-            public override int attackValue(Tile pFromTile, Tile pTargetTile, bool bCheckOtherUnits, int iExtraModifier, out bool bCivilian, out int iPushTileID, out bool bStun, out int iSelfDamage)
+            public override int attackValue(Tile pFromTile, Tile pTargetTile, bool bCheckOtherUnits, int iExtraModifier, out bool bCivilian, out int iPushTileID, out bool bStun, out int iSelfDamage, out bool bPriorityUnit)
             {
-                int iValue = base.attackValue(pFromTile, pTargetTile, bCheckOtherUnits, iExtraModifier, out bCivilian, out iPushTileID, out bStun, out iSelfDamage);
+                int iValue = base.attackValue(pFromTile, pTargetTile, bCheckOtherUnits, iExtraModifier, out bCivilian, out iPushTileID, out bStun, out iSelfDamage, out bPriorityUnit);
 
                 Unit pTargetUnit = pTargetTile.defendingUnit();
                 if ((unit.hasPlayer()) && !(unit.canDamageCity(pTargetTile)) && (pTargetUnit != null) && (unit.canDamageUnit(pTargetUnit)))
@@ -86,92 +93,64 @@ namespace BetterAI
                 return iValue;
             }
 
-            //lines 5669-5742
-            protected override void setRaidCity(PathFinder pPathfinder)
+
+            public override Character getBestGeneral()
             {
-                if (unit.isRaiding())
+                using var profileScope = new UnityProfileScope("UnitAI.getBestGeneral");
+
+                long iBestValue = 0;
+                Character pBestCharacter = null;
+                using (var characterListScoped = CollectionCache.GetListScoped<int>())
                 {
-                    Tile pTile = unit.tile();
+                    unit.buildGeneralList(characterListScoped.Value);
 
-                    int iBestDist = int.MaxValue;
-                    City pBestCity = null;
-                    for (TeamType eTeam = 0; eTeam < game.getNumTeams(); ++eTeam)
+                    foreach (int iCharacter in characterListScoped.Value)
                     {
-                        if (unit.isRaidTeam(eTeam))
-                        {
-                            City pCity = pTile.findBestRaidCity(unit.getOriginalTribe(), int.MaxValue, eTeam, bIgnoreMinTurns: true);
-                            if (pCity == null)
-                            {
+                        Character pCharacter = game.character(iCharacter);
+
 /*####### Better Old World AI - Base DLL #######
-  ### Proper Raid City Search          START ###
+  ### No Governor Courtiers as Generals START###
   ##############################################*/
-                                //pCity = pTile.findBestRaidCity(eTeam: eTeam, bIgnoreMinTurns: true);
-                                pCity = pTile.findBestRaidCity(unit.getTribe(), int.MaxValue, eTeam: eTeam, bIgnoreMinTurns: true);
+
+                        if (infos.trait(pCharacter.getArchetype()).mbGovernorPrereq)
+                        {
+                            continue;
+                        }
+
 /*####### Better Old World AI - Base DLL #######
-  ### Proper Raid City Search            END ###
+  ### No Governor Courtiers as Generals  END ###
   ##############################################*/
-                            }
-                            if (pCity != null)
-                            {
-                                int iDist = pTile.distanceTile(pCity.tile());
-                                if (iDist < iBestDist)
-                                {
-                                    pBestCity = pCity;
-                                    iBestDist = iDist;
-                                }
-                            }
-                        }
-                    }
-
-                    // if there is no city to raid and no prior target, behave like a non-raiding unit
-                    if (pBestCity == null && Target == -1)
-                    {
-                        clearRole();
-                        return;
-                    }
-
-                    using (var tileListScoped = CollectionCache.GetListScoped<int>())
-                    {
-                        List<int> aiCandidateTiles = tileListScoped.Value;
-
-                        if (pBestCity != null)
+                        long iValue = getGeneralValue(pCharacter);
+                        if (iValue > iBestValue)
                         {
-                            foreach (int iTile in pBestCity.getTerritoryTiles())
-                            {
-                                aiCandidateTiles.Add(iTile);
-                            }
-
-                            for (int i = 0; i < pBestCity.tile().distanceTile(pTile); ++i)
-                            {
-                                if (doTribePickTarget(pPathfinder, aiCandidateTiles, unit.getStepsToFatigue() + i, true))
-                                {
-                                    return;
-                                }
-
-                                if (doTribePickPillage(pPathfinder, aiCandidateTiles, unit.getStepsToFatigue() + i))
-                                {
-                                    return;
-                                }
-                            }
-                        }
-                        else if (Target != -1)
-                        {
-                            aiCandidateTiles.Add(Target);
-                        }
-
-                        if (doTribePickTarget(pPathfinder, aiCandidateTiles, int.MaxValue, true))
-                        {
-                            return;
-                        }
-
-                        if (doTribePickPillage(pPathfinder, aiCandidateTiles, int.MaxValue))
-                        {
-                            return;
+                            iBestValue = iValue;
+                            pBestCharacter = pCharacter;
                         }
                     }
                 }
+                return pBestCharacter;
             }
 
+            //lines 5669-5742
+            //I no longer remember why I thought I needed to modify setRaidCity. The original should do fine.
+
+
+            protected override Tile getBestBuyTile(City pCity, YieldType eYield)
+            {
+                using var profileScope = new UnityProfileScope("UnitAI.getBestBuyTile");
+
+                //(Tile pBestTile, long iBestValue) = AI.getBestBuyTile(pCity, eYield);
+                (Tile pBuyTile, long iBuyValue) = ((BetterAIPlayer.BetterAIPlayerAI)AI).getBestUnitBuyTileInCity(unit, eYield, pCity, bSkipIfUnlockedInCity: false, bUnitInCity: true);
+
+                if (pBuyTile != null)
+                {
+                    if (unit.canBuyTile(pBuyTile, pCity, eYield, ActingPlayer))
+                    {
+                        return pBuyTile;
+                    }
+                }
+                return null;
+            }
 
         }
     }
