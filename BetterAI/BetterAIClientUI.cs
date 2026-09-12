@@ -848,7 +848,7 @@ namespace BetterAI
         {
             if (((BetterAIInfoGlobals)Infos.Globals).BAI_ALT_CHARACTER_SORT == 0)
             {
-                updateCharacters(updateCharacterList);
+                base.updateCharacters(updateCharacterList);
                 return;
             }
             else

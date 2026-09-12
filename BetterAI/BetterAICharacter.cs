@@ -23,6 +23,35 @@ namespace BetterAI
 {
     public class BetterAICharacter : Character
     {
+        public override TextVariable getAgeTextVariable()
+        {
+            if (isAgeless())
+            {
+                return HelpText.TEXTVAR_TYPE("TEXT_UI_CHARACTER_AGELESS");
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate         START ###
+  ##############################################*/
+            BetterAIPlayer pPlayer = (BetterAIPlayer)player();
+            if (pPlayer != null)
+            {
+                BetterAIPlayer.BetterAIPlayerAI pPlayerAI = (BetterAIPlayer.BetterAIPlayerAI)pPlayer.AI;
+                if (pPlayerAI != null)
+                {
+                    int iMaxAgeX10 = (10 * getAge()) + pPlayerAI.getTurnsLeftEstimateX10(this, bGeneral: false, bJob: false);
+                    TextVariable maxAge = HelpText.buildValueTextVariable(iMaxAgeX10, 10, false);
+                    TextVariable currentAge = HelpText.TEXTVAR_TYPE("TEXT_HELPTEXT_CHARACTER_HELP_AGE", getAge());
+                    return HelpText.TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_ENCLOSED_PARENTHESIS", currentAge, maxAge);
+                }
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate           END ###
+  ##############################################*/
+
+            return HelpText.TEXTVAR_TYPE("TEXT_HELPTEXT_CHARACTER_HELP_AGE", getAge());
+        }
+
         //lines 4427-4438
         public override int getLegitimacy(int iIndex, int iNumLeaders)
         {
@@ -238,6 +267,12 @@ namespace BetterAI
                     }
                 }
             }
+        }
+
+        //damn protection levels again
+        public virtual bool getTraitValid(TraitType eTrait)
+        {
+            return base.isTraitValid(eTrait);
         }
 
     }

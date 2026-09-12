@@ -36,6 +36,7 @@ namespace BetterAI
             protected int AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE => ((BetterAIInfoGlobals)infos.Globals).AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE;
 
             protected virtual int AI_CITY_GOVERNOR_VALUE => ((BetterAIInfoGlobals)infos.Globals).AI_CITY_GOVERNOR_VALUE;
+            protected virtual int AI_DEATHTRAIT_PROB_EVAL_DEPTH => ((BetterAIInfoGlobals)infos.Globals).AI_DEATHTRAIT_PROB_EVAL_DEPTH;
 
             [SkipCheckSaveConsistency] protected BetterAIPlayerCache BAI_mpAICache = new BetterAIPlayerCache();
 
@@ -386,6 +387,8 @@ namespace BetterAI
             {
                 base.cacheCityYieldValues();
                 cacheCityYieldSpecializationModifiers();
+                //attaching to cacheCityYieldValues
+                cacheCharacterTurnsRemaining();
             }
 
             //lines 2715-2927
@@ -988,10 +991,10 @@ namespace BetterAI
                                 iLeaderValue += infos.utils().modify(iYieldAmount, pCity.calculateTotalYieldModifierForGovernor(eLoopYield, pCharacter)) * cityYieldValue(eLoopYield, pCity);
                             }
                         }
-                        iValue += iLeaderValue * getTurnsLeftEstimate(pCharacter, false) / Constants.YIELDS_MULTIPLIER;
+                        iValue += (iLeaderValue * getTurnsLeftEstimateX10(pCharacter, bGeneral: false, bJob: true) / Constants.YIELDS_MULTIPLIER) / 10;
                     }
 
-                    iValue += getCharacterXPValue(pCharacter, pCity.culture().miXP * getTurnsLeftEstimate(pCharacter, false));
+                    iValue += (getCharacterXPValue(pCharacter, pCity.culture().miXP * getTurnsLeftEstimateX10(pCharacter, bGeneral: false, bJob: true))) / 10;
 
                     for (RatingType eRating = 0; eRating < infos.ratingsNum(); ++eRating)
                     {
@@ -1055,7 +1058,7 @@ namespace BetterAI
 
                 if (pCharacter != null && player != null)
                 {
-                    iValue += getCharacterXPValue(pCharacter, infos.council(eCouncil).miXP * getTurnsLeftEstimate(pCharacter, false));
+                    iValue += (getCharacterXPValue(pCharacter, infos.council(eCouncil).miXP * getTurnsLeftEstimateX10(pCharacter, bGeneral: false, bJob: true))) / 10;
 
                     for (RatingType eLoopRating = 0; eLoopRating < infos.ratingsNum(); ++eLoopRating)
                     {
@@ -2405,9 +2408,9 @@ namespace BetterAI
 
                     for (YieldType eLoopYield = 0; eLoopYield < infos.yieldsNum(); eLoopYield++)
                     {
-                        /*####### Better Old World AI - Base DLL #######
-                          ### AI: proper yield modifiers       START ###
-                          ##############################################*/
+/*####### Better Old World AI - Base DLL #######
+  ### AI: proper yield modifiers       START ###
+  ##############################################*/
                         //long iTileOutputValue = pTile.yieldOutput(eImprovement, eImprovementSpecialist, eLoopYield, pCityEffects: null, bBaseOnly: false);
                         //long iTileOutputValue = pTile.yieldOutput(eImprovement, SpecialistType.NONE, eLoopYield, pCityEffects: null, bBaseOnly: false);
                         long iTileOutputValue = ((BetterAITile)pTile).yieldOutputForGovernor(eImprovement, SpecialistType.NONE, eLoopYield, pCity, bCityEffects: false, bBaseOnly: false, bCost: true, pCity.governor(), bTheology: true, newImprovements: null, dEffectCityExtraCounts);
@@ -2784,7 +2787,6 @@ namespace BetterAI
 
                 return Math.Max(0, iValue);
             }
-
 
 
             public virtual void addImprovementCityEffectCounts(ImprovementType eImprovement, Tile pTile, Dictionary<EffectCityType, int> dEffectCityCounts, bool bRemove = false)
@@ -3450,47 +3452,591 @@ namespace BetterAI
 
             }
 
-            
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate         START ###
+  ##############################################*/
             public virtual int getCouncilTurnsLeftEstimate(Character pCharacter, CouncilType eCouncil)
             {
-                //TODO: better calculation of extected remaining life (job) tile
-
-                return getTurnsLeftEstimate(pCharacter, bGeneral: false);
+                return (getCouncilTurnsLeftEstimateX10(pCharacter, eCouncil) + 5) / 10;
             }
+            public virtual int getCouncilTurnsLeftEstimateX10(Character pCharacter, CouncilType eCouncil)
+            {
+                return getTurnsLeftEstimateX10(pCharacter, bGeneral: false, bJob: true);
+            }
+
             public virtual int getJobTurnsLeftEstimate(Character pCharacter, JobType eJob)
             {
-                //TODO: better calculation of extected remaining life (job) tile
+                return (getJobTurnsLeftEstimateX10(pCharacter, eJob) + 5) / 10;
+            }
 
-                return getTurnsLeftEstimate(pCharacter, bGeneral: (eJob == infos.Globals.GENERAL_JOB));
+            public virtual int getJobTurnsLeftEstimateX10(Character pCharacter, JobType eJob)
+            {
+                return getTurnsLeftEstimateX10(pCharacter, bGeneral: (eJob == infos.Globals.GENERAL_JOB), bJob: true);
             }
 
             public virtual int getTraitTurnsLeftEstimate(Character pCharacter, TraitType eTrait)
             {
-                //TODO: better calculation of extected remaining life (job) tile
+                return (getTraitTurnsLeftEstimateX10(pCharacter, eTrait) + 5) / 10;
+            }
 
-                return getTurnsLeftEstimate(pCharacter, bGeneral: false);
+            public virtual int getTraitTurnsLeftEstimateX10(Character pCharacter, TraitType eTrait)
+            {
+                BetterAIInfoTrait pInfoTrait = (BetterAIInfoTrait)(infos.trait(eTrait));
+
+                if (pInfoTrait.miRemoveTurns != 0)
+                {
+                    int iRemoveTurns = pInfoTrait.miRemoveTurns;
+                    if (pCharacter.isTrait(eTrait))
+                    {
+                        iRemoveTurns -= pCharacter.getTraitTurnLength(eTrait);
+                    }
+                    return 10 * iRemoveTurns;
+                }
+                else if (pInfoTrait.maiRemoveTurnsFromTraitProbsX10 != 0)
+                {
+                    return pInfoTrait.maiRemoveTurnsFromTraitProbsX10;
+                }
+                else
+                {
+                    return getTurnsLeftEstimateX10(pCharacter, bGeneral: false, bJob: false);
+                }
+
+            }
+
+            protected virtual void cacheCharacterTurnsRemaining()
+            {
+                using (new UnityProfileScope("PlayerAI.cacheCharacterTurnsRemaining"))
+                {
+                    Action<int> loopCharacterMaxAgeDelegate = new Action<int>(iCharacterID =>
+                    {
+                        cacheCharacterTurnsRemaining(iCharacterID);
+                    });
+
+
+                    //((BetterAIGame)game)
+                    using (new GameCoreObjectTracker(null))
+                    {
+                        if (Multithreaded)
+                        {
+                            System.Threading.Tasks.Parallel.ForEach(((BetterAIPlayer)player).getCharacters(), game.ParallelOptions, loopCharacterMaxAgeDelegate);
+
+                            for (PlayerType eLoopOtherPlayer = 0; eLoopOtherPlayer < game.getNumPlayers(); ++eLoopOtherPlayer)
+                            {
+                                if (eLoopOtherPlayer != getPlayer())
+                                {
+                                    BetterAIPlayer pLoopOtherPlayer = ((BetterAIPlayer)(game.player(eLoopOtherPlayer)));
+
+                                    if (pLoopOtherPlayer.isAlive() && game.isTeamContact(player.getTeam(), pLoopOtherPlayer.getTeam()))
+                                    {
+                                        //game.team pPlayer.getTeam();
+                                        System.Threading.Tasks.Parallel.ForEach(pLoopOtherPlayer.getCharacters(), game.ParallelOptions, loopCharacterMaxAgeDelegate);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            foreach (int iCharacterID in ((BetterAIPlayer)player).getCharacters())
+                            {
+                                loopCharacterMaxAgeDelegate(iCharacterID);
+                            }
+
+                            for (PlayerType eLoopOtherPlayer = 0; eLoopOtherPlayer < game.getNumPlayers(); ++eLoopOtherPlayer)
+                            {
+                                if (eLoopOtherPlayer != getPlayer())
+                                {
+                                    BetterAIPlayer pLoopOtherPlayer = ((BetterAIPlayer)(game.player(eLoopOtherPlayer)));
+
+                                    if (pLoopOtherPlayer.isAlive() && game.isTeamContact(player.getTeam(), pLoopOtherPlayer.getTeam()))
+                                    {
+                                        foreach (int iCharacterID in pLoopOtherPlayer.getCharacters())
+                                        {
+                                            loopCharacterMaxAgeDelegate(iCharacterID);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            protected virtual void cacheCharacterTurnsRemaining(int iCharacterID)
+            {
+                Character pCharacter = game.character(iCharacterID);
+                {
+                    if (pCharacter != null && pCharacter.isAlive() && !pCharacter.isTemporary() && !pCharacter.hasTraitDoomed())
+                    {
+                        BAI_mpAICache.setCharacterGeneralTurnsLeftX10(iCharacterID, calculateTurnsLeftEstimateX10(pCharacter: pCharacter, bGeneral: true));
+                        BAI_mpAICache.setCharacterAnyJobTurnsLeftX10(iCharacterID, calculateTurnsLeftEstimateX10(pCharacter: pCharacter, bGeneral: false, bJob: true));
+                        BAI_mpAICache.setCharacterLifeTurnsLeftX10(iCharacterID, calculateTurnsLeftEstimateX10(pCharacter: pCharacter, bGeneral: false, bJob: false));
+                    }
+                    else
+                    {
+                        BAI_mpAICache.setCharacterGeneralTurnsLeftX10(iCharacterID, 0);
+                        BAI_mpAICache.setCharacterAnyJobTurnsLeftX10(iCharacterID, 0);
+                        BAI_mpAICache.setCharacterLifeTurnsLeftX10(iCharacterID, 0);
+                    }
+                }
+            }
+
+
+            public virtual int getExpectedMaxAgeHealthyX10(Character pCharacter, bool bGeneral)
+            {
+                BetterAIInfoMortality pInfoMortality = (BetterAIInfoMortality)infos.mortality(game.getMortality());
+
+                if (bGeneral)
+                {
+                    return pInfoMortality.maiMaxAgeGeneralX10[pCharacter.getAge()];
+                }
+                else
+                {
+                    return pInfoMortality.maiMaxAgeX10[pCharacter.getAge()];
+                }
+            }
+
+            public virtual int getPerMilleChanceForDecadePropTrait(BetterAICharacter pCharacter, int iExtraAge = 0)
+            {
+                int iChance = 10000;
+                for (TraitType eLoopTrait = 0; eLoopTrait < infos.traitsNum(); eLoopTrait++)
+                {
+                    BetterAIInfoTrait pLoopInfoTrait = (BetterAIInfoTrait)(infos.trait(eLoopTrait));
+
+                    if (!pCharacter.isTrait(eLoopTrait) && pLoopInfoTrait.maiDecadeProb.Count > 0 && pCharacter.getTraitValid(eLoopTrait))
+                    {
+                        iChance -= iChance * pLoopInfoTrait.maiDecadeProb[Math.Min((pCharacter.getAge() + iExtraAge) / 10, pLoopInfoTrait.maiDecadeProb.Count - 1)];
+                    }
+                }
+
+                return (10000 - iChance) / 10;
+            }
+
+            public virtual void modifySecondaryTraitChanceForPoolSize(TraitType eSecondardDieTrait, TraitType eOriginTrait, ref int iSecondaryTraitAddChance, ref Dictionary<(TraitType, TraitType), int> dTraitProbs)
+            {
+                int iValue = 0;
+                int iGranularity = 1000; //iSecondaryTraitAddChance is multiplied with 1000 already
+                using (var traitProbTraitsScoped = CollectionCache.GetListScoped<(TraitType, TraitType)>())
+                using (var traitPoolsizeProbsScoped = CollectionCache.GetDictionaryScoped<int, int>())
+                {
+                    List<(TraitType, TraitType)> otherTraitPairs = traitProbTraitsScoped.Value;
+                    Dictionary<int, int> dPoolsizeProbs = traitPoolsizeProbsScoped.Value;
+                    foreach ((TraitType, TraitType) eLoopTraitPair in dTraitProbs.Keys)
+                    {
+                        if (eLoopTraitPair.Item1 != eOriginTrait || eLoopTraitPair.Item2 != eSecondardDieTrait)
+                        {
+                            otherTraitPairs.Add(eLoopTraitPair);
+                        }
+                    }
+
+                    getTraitPoolsizeChances(iIndex: 0, iPoolsize: 0, iChances: iGranularity, ref otherTraitPairs, ref dTraitProbs, ref dPoolsizeProbs);
+                    foreach (int iLoopPoolsize in dPoolsizeProbs.Keys)
+                    {
+                        iValue += iSecondaryTraitAddChance * dPoolsizeProbs[iLoopPoolsize] / (1 + iLoopPoolsize);
+                    }
+
+                    iSecondaryTraitAddChance = (iValue + (iGranularity/2)) / iGranularity;
+                    return;
+                }
+            }
+
+            public virtual void getTraitPoolsizeChances(int iIndex, int iPoolsize, int iChances, ref List<(TraitType, TraitType)> otherTraitPairs, ref Dictionary<(TraitType, TraitType), int> dTraitProbs, ref Dictionary<int, int> dPoolsizeProbs)
+            {
+                (TraitType, TraitType) eCurrentTrait = otherTraitPairs[iIndex];
+                if (iIndex <= otherTraitPairs.Count - 2)
+                {
+                    getTraitPoolsizeChances(iIndex + 1, iPoolsize + 0, iChances * (100 - dTraitProbs[eCurrentTrait]), ref otherTraitPairs, ref dTraitProbs, ref dPoolsizeProbs);
+                    getTraitPoolsizeChances(iIndex + 1, iPoolsize + 1, iChances * dTraitProbs[eCurrentTrait], ref otherTraitPairs, ref dTraitProbs, ref dPoolsizeProbs);
+                }
+                else // last item: iIndex == otherTraits.Count - 1
+                {
+                    if (dPoolsizeProbs.ContainsKey(iPoolsize))
+                    {
+                        dPoolsizeProbs[iPoolsize] += iChances * (100 - dTraitProbs[eCurrentTrait]);
+                    }
+                    else
+                    {
+                        dPoolsizeProbs.Add(iPoolsize, iChances * (100 - dTraitProbs[eCurrentTrait]));
+                    }
+
+                    if (dPoolsizeProbs.ContainsKey(iPoolsize + 1))
+                    {
+                        dPoolsizeProbs[iPoolsize + 1] += iChances * dTraitProbs[eCurrentTrait];
+                    }
+                    else
+                    {
+                        dPoolsizeProbs.Add(iPoolsize + 1, iChances * dTraitProbs[eCurrentTrait]);
+                    }
+                }
+            }
+
+
+            public virtual void getTurnsWeightProductFromDeathTraitX10(TraitType eDieTrait, Character pCharacter, 
+                ref int iValue, ref int iWeight, ref int iRemainingWeight, ref Dictionary<(TraitType, TraitType), int> dTraitProbs, int iEvalStartTurn = 1, int iEvalEndTurn = 10, bool bJob = true)
+            {
+                BetterAIInfoTrait pDieInfoTrait = (BetterAIInfoTrait)(infos.trait(eDieTrait));
+                int iDieProb = infos.Helpers.getTraitDieProb(eDieTrait, game);
+                if (bJob)
+                {
+                    foreach (TraitType eLoopTrait in pDieInfoTrait.maeNoJobTraitProbs)
+                    {
+                        //NoJob is the same as death
+                        iDieProb += pDieInfoTrait.maiTraitProb[eLoopTrait];
+                    }
+                }
+
+                int iRemoveTurns = pDieInfoTrait.miRemoveTurns;
+                int iRemoveProb = pDieInfoTrait.miRemoveProb;
+                int iNewValue = 0;
+
+                int iYearDivisor = game.getYearDivisions();
+                int iTurnYearOffset = (game.getTurn() - pCharacter.getID()) % iYearDivisor;
+
+                //this is moved to parent method
+                //using (var traitProbsScoped = CollectionCache.GetDictionaryScoped<(TraitType, TraitType), int>())
+                {
+                    //Dictionary<(TraitType, TraitType), int> dTraitProbs = traitProbsScoped.Value;
+                    //foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    //{
+                    //    BetterAIInfoTrait pLoopInfoTrait = (BetterAIInfoTrait)(infos.trait(eLoopTrait));
+                    //    foreach(TraitType eOtherTrait in pLoopInfoTrait.maeAllTraitProbs)
+                    //    {
+                    //        if (dTraitProbs.ContainsKey((eLoopTrait, eOtherTrait)))
+                    //        {
+                    //            dTraitProbs[(eLoopTrait, eOtherTrait)] += pLoopInfoTrait.maiTraitProb[eOtherTrait]; //not perfect but w/e
+                    //        }
+                    //        else
+                    //        {
+                    //            dTraitProbs.Add((eLoopTrait, eOtherTrait), pLoopInfoTrait.maiTraitProb[eOtherTrait]);
+                    //        }
+                    //    }
+                    //}
+
+
+                    for (int i = iEvalStartTurn; i < iEvalEndTurn; i++)
+                    {
+                        if ((i + iTurnYearOffset) % iYearDivisor == 0) //these things only happen yearly, for other turn scales this skips many turns
+                        {
+
+                            int iYear = game.turnsToYears(i + iTurnYearOffset) / iYearDivisor;
+
+                            //first: dying: doTurnYear -> checkDeathTrait
+                            int iDieProbWeight = iDieProb * iWeight;
+                            iNewValue += iDieProbWeight * i;
+                            //iWeight *= (100 - iDieProb);
+                            //iWeight /= 100;
+                            iWeight -= iDieProbWeight / 100;
+
+                            //second: adding traits: doTurnYear -> checkLifeEvent -> doAddTrait
+                            //this does now account for other present traits with their own aiTraitProps that could be chosen instead, thus reducing the chances of a death trait to be added
+                            int iDecadePropTraitGetsAddedChanceX1000 = getPerMilleChanceForDecadePropTrait((BetterAICharacter)pCharacter, iYear);
+                            foreach (TraitType eSecondardDieTrait in pDieInfoTrait.maeDieTraitProbs)
+                            {
+                                BetterAIInfoTrait pSecondaryDieInfoTrait = (BetterAIInfoTrait)(infos.trait(eSecondardDieTrait));
+                                int iSecondaryTraitAddChance = 1000 * pDieInfoTrait.maiTraitProb[eSecondardDieTrait]; //* 1000 #1
+                                if (dTraitProbs.Count > 1)
+                                {
+                                    modifySecondaryTraitChanceForPoolSize(eSecondardDieTrait, eDieTrait,ref iSecondaryTraitAddChance, ref dTraitProbs);
+
+                                }
+                                iSecondaryTraitAddChance *= (1000 - iDecadePropTraitGetsAddedChanceX1000); //*1000 #2
+                                iSecondaryTraitAddChance += 500;  // rounding
+                                iSecondaryTraitAddChance /= 1000; // /1000 #1
+
+                                int iSecondaryWeight = ((iWeight * iSecondaryTraitAddChance) + 500) / 1000; // rounding, /1000 #2
+                                iSecondaryWeight = (iSecondaryWeight + 50) / 100;
+                                int iOriginalSecondaryWeight = iSecondaryWeight;
+                                int iSecondaryRemainingWeight = 0;
+                                int iSecondaryValue = 0;
+                                if (!pDieInfoTrait.mbNoRemoveOnTraitProb)
+                                {
+                                    foreach (TraitType eOtherTrait in pDieInfoTrait.maeAllTraitProbs)
+                                    {
+                                        //first remove them
+                                        dTraitProbs.Remove((eDieTrait, eOtherTrait));
+                                    }
+                                }
+
+                                foreach (TraitType eOtherTrait in pSecondaryDieInfoTrait.maeAllTraitProbs)
+                                {
+                                    //add the new ones
+                                    dTraitProbs.Add((eSecondardDieTrait, eOtherTrait), pSecondaryDieInfoTrait.maiTraitProb[eOtherTrait]);
+                                }
+
+                                getTurnsWeightProductFromDeathTraitX10(eSecondardDieTrait, pCharacter, ref iSecondaryValue, ref iSecondaryWeight, ref iSecondaryRemainingWeight, ref dTraitProbs,
+                                    iEvalStartTurn: iEvalStartTurn + i, iEvalEndTurn: iEvalEndTurn + (i/2), bJob: bJob); //start at current turn, but extend range a bit too, to properly grasp TRAIT_SICKLY effect
+
+                                {
+                                    int iWeightDiff = iOriginalSecondaryWeight - iSecondaryWeight;
+                                    int iWeightDie = iWeightDiff - iSecondaryRemainingWeight;
+                                    int iAverageTurns = 0;
+                                    if (iWeightDiff != 0)
+                                    {
+                                        iAverageTurns = iSecondaryValue / iWeightDiff;
+                                    }
+                                    
+                                    Debug.Log($"Turn {i}, {pSecondaryDieInfoTrait.mzType} from {pDieInfoTrait.mzType}: Total secondary weight {iOriginalSecondaryWeight}, weight used {iWeightDiff}, average turns to die {iAverageTurns}(/10) at weight {iWeightDie}");
+                                }
+
+                                foreach (TraitType eOtherTrait in pSecondaryDieInfoTrait.maeAllTraitProbs)
+                                {
+                                    //and remove the new ones again
+                                    dTraitProbs.Remove((eSecondardDieTrait, eOtherTrait));
+                                }
+
+                                iNewValue += 10 * iSecondaryValue; //because iSecondaryValue got divided by 10 at the end of the method, and iNewValue is not yet divided
+
+                                //adding severely ill removes ill. This removal on adding always happens unless mbNoRemoveOnTraitProb. Character.doAddTrait
+                                //if (pSecondaryDieInfoTrait.maeTraitReplaces.Contains(eDieTrait))
+
+                                if (!pDieInfoTrait.mbNoRemoveOnTraitProb)
+                                {
+                                    foreach (TraitType eOtherTrait in pDieInfoTrait.maeAllTraitProbs)
+                                    {
+                                        //then add them again
+                                        dTraitProbs.Add((eDieTrait, eOtherTrait), pDieInfoTrait.maiTraitProb[eOtherTrait]);
+                                    }
+
+                                    //chance to die:             ((100 * (iOriginalSecondaryWeight-iSecondaryWeight-iSecondaryRemainingWeight) / iOriginalSecondaryWeight)
+                                    //chance to be cured:        ((100 * iSecondaryRemainingWeight) / iOriginalSecondaryWeight)
+                                    //chance undecided:          ((100 * iSecondaryWeight) / iOriginalSecondaryWeight)
+                                    //chance to be cured or die: ((100 * (iOriginalSecondaryWeight-iSecondaryWeight) / iOriginalSecondaryWeight)
+
+                                    //add weight from cure
+                                    iRemainingWeight += 100 * iSecondaryRemainingWeight; //iSecondaryRemainingWeight is already divided by 100 !
+
+                                    //remove weight from  cure or dying
+                                    iWeight -= (iOriginalSecondaryWeight - iSecondaryWeight);
+                                }
+                                else
+                                {
+                                    //iWeight *= (100 - ((100 * (iOriginalSecondaryWeight - iSecondaryWeight - iSecondaryRemainingWeight) / iOriginalSecondaryWeight)));
+                                    //iWeight /= 100;
+
+                                    //remove weight from dying: like above but also remove cure chance, because Character still has original trait
+                                    iWeight -= (iOriginalSecondaryWeight - iSecondaryWeight - iSecondaryRemainingWeight);
+                                }
+                            }
+
+                            //third: removing traits: doTurnYear -> checkLifeEvent -> doRemoveTrait
+                            if (iRemoveProb > 0)
+                            {
+                                //remove from removeprob can only happen if no trait from traitprob was added so chances need to be modified
+                                //10000 is arbitrary
+                                const int iGranularity = 10000;
+                                int iModifier = (iGranularity * (1000 - iDecadePropTraitGetsAddedChanceX1000)) / 1000;
+                                if (dTraitProbs.Count > 0)
+                                {
+                                    foreach ((TraitType, TraitType) eLoopTraitPair in dTraitProbs.Keys)
+                                    {
+                                        iModifier *= (100 - dTraitProbs[eLoopTraitPair]);
+                                        iModifier /= 100;
+                                    }
+                                }
+                                int iTempRemoveProbX10 = (((iRemoveProb * 10 * iModifier)) + (iGranularity/2)) / iGranularity;
+                                int iRemoveProbWeight = ((iWeight * iTempRemoveProbX10) + 5) / 10;
+                                iRemainingWeight += iRemoveProbWeight;
+                                //iWeight *= (1000 - iTempRemoveProbX10);
+                                //iWeight /= 1000;
+                                iWeight -= iRemoveProbWeight / 100;
+                            }
+                        }
+
+                        //fourth: removing traits with miRemoveTurns in doTurn. this is not affected by anything that comes before it, it even executes every turn for all turn scales
+                        if (iRemoveTurns > 0 && pCharacter.getTraitTurnLength(eDieTrait) + i > iRemoveTurns)
+                        {
+                            iRemainingWeight += iWeight * 100;
+                            iWeight = 0;
+                            break;
+                        }
+
+                        if (iWeight < 20) break;
+                    }
+                }
+
+                iRemainingWeight /= 100;
+                iNewValue /= 10;
+
+                iValue += iNewValue;
+
+                return;
+            }
+
+            protected override int getTurnsLeftEstimate(Character pCharacter, bool bGeneral)
+            {
+                return (getTurnsLeftEstimateX10(pCharacter, bGeneral, bJob: true) + 5) / 10;
+            }
+            protected virtual int getTurnsLeftEstimate(Character pCharacter, bool bGeneral, bool bJob = true)
+            {
+                return (getTurnsLeftEstimateX10(pCharacter, bGeneral, bJob: bJob) + 5) / 10;
+            }
+
+
+            public virtual int getTurnsLeftEstimateX10(Character pCharacter, bool bGeneral, bool bJob = true)
+            {
+                int iValue;
+                //if (pCharacter.getPlayer() == player.getPlayer())
+                {
+                    if (bGeneral)
+                    {
+                        if (BAI_mpAICache.getCharacterGeneralTurnsLeftX10(pCharacter.getID(), out iValue))
+                        {
+                            return iValue;
+                        }
+                    }
+                    else
+                    {
+                        if (bJob)
+                        {
+                            if (BAI_mpAICache.getCharacterAnyJobTurnsLeftX10(pCharacter.getID(), out iValue))
+                            {
+                                return iValue;
+                            }
+                        }
+                        else
+                        {
+                            if (BAI_mpAICache.getCharacterLifeTurnsLeftX10(pCharacter.getID(), out iValue))
+                            {
+                                return iValue;
+                            }
+                        }
+                    }
+                }
+
+                {
+                    //log as error with char id
+
+                    iValue = calculateTurnsLeftEstimateX10(pCharacter, bGeneral, bJob: bJob);
+                    if (bGeneral)
+                    {
+                        BAI_mpAICache.setCharacterGeneralTurnsLeftX10(pCharacter.getID(), iValue);
+                    }
+                    else
+                    {
+                        if (bJob)
+                        {
+                            BAI_mpAICache.setCharacterAnyJobTurnsLeftX10(pCharacter.getID(), iValue);
+                        }
+                        else
+                        {
+                            BAI_mpAICache.setCharacterLifeTurnsLeftX10(pCharacter.getID(), iValue);
+                        }
+                    }
+
+                    return iValue;
+                }
+
             }
 
             //lines 11453-11465
-            protected override int getTurnsLeftEstimate(Character pCharacter, bool bGeneral)
+            public virtual int calculateTurnsLeftEstimateX10(Character pCharacter, bool bGeneral, bool bJob = true)
             {
                 if (pCharacter == null || pCharacter.hasTraitDoomed())
                 {
                     return 0;
                 }
+                int iSafeTurns = (pCharacter.getSafeTurn() - game.getTurn());
+                if (pCharacter.isLeader())
+                {
+                    iSafeTurns = Math.Max(iSafeTurns, infos.mortality(game.getMortality()).miInitLeaderSafeTurns - game.getTurn());
+                    if (player.getSuccessionCount() == 0)
+                    {
+                        iSafeTurns = Math.Max(iSafeTurns, game.yearsToTurns(infos.Globals.LEADER_NO_HEIR_SAFE_MIN_AGE - pCharacter.getAge()));
+                    }
+                }
+                else if (pCharacter.isHeir() && player.getSuccessionCount() == 1)
+                {
+                    iSafeTurns = Math.Max(iSafeTurns, game.yearsToTurns(infos.Globals.SOLE_HEIR_SAFE_MIN_AGE - pCharacter.getAge()));
+                }
+                iSafeTurns = Math.Max(iSafeTurns, 0);
 
-                //TODO: better calculation of extected remaining life (job) tile
+                int iMaxAgeX10 = infos.Globals.GENERAL_RETIRE_AGE;
+                //if (pCharacter.getAge() + game.turnsToYears(iSafeTurns) + 1 >= iMaxAgeX10)
+                //{
+                //    return game.yearsToTurns(iMaxAgeX10 - pCharacter.getAge());
+                //}
+
+                //better calculation of extected remaining life (job) time
                 //either death, or NO_JOB trait like Incubated
                 //aiMortalityDieProb, iDieProb, iDieModifier
                 //job: bNoJob, bNoCouncil, bNoGeneral, bNoGovernor, bNoReligion (removes clergy status, which removes agent ability is not enabled in another way), enablers: bGeneralPrereq, bGeneralAll, bGovernorPrereq, bGovernorAll, bAgentPrereq, ReligionAgent
                 //maiDecadeProb, aiTraitProb (bNoRemoveOnTraitProb), aeTraitInvalid, iRemoveTurns, iRemoveProb, aeTraitReplaces (bRemoveLeader)
-                int iMaxAge = infos.Globals.GENERAL_RETIRE_AGE;
-                if (!bGeneral || pCharacter.isLeader())
+
+                //just focusing on traits that can appear randomly and cause death/nojob
+                //leader is protected from some: Incubated, check via (infos().Helpers.isInvalidLeaderTrait(eLoopTrait))
+                //TRAIT_INCUBATED, TRAIT_ILL, TRAIT_SEVERELY_ILL, TRAIT_WOUNDED, TRAIT_SEVERELY_WOUNDED, TRAIT_POISONED, TRAIT_DROUGHT_STRICKEN, TRAIT_AMBUSHED_BY_REBELS, TRAIT_INFECTED
+                //TRAIT_INCUBATED: can't be gained randomly, removeTurns 3, removed by TRAIT_SEVERELY_ILL
+                //TRAIT_INFECTED, TRAIT_POISONED: can't be gained randomly, removeProb 20
+                //TRAIT_AMBUSHED_BY_REBELS: can't be gained randomly, removeTurns 1
+                //TRAIT_DROUGHT_STRICKEN: can't be gained randomly, removeProb 50
+                //TRAIT_WOUNDED: from battle, removeProb 40
+                //TRAIT_SEVERELY_WOUNDED: removeProb 20, but 20 blinded (bNoJob)
+                //TRAIT_ILL: removeProb 60 but DecadeProb 0012345000
+                //TRAIT_SEVERELY_ILL: removedProb 40, replaces Ill, incubated, aiDecadeProb 00000 5 10 15 25 30
+
+                const int iTotalWeight = 10000; //10000 equals 100% chance
+                int iWeight = iTotalWeight;
+                int iRemainingWeight = 0; //normal max age calculation will still run, but only be weighted with iRemainingWeight. Full weight only is character is healthy and has no death traits, or traits that give dead traits
+                int iValue = 0; //Years * iWeight * 10
+                using (var traitProbsScoped = CollectionCache.GetDictionaryScoped<(TraitType, TraitType), int>())
                 {
-                    iMaxAge = Math.Max(iMaxAge, pCharacter.getAge() + 5);
+                    Dictionary<(TraitType, TraitType), int> dTraitProbs = traitProbsScoped.Value;
+                    foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    {
+                        BetterAIInfoTrait pLoopInfoTrait = (BetterAIInfoTrait)(infos.trait(eLoopTrait));
+                        foreach (TraitType eOtherTrait in pLoopInfoTrait.maeAllTraitProbs)
+                        {
+                            if (dTraitProbs.ContainsKey((eLoopTrait, eOtherTrait)))
+                            {
+                                dTraitProbs[(eLoopTrait, eOtherTrait)] += pLoopInfoTrait.maiTraitProb[eOtherTrait]; //not perfect but w/e
+                            }
+                            else
+                            {
+                                dTraitProbs.Add((eLoopTrait, eOtherTrait), pLoopInfoTrait.maiTraitProb[eOtherTrait]);
+                            }
+                        }
+                    }
+                    foreach (TraitType eLoopTrait in pCharacter.getTraits())
+                    {
+                        BetterAIInfoTrait pLoopInfoTrait = ((BetterAIInfoTrait)(infos.trait(eLoopTrait)));
+                        if (infos.Helpers.getTraitDieProb(eLoopTrait, game) > 0 || pLoopInfoTrait.maeDieTraitProbs.Count > 0 || (bJob && pLoopInfoTrait.maeNoJobTraitProbs.Count > 0))
+                        {
+                            getTurnsWeightProductFromDeathTraitX10(eLoopTrait, pCharacter, ref iValue, ref iWeight, ref iRemainingWeight, ref dTraitProbs, iEvalStartTurn: (1 + ((bJob && pLoopInfoTrait.maeNoJobTraitProbs.Count > 0) ? 0 : iSafeTurns)), iEvalEndTurn: AI_DEATHTRAIT_PROB_EVAL_DEPTH, bJob: bJob);
+                        }
+                    }
                 }
-                return game.yearsToTurns(Math.Max(0, iMaxAge - pCharacter.getAge()));
+
+                iRemainingWeight += iWeight;
+
+                iMaxAgeX10 = getExpectedMaxAgeHealthyX10(pCharacter, bGeneral && !(pCharacter.isLeader() || pCharacter.isHeir())); //age * 10
+                int iValueForHealthyMaxAge = iMaxAgeX10 - (10*(pCharacter.getAge() - 1)); //-1 because a character is no longer useful on their dying year
+                iValueForHealthyMaxAge = game.yearsToTurns(iValueForHealthyMaxAge) * iRemainingWeight;
+
+                if (iWeight != iTotalWeight)
+                {
+                    int iTraitWeight = iTotalWeight - iRemainingWeight;
+                    int iMaxAgeFromTraits = iValue / iTraitWeight;
+                    Debug.Log($"TraitMax {iMaxAgeFromTraits} at weight {iTraitWeight}, NormalMax {iMaxAgeX10} at weight {iRemainingWeight}");
+                }
+
+                iValue += iValueForHealthyMaxAge;
+                iValue += (iTotalWeight / 2); //rounding
+                iValue /= iTotalWeight;
+
+                int iExtraTurnsFromTurnYearOffset = 10 * ((pCharacter.getID() - game.getTurn() - 1) % game.getYearDivisions());
+                return game.yearsToTurns(Math.Max(0, iValue + iExtraTurnsFromTurnYearOffset));
+
+                //this was the original.
+                ////int iMaxAge = infos.Globals.GENERAL_RETIRE_AGE;
+                //if (!bGeneral || pCharacter.isLeader())
+                //{
+                //    iMaxAge = Math.Max(iMaxAge, pCharacter.getAge() + 5);
+                //}
+                //return game.yearsToTurns(Math.Max(0, iMaxAge - pCharacter.getAge()));
             }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate           END ###
+  ##############################################*/
 
             public virtual long getTotalCharacterTraitsValue(Character pCharacter, bool? bLeader = null, bool? bLeaderSpouse = null, bool? bSuccessor = null, CouncilType? eCouncil = null, int? iCityGovernor = null, UnitType? eUnitGeneral = null, int? iCityAgent = null)
             {
@@ -3528,6 +4074,16 @@ namespace BetterAI
 
                 BetterAIInfoTrait pInfoTrait = (BetterAIInfoTrait)infos.trait(eTrait);
 
+
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+                int iTraitTurnsLeftX10 = Math.Min(AI_YIELD_TURNS * 10, getTraitTurnsLeftEstimateX10(pCharacter, eTrait));
+                //int iTurnsLeft = ((int)iTurnsLeftX10 + 5) / 10;
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+
                 long iValue = 0;
 
                 iValue += getCharacterXPValue(pCharacter, pInfoTrait.miXPTurn);
@@ -3554,16 +4110,43 @@ namespace BetterAI
 
                     if (eEffectPlayer != EffectPlayerType.NONE)
                     {
-                        long iLeaderValue = effectPlayerValue(eEffectPlayer, player.getStateReligion(), bRemove);
+                        //long iLeaderValue = effectPlayerValue(eEffectPlayer, player.getStateReligion(), bRemove);
+                        long iLeaderValue = effectPlayerValue(eEffectPlayer, player.getStateReligion(), bRemove: bRemove, 
+                            iMaxTurnsRemainingX10: iTraitTurnsLeftX10, bSkipTurnsRemaining: false, bIncludeDependentEffects: true);
 
                         if (!bTestLeader)
                         {
-                            iLeaderValue /= 2;
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate         START ###
+  ##############################################*/
+                            if (player.leader() != null || player.leader() != pCharacter)
+                            {
+                                int iLeaderTurnsLeftX10 = getTurnsLeftEstimateX10(player.leader(), bGeneral: false, bJob: false);
+                                if (iTraitTurnsLeftX10 > iLeaderTurnsLeftX10)
+                                {
+                                    iLeaderValue *= (iTraitTurnsLeftX10 - iLeaderTurnsLeftX10);
+                                    iLeaderValue /= iTraitTurnsLeftX10;
+                                }
+                                else
+                                {
+                                    iLeaderValue = 0;
+                                }
+                            }
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate           END ###
+  ##############################################*/
+                            else
+                            {
+                                iLeaderValue /= 2;
+                            }
                         }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
   ##############################################*/
-                        iLeaderValue *= getTurnsLeftEstimate(pCharacter, false);
+                        //iLeaderValue *= Math.Min(iTurnsLeftX10, getTurnsLeftEstimateX10(pCharacter, bGeneral: false, bJob: false));
+                        //iLeaderValue /= 10; //because X10 above
+                        iLeaderValue *= AI_YIELD_TURNS; //already scaled for remaining turns
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
   ##############################################*/
@@ -3592,6 +4175,7 @@ namespace BetterAI
                 }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
+  ### Better TurnsLeftEstimate         START ###
   ##############################################*/
                 int iTestAgentCityID = pCharacter.getCityAgentID();
                 if (iCityAgent.HasValue)
@@ -3606,8 +4190,13 @@ namespace BetterAI
 
                     if (eEffectPlayer != EffectPlayerType.NONE)
                     {
-                        long iCouncilValue = effectPlayerValue(eEffectPlayer, player.getStateReligion(), bRemove);
-                        iCouncilValue *= getCouncilTurnsLeftEstimate(pCharacter, eTestCouncil);
+
+                        //long iCouncilValue = effectPlayerValue(eEffectPlayer, player.getStateReligion(), bRemove);
+                        long iCouncilValue = effectPlayerValue(eEffectPlayer, player.getStateReligion(), bRemove: bRemove, 
+                            iMaxTurnsRemainingX10: Math.Min(getCouncilTurnsLeftEstimateX10(pCharacter, eTestCouncil), iTraitTurnsLeftX10), bSkipTurnsRemaining: false, bIncludeDependentEffects: true);
+                        // iCouncilValue *= Math.Min(iTurnsLeftX10, getCouncilTurnsLeftEstimateX10(pCharacter, eTestCouncil));
+                        // iCouncilValue /= 10;  //because X10
+                        iCouncilValue *= AI_YIELD_TURNS; //already scaled
                         iValue += iCouncilValue;
                     }
                 }
@@ -3616,27 +4205,39 @@ namespace BetterAI
                 {
                     EffectCityType eEffectCity = pInfoTrait.meGovernorEffectCity;
 
-                    long iGovernorValue = 0;
                     if (eEffectCity != EffectCityType.NONE)
                     {
-                        iGovernorValue += effectCityValue(eEffectCity, game.city(iTestGovernorCityID), bRemove);
+
+                        long iGovernorEffectCityValue = effectCityValue(eEffectCity, game.city(iTestGovernorCityID), bRemove);
+                        iGovernorEffectCityValue *= Math.Min(iTraitTurnsLeftX10, getJobTurnsLeftEstimateX10(pCharacter, infos.Globals.GOVERNOR_JOB));
+                        iGovernorEffectCityValue /= 10;  //because X10
+                        iValue += iGovernorEffectCityValue;
                     }
 
                     if (pInfoTrait.maeJobEffectPlayer[infos.Globals.GOVERNOR_JOB] != EffectPlayerType.NONE)
                     {
-                        iGovernorValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GOVERNOR_JOB], player.getStateReligion(), bRemove);
+                        //iGovernorValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GOVERNOR_JOB], player.getStateReligion(), bRemove);
+                        long iGovernorEffectPlayerValue = effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GOVERNOR_JOB], player.getStateReligion(), bRemove: bRemove, 
+                            iMaxTurnsRemainingX10: Math.Min(getJobTurnsLeftEstimateX10(pCharacter, infos.Globals.GOVERNOR_JOB), iTraitTurnsLeftX10), bSkipTurnsRemaining: false, bIncludeDependentEffects: true);
+                        iGovernorEffectPlayerValue *= AI_YIELD_TURNS; //already scaled
+                        iValue += iGovernorEffectPlayerValue;
                     }
 
-                    iGovernorValue *= getJobTurnsLeftEstimate(pCharacter, infos.Globals.GOVERNOR_JOB);
-                    iValue += iGovernorValue;
+                    //iGovernorValue *= Math.Min(iTraitTurnsLeftX10, getJobTurnsLeftEstimateX10(pCharacter, infos.Globals.GOVERNOR_JOB));
+                    //iGovernorValue /= 10;  //because X10
+                    //iValue += iGovernorValue;
                 }
 
                 if (iTestAgentCityID != -1)
                 {
                     if (pInfoTrait.maeJobEffectPlayer[infos.Globals.AGENT_JOB] != EffectPlayerType.NONE)
                     {
-                        long iAgentValue = effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.AGENT_JOB], player.getStateReligion(), bRemove);
-                        iAgentValue *= getJobTurnsLeftEstimate(pCharacter, infos.Globals.AGENT_JOB);
+                        //long iAgentValue = effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.AGENT_JOB], player.getStateReligion(), bRemove);
+                        long iAgentValue = effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.AGENT_JOB], player.getStateReligion(), bRemove: bRemove, 
+                            iMaxTurnsRemainingX10: Math.Min(getJobTurnsLeftEstimateX10(pCharacter, infos.Globals.AGENT_JOB), iTraitTurnsLeftX10), bSkipTurnsRemaining: false, bIncludeDependentEffects: true);
+                        //iAgentValue *= Math.Min(iTraitTurnsLeftX10, getJobTurnsLeftEstimateX10(pCharacter, infos.Globals.AGENT_JOB));
+                        iAgentValue *= AI_YIELD_TURNS; //already scaled
+                        //iAgentValue /= 10;  //because X10
                         iValue += iAgentValue;
                     }
                 }
@@ -3644,13 +4245,14 @@ namespace BetterAI
                 //iValue *= getTurnsLeftEstimate(pCharacter, false);
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
+  ### Better TurnsLeftEstimate           END ###
   ##############################################*/
 
 
                 if (eTestUnit != UnitType.NONE)
                 {
-                    long iGeneralValue = 0;
                     {
+                        long iGeneralValue = 0;
                         {
                             EffectUnitType eEffectUnit = pInfoTrait.meGeneralEffectUnit;
 
@@ -3669,20 +4271,30 @@ namespace BetterAI
                                 iGeneralValue += effectUnitValue(eEffectUnit, eTestUnit);
                             }
                         }
+                        //iValue += iGeneralValue * getTurnsLeftEstimate(pCharacter, true);
+                        iGeneralValue *= Math.Min(iTraitTurnsLeftX10, getJobTurnsLeftEstimateX10(pCharacter, infos.Globals.GENERAL_JOB));
+                        iGeneralValue /= 10;  //because X10
+                        iValue += iGeneralValue;
+                    }
 
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
+  ### Better TurnsLeftEstimate         START ###
   ##############################################*/
+
+                    {
+                        //long iGeneralEffectPlayerValue = 0;
                         if (pInfoTrait.maeJobEffectPlayer[infos.Globals.GENERAL_JOB] != EffectPlayerType.NONE)
                         {
-                            iGeneralValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GENERAL_JOB], player.getStateReligion(), bRemove);
+                            //  iGeneralEffectPlayerValue += effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GENERAL_JOB], player.getStateReligion(), bRemove);
+                            long iGeneralEffectPlayerValue = effectPlayerValue(pInfoTrait.maeJobEffectPlayer[infos.Globals.GENERAL_JOB], player.getStateReligion(), bRemove: bRemove, 
+                                iMaxTurnsRemainingX10: Math.Min(getJobTurnsLeftEstimateX10(pCharacter, infos.Globals.GENERAL_JOB), iTraitTurnsLeftX10), bSkipTurnsRemaining: false, bIncludeDependentEffects: true);
+                            iGeneralEffectPlayerValue *= AI_YIELD_TURNS; //already scaled
+                            iValue += iGeneralEffectPlayerValue;
                         }
-
                     }
 
-                    //iValue += iGeneralValue * getTurnsLeftEstimate(pCharacter, true);
-                    iGeneralValue *= getJobTurnsLeftEstimate(pCharacter, infos.Globals.GENERAL_JOB);
-                    iValue += iGeneralValue;
+
                 }
 
                 if (pInfoTrait.bAnyTraitEffectPlayer)
@@ -3713,8 +4325,12 @@ namespace BetterAI
 
                             if (eLoopEffectPlayer != EffectPlayerType.NONE)
                             {
-                                long iJobliketraitValue = effectPlayerValue(eLoopEffectPlayer, player.getStateReligion(), bRemove);
-                                iJobliketraitValue *= getTraitTurnsLeftEstimate(pCharacter, eLoopTrait);
+                                //long iJobliketraitValue = effectPlayerValue(eLoopEffectPlayer, player.getStateReligion(), bRemove);
+                                long iJobliketraitValue = effectPlayerValue(eLoopEffectPlayer, player.getStateReligion(), bRemove: bRemove, 
+                                    iMaxTurnsRemainingX10: Math.Min(getTraitTurnsLeftEstimateX10(pCharacter, eLoopTrait), iTraitTurnsLeftX10), bSkipTurnsRemaining: false, bIncludeDependentEffects: true);
+                                iJobliketraitValue *= AI_YIELD_TURNS; //already scaled
+                                //iJobliketraitValue *= Math.Min(iTraitTurnsLeftX10, getTraitTurnsLeftEstimateX10(pCharacter, eLoopTrait));
+                                //iJobliketraitValue /= 10; //because X10
                                 iValue += iJobliketraitValue;
                             }
                         }
@@ -3723,6 +4339,7 @@ namespace BetterAI
                 }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
+  ### Better TurnsLeftEstimate           END ###
   ##############################################*/
 
                 iValue /= AI_YIELD_TURNS;
@@ -3733,109 +4350,168 @@ namespace BetterAI
             //lines 12298-12966
             protected override long effectPlayerValue(EffectPlayerType eEffectPlayer, ReligionType eStateReligion, bool bRemove)
             {
-                return effectPlayerValue(eEffectPlayer, eStateReligion, bRemove, bIncludeDependentEffects: true);
+                return effectPlayerValue(eEffectPlayer, eStateReligion, bRemove: bRemove, AI_YIELD_TURNS, bSkipTurnsRemaining: !(game.isCharacters()), bIncludeDependentEffects: true);
             }
 
-            public virtual int getEffectPlayerTurnsRemaining(EffectPlayerType eEffectPlayer)
+            public virtual int getEffectPlayerTurnsRemainingX10(EffectPlayerType eEffectPlayer, int iMaxTurnsX10)
             {
                 BetterAIInfoEffectPlayer pEffectPlayer = (BetterAIInfoEffectPlayer)infos.effectPlayer(eEffectPlayer);
-                int iRemainingEffectTurns = AI_YIELD_TURNS;
+                int iRemainingEffectTurnsX10 = iMaxTurnsX10;
 
-                int iMaxPossibleCharacters = int.MaxValue;
-                int iFoundCharacters = 0;
-                using (var effectPlayerIngoreListScoped = CollectionCache.GetListScoped<int>())
+                bool bCheckAllCharacters = false;
+                bool bSourceFound = false;
+                using (var effectPlayerTurnsLeftListScoped = CollectionCache.GetListScoped<int>())
                 {
-                    List<int> CharactersTurnsLeftEstimate = effectPlayerIngoreListScoped.Value;
-
-                    if (pEffectPlayer.meSourceTraitJob != JobType.NONE)
+                    List<int> CharactersTurnsLeftEstimateX10 = effectPlayerTurnsLeftListScoped.Value;
+                    if (pEffectPlayer.meSourceTrait != TraitType.NONE && (player.leader()?.isTrait(pEffectPlayer.meSourceTrait) ?? false))
                     {
-                        if (infos.job(pEffectPlayer.meSourceTraitJob).meCouncil != CouncilType.NONE)
+                        CharactersTurnsLeftEstimateX10.Add(Math.Min(getTraitTurnsLeftEstimateX10(player.leader(), pEffectPlayer.meSourceTrait), iMaxTurnsX10));
+                        bSourceFound = true;
+                    }
+                    else
+                    {
+                        foreach (JobType eLoopJob in pEffectPlayer.mseSourceTraitJobs)
                         {
-                            //iMaxPossibleCharacters = 1;
+                            bSourceFound = true;
+                            BetterAIInfoJob pLoopInfoJob = (BetterAIInfoJob)(infos.job(eLoopJob));
 
-                            BetterAICharacter pCharacter = (BetterAICharacter)player.councilCharacter(infos.job(pEffectPlayer.meSourceTraitJob).meCouncil);
-                            if (pCharacter != null)
+                            //TraitType eLoopTrait = pLoopInfoJob.mleEffectPlayerTraits[eEffectPlayer][0];
+                            if (pLoopInfoJob.meCouncil != CouncilType.NONE)
                             {
-                                return Math.Min(getJobTurnsLeftEstimate(pCharacter, pEffectPlayer.meSourceTraitJob), getTraitTurnsLeftEstimate(pCharacter, pEffectPlayer.meSourceTrait));
-                            }
-                        }
-                        else if (pEffectPlayer.meSourceTraitJob == infos.Globals.GOVERNOR_JOB)
-                        {
-                            iMaxPossibleCharacters = player.getNumCities();
-                        }
-                        else if (pEffectPlayer.meSourceTraitJob == infos.Globals.GENERAL_JOB)
-                        {
-                            iMaxPossibleCharacters = player.getNumUnits();
-                        }
-                        else if (pEffectPlayer.meSourceTraitJob == infos.Globals.AGENT_JOB)
-                        {
-                            iMaxPossibleCharacters = game.getNumCities() - player.getNumCities();
-                        }
-
-
-                        //Governor, General, Agent
-                        using (var charListScoped = CollectionCache.GetListScoped<int>())
-                        {
-                            player.getActiveCharacters(charListScoped.Value);
-
-                            foreach (int iLoopCharacter in charListScoped.Value)
-                            {
-                                Character pLoopCharacter = game.character(iLoopCharacter);
-
-                                if (pLoopCharacter.isJob(pEffectPlayer.meSourceTraitJob))
+                                BetterAICharacter pCouncilCharacter = (BetterAICharacter)player.councilCharacter(infos.job(eLoopJob).meCouncil);
+                                if (pCouncilCharacter != null)
                                 {
-                                    iFoundCharacters++;
-                                    if (pLoopCharacter.isTrait(pEffectPlayer.meSourceTrait))
+                                    TraitType eBestTrait = TraitType.NONE;
+                                    int iBestTraitTurns = 0;
+                                    foreach (TraitType eLoopTrait in pLoopInfoJob.mdlEffectPlayerTraits[eEffectPlayer])
                                     {
-                                        CharactersTurnsLeftEstimate.Add(Math.Min(getJobTurnsLeftEstimate(pLoopCharacter, pEffectPlayer.meSourceTraitJob), getTraitTurnsLeftEstimate(pLoopCharacter, pEffectPlayer.meSourceTrait)));
+                                        if (pCouncilCharacter.isTrait(eLoopTrait))
+                                        {
+                                            int iTraitTurns = getTraitTurnsLeftEstimateX10(pCouncilCharacter, eLoopTrait);
+                                            if (iTraitTurns > iBestTraitTurns)
+                                            {
+                                                iBestTraitTurns = iTraitTurns;
+                                                eBestTrait = eLoopTrait;
+                                            }
+                                        }
+                                    }
+                                    iBestTraitTurns = Math.Min(iBestTraitTurns, iMaxTurnsX10);
+                                    if (eBestTrait != TraitType.NONE)
+                                    {
+                                        CharactersTurnsLeftEstimateX10.Add(Math.Min(getJobTurnsLeftEstimateX10(pCouncilCharacter, eLoopJob), iBestTraitTurns));
                                     }
                                 }
-
-                                if (iFoundCharacters >= iMaxPossibleCharacters) break;
                             }
-                        }
-
-                    }
-                    else if (pEffectPlayer.meSourceTraitTrait != TraitType.NONE)
-                    {
-                        if (infos.trait(pEffectPlayer.meSourceTraitTrait).mbClergy || infos.trait(pEffectPlayer.meSourceTrait).mbClergy)
-                        {
-                            //max is 2
-                            iMaxPossibleCharacters = 2;
-                        }
-
-                        //Clergy
-                        using (var charListScoped = CollectionCache.GetListScoped<int>())
-                        {
-                            player.getActiveCharacters(charListScoped.Value);
-                            foreach (int iLoopCharacter in charListScoped.Value)
+                            else if (eLoopJob == infos.Globals.GENERAL_JOB || eLoopJob == infos.Globals.GOVERNOR_JOB || eLoopJob == infos.Globals.AGENT_JOB)
                             {
-                                Character pLoopCharacter = game.character(iLoopCharacter);
+                                bCheckAllCharacters = true;
+                            }
+                        }
+                        if (!bCheckAllCharacters && pEffectPlayer.mseSourceTraitTraits.Count > 0)
+                        {
+                            bSourceFound = true;
+                            bCheckAllCharacters = true;
+                        }
 
-                                if (pLoopCharacter.isTrait(pEffectPlayer.meSourceTraitTrait))
+                        if (bCheckAllCharacters)
+                        {
+                            using (var charListScoped = CollectionCache.GetListScoped<int>())
+                            {
+                                player.getActiveCharacters(charListScoped.Value);
+
+                                foreach (int iLoopCharacter in charListScoped.Value)
                                 {
-                                    iFoundCharacters++;
-                                    if (pLoopCharacter.isTrait(pEffectPlayer.meSourceTrait))
-                                    {
-                                        CharactersTurnsLeftEstimate.Add(Math.Min(getTraitTurnsLeftEstimate(pLoopCharacter, pEffectPlayer.meSourceTraitTrait), getTraitTurnsLeftEstimate(pLoopCharacter, pEffectPlayer.meSourceTrait)));
-                                    }
-                                }
+                                    Character pLoopCharacter = game.character(iLoopCharacter);
+                                    int iBestCharacterTurns = 0;
 
-                                if (iFoundCharacters >= iMaxPossibleCharacters) break;
+                                    if (pEffectPlayer.mseSourceTraitJobs.Contains(pLoopCharacter.getJob()))
+                                    {
+                                        BetterAIInfoJob pLoopCharacterInfoJob = (BetterAIInfoJob)(infos.job(pLoopCharacter.getJob()));
+                                        TraitType eBestTrait = TraitType.NONE;
+                                        int iBestTraitTurns = 0;
+                                        foreach (TraitType eLoopTrait in pLoopCharacterInfoJob.mdlEffectPlayerTraits[eEffectPlayer])
+                                        {
+                                            if (pLoopCharacter.isTrait(eLoopTrait))
+                                            {
+                                                int iTraitTurns = getTraitTurnsLeftEstimateX10(pLoopCharacter, eLoopTrait);
+                                                if (iTraitTurns > iBestTraitTurns)
+                                                {
+                                                    iBestTraitTurns = iTraitTurns;
+                                                    eBestTrait = eLoopTrait;
+                                                }
+                                            }
+                                        }
+                                        if (eBestTrait != TraitType.NONE)
+                                        {
+                                            iBestCharacterTurns = Math.Min(getJobTurnsLeftEstimateX10(pLoopCharacter, pLoopCharacter.getJob()), iBestTraitTurns);
+                                            //CharactersTurnsLeftEstimate.Add(Math.Min(getJobTurnsLeftEstimate(pLoopCharacter, pLoopCharacter.getJob()), iBestTraitTurns));
+                                        }
+                                    }
+
+                                    foreach (TraitType eLoopCharacterTrait in pLoopCharacter.getTraits())
+                                    {
+                                        if (pEffectPlayer.mseSourceTraitTraits.Contains(eLoopCharacterTrait))
+                                        {
+                                            BetterAIInfoTrait pSourceInfoTrait = (BetterAIInfoTrait)(infos.trait(eLoopCharacterTrait));
+
+                                            TraitType eBestTrait = TraitType.NONE;
+                                            int iBestTraitTurns = 0;
+                                            foreach (TraitType eLoopAdditionalTrait in pSourceInfoTrait.mleEffectPlayerTraits[eEffectPlayer])
+                                            {
+                                                if (pLoopCharacter.isTrait(eLoopAdditionalTrait))
+                                                {
+                                                    int iTraitTurns = getTraitTurnsLeftEstimateX10(pLoopCharacter, eLoopAdditionalTrait);
+                                                    if (iTraitTurns > iBestTraitTurns)
+                                                    {
+                                                        iBestTraitTurns = iTraitTurns;
+                                                        eBestTrait = eLoopAdditionalTrait;
+                                                    }
+                                                }
+                                            }
+
+                                            if (eBestTrait != TraitType.NONE)
+                                            {
+                                                iBestCharacterTurns = Math.Max(iBestCharacterTurns,
+                                                    Math.Min(getTraitTurnsLeftEstimateX10(pLoopCharacter, eLoopCharacterTrait), iBestTraitTurns));
+                                            }
+                                        }
+                                    }
+                                    iBestCharacterTurns = Math.Min(iBestCharacterTurns, iMaxTurnsX10);
+                                    CharactersTurnsLeftEstimateX10.Add(iBestCharacterTurns);
+                                }
                             }
                         }
                     }
 
-                    if (CharactersTurnsLeftEstimate.Count > 0)
+                    if (!bSourceFound) //only check EffectPlayer sources if no characters are found
                     {
-                        iRemainingEffectTurns = infos.utils().range((CharactersTurnsLeftEstimate.Sum()) / CharactersTurnsLeftEstimate.Count, 0, AI_YIELD_TURNS);
+                        foreach (EffectPlayerType eLoopEffectPlayer in pEffectPlayer.mseGetsUnlockedByEffectPlayers)
+                        {
+                            CharactersTurnsLeftEstimateX10.Add(getEffectPlayerTurnsRemainingX10(eLoopEffectPlayer, iMaxTurnsX10));
+                        }
+                        foreach ((EffectPlayerType, EffectPlayerType) eLoopEffectPlayerPair in pEffectPlayer.maeeSourceEffectPlayers)
+                        {
+                            CharactersTurnsLeftEstimateX10.Add(Math.Min(getEffectPlayerTurnsRemainingX10(eLoopEffectPlayerPair.Item1, iMaxTurnsX10), getEffectPlayerTurnsRemainingX10(eLoopEffectPlayerPair.Item2, iMaxTurnsX10)));
+                        }
+                    }
+                    
+
+                    if (CharactersTurnsLeftEstimateX10.Count > 0)
+                    {
+                        iRemainingEffectTurnsX10 = infos.utils().range((CharactersTurnsLeftEstimateX10.Sum()) / (CharactersTurnsLeftEstimateX10.Count), 0, AI_YIELD_TURNS);
                     }
 
-                    return iRemainingEffectTurns;
+                    return iRemainingEffectTurnsX10;
                 }
             }
 
-            protected virtual long effectPlayerValue(EffectPlayerType eEffectPlayer, ReligionType eStateReligion, bool bRemove, bool bIncludeDependentEffects = true)
+            //protection levels
+            public virtual int getAI_YIELD_TURNS_X10()
+            {
+                return AI_YIELD_TURNS * 10;
+            }
+
+            protected virtual long effectPlayerValue(EffectPlayerType eEffectPlayer, ReligionType eStateReligion, bool bRemove, int iMaxTurnsRemainingX10, bool bSkipTurnsRemaining = true, bool bIncludeDependentEffects = true)
             {
                 if (!bIncludeDependentEffects) return base.effectPlayerValue(eEffectPlayer, eStateReligion, bRemove);
 
@@ -3848,22 +4524,28 @@ namespace BetterAI
                     Dictionary<EffectPlayerType, int> effectPlayerCountChange = effectPlayerCountChangeDictionaryScoped.Value;
                     Dictionary<EffectPlayerType, int> effectPlayerTurnsRemaining = effectPlayerTurnsRemainingDictionaryScoped.Value;
 
-                    ((BetterAIPlayer)player).getDependentEffectPlayerCountChangesWithTurnsRemaining(eEffectPlayer, iChange: 1, ref aeEffectPlayerIgnore, ref effectPlayerCountChange, ref effectPlayerTurnsRemaining, bSkipTurnsRemaining: false);
+                    //ToDo: maybe cache effectPlayer values
+                    ((BetterAIPlayer)player).getDependentEffectPlayerCountChangesWithTurnsRemaining(eEffectPlayer, iChange: 1, iMaxTurnsRemainingX10, ref aeEffectPlayerIgnore, ref effectPlayerCountChange, ref effectPlayerTurnsRemaining, bSkipTurnsRemaining: (!game.isCharacters()));
 
-                    long iTurnsRemaining = AI_YIELD_TURNS;
+                    long iTurnsRemainingX10 = iMaxTurnsRemainingX10;
                     if (effectPlayerTurnsRemaining.ContainsKey(eEffectPlayer))
                     {
-                        iTurnsRemaining = effectPlayerTurnsRemaining[eEffectPlayer];
+                        iTurnsRemainingX10 = effectPlayerTurnsRemaining[eEffectPlayer];
                     }
 
                     foreach (KeyValuePair<EffectPlayerType, int> eLoopEffectPlayerChangeCount in effectPlayerCountChange)
                     {
                         long iSubValue = base.effectPlayerValue(eLoopEffectPlayerChangeCount.Key, eStateReligion, bRemove) * eLoopEffectPlayerChangeCount.Value;
-                        if (iSubValue != 0 && effectPlayerTurnsRemaining.ContainsKey(eLoopEffectPlayerChangeCount.Key) && iTurnsRemaining > effectPlayerTurnsRemaining[eLoopEffectPlayerChangeCount.Key])
+                        if (iSubValue != 0 && effectPlayerTurnsRemaining.ContainsKey(eLoopEffectPlayerChangeCount.Key) && iTurnsRemainingX10 > effectPlayerTurnsRemaining[eLoopEffectPlayerChangeCount.Key])
                         {
                             iSubValue *= effectPlayerTurnsRemaining[eLoopEffectPlayerChangeCount.Key];
-                            iSubValue /= iTurnsRemaining;
                         }
+                        else
+                        {
+                            iSubValue *= iTurnsRemainingX10;
+                        }
+
+                        iSubValue /= (AI_YIELD_TURNS * 10); //if remaing turns == AI_YIELD_TURNS, value is unchanged. If less, then it's scaled down.
 
                         iValue += iSubValue;
                     }

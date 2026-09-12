@@ -115,12 +115,24 @@ namespace BetterAI
         {
             if (iChange != 0)
             {
-                updateLastData(BetterAIDirtyType.miEnablesGovernorUnlock, ((BetterAINetworkData)mpCurrentData).miEnablesGovernorUnlock, ref ((BetterAINetworkData)mpLastUpdateData).miEnablesGovernorUnlock);
-                ((BetterAINetworkData)mpCurrentData).miEnablesGovernorUnlock += iChange;
+                if (mpCurrentData != null)
+                {
+                    if (mpLastUpdateData != null)
+                    {
+                        updateLastData(BetterAIDirtyType.miEnablesGovernorUnlock, ((BetterAINetworkData)mpCurrentData).miEnablesGovernorUnlock, ref ((BetterAINetworkData)mpLastUpdateData).miEnablesGovernorUnlock);
+                    }
+                    ((BetterAINetworkData)mpCurrentData).miEnablesGovernorUnlock += iChange;
+                }
+                else Debug.Log("mpCurrentData null");
             }
         }
         public override void changeEffectCityCount(EffectCityType eIndex, int iChange)
         {
+            if (iChange == 0 || eIndex == EffectCityType.NONE)
+            {
+                return;
+            }
+
             base.changeEffectCityCount(eIndex, iChange);
 
             if (((BetterAIInfoEffectCity)infos().effectCity(eIndex)).mbEnablesGovernor)
@@ -180,7 +192,7 @@ namespace BetterAI
                         iBiomeScoreTotal += iCount;
                     }
                 }
-                CityBiomeType iBestBiome = (CityBiomeType)1; //Default to Temperate
+                CityBiomeType iBestBiome = ((int)((BetterAIInfos)infos()).cityBiomesNum() >= 2) ? (CityBiomeType)1 : CityBiomeType.NONE; //Default to Temperate
                 int iBestBiomeScore = 0;
                 for (CityBiomeType eBiome = 0; eBiome < ((BetterAIInfos)infos()).cityBiomesNum(); eBiome++)
                 {
@@ -624,7 +636,7 @@ namespace BetterAI
         {
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
-                return base.getImprovementModifier(eIndex);
+                return base.getImprovementModifierForGovernor(eIndex, pGovernor);
             }
 
             using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
@@ -676,7 +688,7 @@ namespace BetterAI
         {
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
-                return base.getImprovementRiverModifier(eIndex);
+                return base.getImprovementRiverModifierForGovernor(eIndex, pGovernor);
             }
 
             using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())
@@ -888,12 +900,13 @@ namespace BetterAI
             }
         }
 
+        //wtf this is actually not in use?
         //lines 4959-4975
         public virtual int getEffectCityTerrainYieldForGovernor(TerrainType eTerrain, YieldType eYield, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
-                return base.getEffectCityTerrainYield(eTerrain, eYield);
+                return base.getEffectCityTerrainYieldForGovernor(eTerrain, eYield, pGovernor);
             }
 
             using (var effectCityCountsScoped = CollectionCache.GetDictionaryScoped<EffectCityType, int>())

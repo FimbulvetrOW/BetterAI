@@ -111,15 +111,16 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### No Governor Courtiers as Generals START###
   ##############################################*/
+                        InfoTrait pInfoArcheType = infos.trait(pCharacter.getArchetype());
 
-                        if (infos.trait(pCharacter.getArchetype()).mbGovernorPrereq)
+                        if ((pInfoArcheType.mbGovernorPrereq || pInfoArcheType.mbGovernorAll) && !(pInfoArcheType.mbGeneralPrereq || pInfoArcheType.mbGeneralAll))
                         {
                             continue;
                         }
-
 /*####### Better Old World AI - Base DLL #######
   ### No Governor Courtiers as Generals  END ###
   ##############################################*/
+                        
                         long iValue = getGeneralValue(pCharacter);
                         if (iValue > iBestValue)
                         {

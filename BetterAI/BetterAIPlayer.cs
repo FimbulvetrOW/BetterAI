@@ -718,8 +718,14 @@ namespace BetterAI
             using (var effectPlayerTurnsRemainingDictionaryScoped = CollectionCache.GetDictionaryScoped<EffectPlayerType, int>())
             {
                 Dictionary<EffectPlayerType, int> effectPlayerTurnsRemaining = effectPlayerTurnsRemainingDictionaryScoped.Value;
+                BetterAIPlayerAI pPlayerAI = (BetterAIPlayerAI)AI;
+                int iMaxTurnsRemainingX10 = 1000;
+                if (pPlayerAI != null)
+                {
+                    iMaxTurnsRemainingX10 = pPlayerAI.getAI_YIELD_TURNS_X10();
+                }
 
-                getDependentEffectPlayerCountChangesWithTurnsRemaining(eIndex, iChange, ref aeEffectPlayerIgnore, ref effectPlayerCountChange, ref effectPlayerTurnsRemaining, bSkipTurnsRemaining: true, iMaxDepth);
+                getDependentEffectPlayerCountChangesWithTurnsRemaining(eIndex, iChange, iMaxTurnsRemainingX10: iMaxTurnsRemainingX10, ref aeEffectPlayerIgnore, ref effectPlayerCountChange, ref effectPlayerTurnsRemaining, bSkipTurnsRemaining: true, iMaxDepth);
             }
 
             return;
@@ -770,7 +776,7 @@ namespace BetterAI
 
 
 
-        public virtual void getDependentEffectPlayerCountChangesWithTurnsRemaining(EffectPlayerType eIndex, int iChange, ref List<EffectPlayerType> aeEffectPlayerIgnore, ref Dictionary<EffectPlayerType, int> effectPlayerCountChange, ref Dictionary<EffectPlayerType, int> effectPlayerTurnsRemaining, bool bSkipTurnsRemaining = true, int iMaxDepth = 100)
+        public virtual void getDependentEffectPlayerCountChangesWithTurnsRemaining(EffectPlayerType eIndex, int iChange, int iMaxTurnsRemainingX10, ref List<EffectPlayerType> aeEffectPlayerIgnore, ref Dictionary<EffectPlayerType, int> effectPlayerCountChange, ref Dictionary<EffectPlayerType, int> effectPlayerTurnsRemainingX10, bool bSkipTurnsRemaining = true, int iMaxDepth = 100)
         {
             if (iChange != 0)
             {
@@ -786,11 +792,12 @@ namespace BetterAI
 
                     if (!bSkipTurnsRemaining)
                     {
-                        if (pEffectPlayer.meSourceTraitJob != JobType.NONE || pEffectPlayer.meSourceTraitTrait != TraitType.NONE)
+                        if (!pEffectPlayer.mbPermanent)
                         {
-                            if (!effectPlayerTurnsRemaining.ContainsKey(eIndex))
+                            if (!effectPlayerTurnsRemainingX10.ContainsKey(eIndex))
                             {
-                                effectPlayerTurnsRemaining.Add(eIndex, ((BetterAIPlayerAI)AI).getEffectPlayerTurnsRemaining(eIndex));
+                                iMaxTurnsRemainingX10 = ((BetterAIPlayerAI)AI).getEffectPlayerTurnsRemainingX10(eIndex, iMaxTurnsRemainingX10); //iMaxTurnsRemainingX10 reduced only for further down the ladder, since iMaxTurnsRemainingX10 not passed by ref
+                                effectPlayerTurnsRemainingX10.Add(eIndex, iMaxTurnsRemainingX10);
                             }
                         }
                     }
@@ -819,7 +826,7 @@ namespace BetterAI
                             if (eEffectPlayerEffectPlayer != EffectPlayerType.NONE)
                             {
                                 aeEffectPlayerIgnore.Add(eLoopEffectPlayer);
-                                getDependentEffectPlayerCountChangesWithTurnsRemaining(eEffectPlayerEffectPlayer, iChange * iCount, ref aeEffectPlayerIgnore, ref effectPlayerCountChange, ref effectPlayerTurnsRemaining, bSkipTurnsRemaining, (iMaxDepth - 1));
+                                getDependentEffectPlayerCountChangesWithTurnsRemaining(eEffectPlayerEffectPlayer, iChange * iCount, iMaxTurnsRemainingX10, ref aeEffectPlayerIgnore, ref effectPlayerCountChange, ref effectPlayerTurnsRemainingX10, bSkipTurnsRemaining, (iMaxDepth - 1));
                                 aeEffectPlayerIgnore.Remove(eLoopEffectPlayer);
                             }
 

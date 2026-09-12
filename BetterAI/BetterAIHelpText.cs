@@ -5011,6 +5011,77 @@ namespace BetterAI
             }
         }
 
+        public override TextVariable buildEffectPlayerSourceLinkVariable(EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer = null)
+        {
+            //this method assumes that there is only one source for the player effect
+            TextVariable result = base.buildEffectPlayerSourceLinkVariable(eEffectPlayer, pGame, pPlayer);
+
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ##############################################*/
+            BetterAIInfoEffectPlayer pInfoEffectPlayer = ((BetterAIInfoEffectPlayer)infos().effectPlayer(eEffectPlayer));
+            if (result == null)
+            {
+                CommaListVariableGenerator jobs = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.OR_LINEBREAK, CommaListVariableGenerator.EncloseType.NONE, bEncloseSingleItem: false, TextManager);
+                if (pInfoEffectPlayer.mseSourceTraitJobs.Count > 0)
+                {
+                    foreach (JobType eLoopJob in pInfoEffectPlayer.mseSourceTraitJobs)
+                    {
+                        CommaListVariableGenerator traits = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.OR, CommaListVariableGenerator.EncloseType.PARENTHESIS, bEncloseSingleItem: false, TextManager);
+                        BetterAIInfoJob pLoopInfoJob = ((BetterAIInfoJob)infos().job(eLoopJob));
+                        foreach(TraitType eLoopTrait in pLoopInfoJob.mdlEffectPlayerTraits[eEffectPlayer])
+                        {
+                            traits.AddItem(buildTraitLinkVariable(eLoopTrait));
+                        }
+
+                        jobs.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", traits.Finalize(), buildJobLinkVariable(eLoopJob)));
+                    }
+                }
+
+                if (pInfoEffectPlayer.mseSourceTraitTraits.Count > 0)
+                {
+                    foreach (TraitType eLoopTrait in pInfoEffectPlayer.mseSourceTraitTraits)
+                    {
+                        CommaListVariableGenerator traits = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.OR, CommaListVariableGenerator.EncloseType.PARENTHESIS, bEncloseSingleItem: false, TextManager);
+                        BetterAIInfoTrait pLoopInfoTrait = ((BetterAIInfoTrait)infos().trait(eLoopTrait));
+                        foreach (TraitType eInnerLoopTrait in pLoopInfoTrait.mleEffectPlayerTraits[eEffectPlayer])
+                        {
+                            traits.AddItem(buildTraitLinkVariable(eInnerLoopTrait));
+                        }
+
+                        jobs.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_CONCAT_SPACE_TWO", traits.Finalize(), buildTraitLinkVariable(eLoopTrait)));
+                    }
+
+                }
+
+                if (pInfoEffectPlayer.mseSourceTraitJobs.Count + pInfoEffectPlayer.mseSourceTraitTraits.Count > 0)
+                {
+                    result = TEXTVAR_TYPE("TEXT_HELPTEXT_LINK_EFFECT_PLAYER_SOURCE_TRAIT", jobs.Finalize());
+                }
+            }
+
+            if (result == null)
+            {
+                if (pInfoEffectPlayer.maeeSourceEffectPlayers.Count > 0)
+                {
+                    CommaListVariableGenerator effectPlayers = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.OR, CommaListVariableGenerator.EncloseType.PARENTHESIS, bEncloseSingleItem: false, TextManager);
+                    foreach ((EffectPlayerType, EffectPlayerType) p in pInfoEffectPlayer.maeeSourceEffectPlayers)
+                    {
+                        if (pPlayer == null || (pPlayer.canEverHaveEffectPlayer(p.Item1) && pPlayer.canEverHaveEffectPlayer(p.Item2)))
+                        {
+                            effectPlayers.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_AND_TWO", buildEffectPlayerLinkVariable(p.Item1, pPlayer), buildEffectPlayerLinkVariable(p.Item2, pPlayer)));
+                        }
+
+                    }
+                    result = effectPlayers.Finalize();
+                }
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+            return result;
+        }
 
 
         //120 lines copy&paste START

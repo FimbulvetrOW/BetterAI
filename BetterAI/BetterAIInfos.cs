@@ -1,25 +1,21 @@
-﻿using System;
-using System.Reflection;
-using System.Collections.Generic;
+﻿using Mohawk.SystemCore;
+using Mohawk.UIInterfaces;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
-using Enum = System.Enum;
+using TenCrowns.AppCore;
+using TenCrowns.ClientCore;
+using TenCrowns.GameCore;
+using TenCrowns.GameCore.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
-using Mohawk.SystemCore;
-using Mohawk.UIInterfaces;
-using TenCrowns.AppCore;
-using TenCrowns.GameCore;
-using TenCrowns.GameCore.Text;
-using static TenCrowns.GameCore.Text.TextExtensions;
-using Constants = TenCrowns.GameCore.Constants;
-using TenCrowns.ClientCore;
-using static TenCrowns.ClientCore.ClientUI;
 
 namespace BetterAI
 {
@@ -231,7 +227,7 @@ namespace BetterAI
                 //this should never happen. I expect things would get weird here - so I choose not to support it at all.
                 BetterAIInfoEffectPlayer pUnlockedByInfoEffectPlayer = (BetterAIInfoEffectPlayer)effectPlayer(eUnlockedByEffectPlayer);
 
-                if (pUnlockedByInfoEffectPlayer.meEffectPlayer == eEffectPlayer)
+                if (pUnlockedByInfoEffectPlayer.meEffectPlayer == eEffectPlayer) //remove only direct unlocks
                 {
                     UnityEngine.Debug.Log("A player effect unlocks another player effect, which together with yet another can add yet another player effect. A -> B; B + C -> D. All unlocks leading to this player effect will be removed: player effect unlocks (EffectPlayer) are allowed to cascade (A -> B -> C -> D) but may never branch out (EffectPlayerEffectPlayer). Avoid this by using 2x EffectPlayerEffectPlayer in the first place instead of 1x EffectPlayer and 1x EffectPlayerEffectPlayer: A + C -> D, B + C -> D. meEffectPlayer ("+ pInfoEffectPlayer.mzType + ") removed from " + pUnlockedByInfoEffectPlayer.mzType);
 
@@ -239,6 +235,93 @@ namespace BetterAI
                 }
             }
         }
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses           START ###
+  ### Better TurnsLeftEstimate         START ###
+  ##############################################*/
+        public virtual void setEffectPlayerPermanance(EffectPlayerType eEffectPlayer)
+        {
+            BetterAIInfoEffectPlayer pInfoEffectPlayer = (BetterAIInfoEffectPlayer)effectPlayer(eEffectPlayer);
+            if (pInfoEffectPlayer.mbPermanent)
+            {
+                if (pInfoEffectPlayer.meSourceTrait != TraitType.NONE || pInfoEffectPlayer.meSourceCouncil != CouncilType.NONE)
+                {
+                    pInfoEffectPlayer.mbPermanent = false;
+                }
+                else if (pInfoEffectPlayer.mseSourceTraitJobs.Count + pInfoEffectPlayer.mseSourceTraitTraits.Count > 0)
+                {
+                    pInfoEffectPlayer.mbPermanent = false;
+                }
+                else if (pInfoEffectPlayer.maeeSourceEffectPlayers.Count + pInfoEffectPlayer.mseGetsUnlockedByEffectPlayers.Count > 0)
+                {
+                    foreach ((EffectPlayerType, EffectPlayerType) eLoopEffectPlayerPair in pInfoEffectPlayer.maeeSourceEffectPlayers)
+                    {
+                        setEffectPlayerPermanance(eLoopEffectPlayerPair.Item1);
+                        setEffectPlayerPermanance(eLoopEffectPlayerPair.Item2);
+                        BetterAIInfoEffectPlayer pSourceInfoEffectPlayer1 = (BetterAIInfoEffectPlayer)effectPlayer(eLoopEffectPlayerPair.Item1);
+                        BetterAIInfoEffectPlayer pSourceInfoEffectPlayer2 = (BetterAIInfoEffectPlayer)effectPlayer(eLoopEffectPlayerPair.Item2);
+                        pInfoEffectPlayer.mbPermanent = pInfoEffectPlayer.mbPermanent && pSourceInfoEffectPlayer1.mbPermanent && pSourceInfoEffectPlayer2.mbPermanent;
+
+                        if (!pInfoEffectPlayer.mbPermanent) return;
+                    }
+
+                    foreach (EffectPlayerType eLoopEffectPlayer in pInfoEffectPlayer.mseGetsUnlockedByEffectPlayers)
+                    {
+                        BetterAIInfoEffectPlayer pSourceInfoEffectPlayer = (BetterAIInfoEffectPlayer)effectPlayer(eLoopEffectPlayer);
+                        setEffectPlayerPermanance(eLoopEffectPlayer);
+                        pInfoEffectPlayer.mbPermanent = pInfoEffectPlayer.mbPermanent && pSourceInfoEffectPlayer.mbPermanent;
+
+                        if (!pInfoEffectPlayer.mbPermanent) return;
+                    }
+                }
+
+            }
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative GV bonuses             END ###
+  ##############################################*/
+
+        public virtual void getFactorsForExpectedMaxAge(int iAge, bool bGeneral, BetterAIInfoMortality pInfoMortality, out int aX10, out int bX1000, out int cX100000)
+        {
+            if (bGeneral)
+            {
+                //General job/life expectancy formula by age (x >= 20), respecting ill and severely ill, by mortality
+                if (iAge > pInfoMortality.miMaxAgeGenOld)
+                {
+                    aX10 = pInfoMortality.miMaxAgeGenOldaX10;
+                    bX1000 = pInfoMortality.miMaxAgeGenOldbX1000;
+                    cX100000 = pInfoMortality.miMaxAgeGenOldcX100000;
+                }
+                else
+                {
+                    aX10 = pInfoMortality.miMaxAgeGenYoungaX10;
+                    bX1000 = pInfoMortality.miMaxAgeGenYoungbX1000;
+                    cX100000 = pInfoMortality.miMaxAgeGenYoungcX100000;
+                }
+            }
+            else
+            {
+                if (iAge > pInfoMortality.miMaxAgeOld)
+                {
+                    aX10 = pInfoMortality.miMaxAgeOldaX10;
+                    bX1000 = pInfoMortality.miMaxAgeOldbX1000;
+                    cX100000 = pInfoMortality.miMaxAgeOldcX100000;
+                }
+                else
+                {
+                    aX10 = pInfoMortality.miMaxAgeYoungaX10;
+                    bX1000 = pInfoMortality.miMaxAgeYoungbX1000;
+                    cX100000 = pInfoMortality.miMaxAgeYoungcX100000;
+                }
+            }
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate           END ###
+  ##############################################*/
 
 
         protected virtual void calculateDerivativeInfo()
@@ -318,7 +401,6 @@ namespace BetterAI
             }
 
 
-
             for (UnitType eLoopUnit = 0; eLoopUnit < unitsNum(); eLoopUnit++)
             {
                 BetterAIInfoUnit pLoopUnitInfo = (BetterAIInfoUnit)unit(eLoopUnit);
@@ -377,57 +459,221 @@ namespace BetterAI
                 for (JobType eLoopJob = 0; eLoopJob < jobsNum(); eLoopJob++)
                 {
                     BetterAIInfoTrait pLoopInfoTrait = ((BetterAIInfoTrait)trait(eLoopTrait));
+                    EffectPlayerType eTraitJobEffectPlayer = pLoopInfoTrait.maeJobEffectPlayer[eLoopJob];
+                    BetterAIInfoEffectPlayer pInfoEffectPlayer = ((BetterAIInfoEffectPlayer)effectPlayer(eTraitJobEffectPlayer));
+                    BetterAIInfoJob pLoopInfoJob = ((BetterAIInfoJob)job(eLoopJob));
 
-                    if (pLoopInfoTrait.maeJobEffectPlayer[eLoopJob] != EffectPlayerType.NONE)
+                    //For council jobs, this is the most elegant solution: using base game field maeCouncilEffectPlayer
+                    if (pLoopInfoJob.meCouncil != CouncilType.NONE)
                     {
-                        BetterAIInfoJob pLoopInfoJob = ((BetterAIInfoJob)job(eLoopJob));
-                        if (pLoopInfoJob.meCouncil != CouncilType.NONE)
+                        if (pLoopInfoTrait.maeCouncilEffectPlayer[pLoopInfoJob.meCouncil] != EffectPlayerType.NONE)
                         {
-                            if (pLoopInfoTrait.maeCouncilEffectPlayer[pLoopInfoJob.meCouncil] != EffectPlayerType.NONE)
+                            if (eTraitJobEffectPlayer != EffectPlayerType.NONE)
                             {
                                 UnityEngine.Debug.Log("Trait " + pLoopInfoTrait.mzType + " has both job effect and council effect for the same job. council effect will be overwritten");
+                                pLoopInfoTrait.maeCouncilEffectPlayer[pLoopInfoJob.meCouncil] = eTraitJobEffectPlayer;
+                                pLoopInfoTrait.maeJobEffectPlayer[eLoopJob] = EffectPlayerType.NONE;
+                                pInfoEffectPlayer.meSourceCouncil = pLoopInfoJob.meCouncil;
                             }
-                            //For council jobs, this is the most elegant solution: using base game field maeCouncilEffectPlayer
-                            pLoopInfoTrait.maeCouncilEffectPlayer[pLoopInfoJob.meCouncil] = pLoopInfoTrait.maeJobEffectPlayer[eLoopJob];
-                            pLoopInfoTrait.maeJobEffectPlayer[eLoopJob] = EffectPlayerType.NONE;
+                            else
+                            {
+                                eTraitJobEffectPlayer = pLoopInfoTrait.maeCouncilEffectPlayer[pLoopInfoJob.meCouncil];
+                            }
+                        }
+                        else if (eTraitJobEffectPlayer != EffectPlayerType.NONE)
+                        {
+                            pLoopInfoTrait.maeCouncilEffectPlayer[pLoopInfoJob.meCouncil] = eTraitJobEffectPlayer;
+                            pInfoEffectPlayer.meSourceCouncil = pLoopInfoJob.meCouncil;
+                        }
+                    }
+
+                    if (eTraitJobEffectPlayer != EffectPlayerType.NONE)
+                    {
+                        pLoopInfoJob.bAnyTraitEffectPlayer = true;
+
+                        if (pLoopInfoJob.mdlEffectPlayerTraits.ContainsKey(eTraitJobEffectPlayer))
+                        {
+                            pLoopInfoJob.mdlEffectPlayerTraits[eTraitJobEffectPlayer].Add(eLoopTrait);
                         }
                         else
                         {
-                            pLoopInfoJob.bAnyTraitEffectPlayer = true;
+                            pLoopInfoJob.mdlEffectPlayerTraits.Add(eTraitJobEffectPlayer, new List<TraitType>() { eLoopTrait });
                         }
 
+                        pInfoEffectPlayer.mseSourceTraitJobs.Add(eLoopJob);
+                        pInfoEffectPlayer.mbPermanent = false;
                     }
                 }
             }
+
 
             for (TraitType eOuterLoopTrait = 0; eOuterLoopTrait < traitsNum(); eOuterLoopTrait++)
             {
                 for (TraitType eInnerLoopTrait = eOuterLoopTrait; eInnerLoopTrait < traitsNum(); eInnerLoopTrait++)
                 {
-                    if (((BetterAIInfoTrait)trait(eOuterLoopTrait)).maeTraitEffectPlayer[eInnerLoopTrait] != EffectPlayerType.NONE)
+                    if (eOuterLoopTrait == eInnerLoopTrait) //no trait can create a player effect by itself
                     {
-                        if (eOuterLoopTrait == eInnerLoopTrait) //no trait can create a player effect by itself
+                        ((BetterAIInfoTrait)trait(eOuterLoopTrait)).maeTraitEffectPlayer[eInnerLoopTrait] = EffectPlayerType.NONE;
+
+                        //this is the same:
+                        //((BetterAIInfoTrait)trait(eInnerLoopTrait)).maeTraitEffectPlayer[eOuterLoopTrait] = EffectPlayerType.NONE;
+
+                        continue;
+                    }
+
+                    BetterAIInfoTrait pOuterLoopInfoTrait = ((BetterAIInfoTrait)trait(eOuterLoopTrait));
+                    BetterAIInfoTrait pInnerLoopInfoTrait = ((BetterAIInfoTrait)trait(eInnerLoopTrait));
+
+                    //can give deadly trait?
+                    int iProb = pOuterLoopInfoTrait.maiTraitProb[eInnerLoopTrait];
+                    if (iProb > 0)
+                    {
+                        pOuterLoopInfoTrait.maeAllTraitProbs.Add(eInnerLoopTrait);
+
+                        if (Helpers.getTraitDieProb(eInnerLoopTrait, pGame: null) > 0)
                         {
-                            ((BetterAIInfoTrait)trait(eOuterLoopTrait)).maeTraitEffectPlayer[eInnerLoopTrait] = EffectPlayerType.NONE;
+                            pOuterLoopInfoTrait.maeDieTraitProbs.Add(eInnerLoopTrait);
+                        }
+                        if (pInnerLoopInfoTrait.mbNoJob)
+                        {
+                            pOuterLoopInfoTrait.maeNoJobTraitProbs.Add(eInnerLoopTrait);
+                        }
+                    }
+                    iProb = pInnerLoopInfoTrait.maiTraitProb[eOuterLoopTrait];
+                    if (iProb > 0)
+                    {
+                        pInnerLoopInfoTrait.maeAllTraitProbs.Add(eOuterLoopTrait);
+
+                        if (Helpers.getTraitDieProb(eOuterLoopTrait, pGame: null) > 0)
+                        {
+                            pInnerLoopInfoTrait.maeDieTraitProbs.Add(eOuterLoopTrait);
+                        }
+                        if (pInnerLoopInfoTrait.mbNoJob
+                            && (pInnerLoopInfoTrait.miRemoveTurns == 0 || pInnerLoopInfoTrait.miRemoveTurns >= 5) //ignore NoJob traits if they are gone in 4 turns or less
+                            && (pInnerLoopInfoTrait.miRemoveProb == 0 || pInnerLoopInfoTrait.miRemoveProb < 40))
+                        {
+                            pOuterLoopInfoTrait.maeNoJobTraitProbs.Add(eInnerLoopTrait);
+                        }
+                    }
+
+                    if (pOuterLoopInfoTrait.maeTraitEffectPlayer[eInnerLoopTrait] != EffectPlayerType.NONE)   //in this case eInnerLoopTrait is the job-like trait
+                    {
+                        EffectPlayerType eTraitTraitPlayerEffect = pOuterLoopInfoTrait.maeTraitEffectPlayer[eInnerLoopTrait];
+                        if (pInnerLoopInfoTrait.maeTraitEffectPlayer[eOuterLoopTrait] != EffectPlayerType.NONE)
+                        {
+                            pInnerLoopInfoTrait.maeTraitEffectPlayer[eOuterLoopTrait] = EffectPlayerType.NONE;  //one direction only
+                        }
+
+                        pOuterLoopInfoTrait.bAnyTraitEffectPlayer = true;
+                        pInnerLoopInfoTrait.bAnyTraitEffectPlayer = true;
+
+                        if (pInnerLoopInfoTrait.mleEffectPlayerTraits.ContainsKey(eTraitTraitPlayerEffect))
+                        {
+                            pInnerLoopInfoTrait.mleEffectPlayerTraits[eTraitTraitPlayerEffect].Add(eInnerLoopTrait);
                         }
                         else
                         {
-                            if (((BetterAIInfoTrait)trait(eInnerLoopTrait)).maeTraitEffectPlayer[eOuterLoopTrait] != EffectPlayerType.NONE)
-                            {
-                                ((BetterAIInfoTrait)trait(eInnerLoopTrait)).maeTraitEffectPlayer[eOuterLoopTrait] = EffectPlayerType.NONE;  //one direction only
-                            }
-                            ((BetterAIInfoTrait)trait(eOuterLoopTrait)).bAnyTraitEffectPlayer = true;
-                            ((BetterAIInfoTrait)trait(eInnerLoopTrait)).bAnyTraitEffectPlayer = true;
+                            pInnerLoopInfoTrait.mleEffectPlayerTraits.Add(eTraitTraitPlayerEffect, new List<TraitType>() { eInnerLoopTrait });
                         }
+
+                        BetterAIInfoEffectPlayer pInfoEffectPlayer = ((BetterAIInfoEffectPlayer)effectPlayer(eTraitTraitPlayerEffect));
+                        pInfoEffectPlayer.mseSourceTraitTraits.Add(eInnerLoopTrait);
+                        pInfoEffectPlayer.mbPermanent = false;
+
                     }
-                    
-                    if (((BetterAIInfoTrait)trait(eInnerLoopTrait)).maeTraitEffectPlayer[eOuterLoopTrait] != EffectPlayerType.NONE)
+                    else if (pInnerLoopInfoTrait.maeTraitEffectPlayer[eOuterLoopTrait] != EffectPlayerType.NONE)  //in this case eOuterLoopTrait is the job-like trait
                     {
-                        ((BetterAIInfoTrait)trait(eOuterLoopTrait)).bAnyTraitEffectPlayer = true;
-                        ((BetterAIInfoTrait)trait(eInnerLoopTrait)).bAnyTraitEffectPlayer = true;
+                        EffectPlayerType eTraitTraitPlayerEffect = pInnerLoopInfoTrait.maeTraitEffectPlayer[eOuterLoopTrait];
+                        pOuterLoopInfoTrait.bAnyTraitEffectPlayer = true;
+                        pInnerLoopInfoTrait.bAnyTraitEffectPlayer = true;
+
+                        if (pOuterLoopInfoTrait.mleEffectPlayerTraits.ContainsKey(eTraitTraitPlayerEffect))
+                        {
+                            pOuterLoopInfoTrait.mleEffectPlayerTraits[eTraitTraitPlayerEffect].Add(eOuterLoopTrait);
+                        }
+                        else
+                        {
+                            pOuterLoopInfoTrait.mleEffectPlayerTraits.Add(eTraitTraitPlayerEffect, new List<TraitType>() { eOuterLoopTrait });
+                        }
+
+                        BetterAIInfoEffectPlayer pInfoEffectPlayer = ((BetterAIInfoEffectPlayer)effectPlayer(eTraitTraitPlayerEffect));
+                        pInfoEffectPlayer.mseSourceTraitTraits.Add(eOuterLoopTrait);
                     }
                 }
             }
+
+
+            for (TraitType eLoopTrait = 0; eLoopTrait < traitsNum(); eLoopTrait++)
+            {
+                BetterAIInfoTrait pLoopInfoTrait = ((BetterAIInfoTrait)trait(eLoopTrait));
+                if (pLoopInfoTrait.mbNoRemoveOnTraitProb || pLoopInfoTrait.miRemoveTurns > 0) continue;
+
+                int iChances = 10000;
+                foreach (TraitType eLoopProbTrait in pLoopInfoTrait.maeAllTraitProbs)
+                {
+                    iChances *= (100 - pLoopInfoTrait.maiTraitProb[eLoopProbTrait]);
+                    iChances /= 100;
+                }
+                //example: 20% chance to get any trait from traitprob means average 5 turns to happen and remove the original trait
+                //(10000 - iChances) = chance for any trait (100% = 10000). 100% / chance = average turns
+                if (iChances < 10000)
+                {
+                    pLoopInfoTrait.maiRemoveTurnsFromTraitProbsX10 = (10000 * 10) / (10000 - iChances);
+                }
+            }
+
+            //mortality from traits
+            for (MortalityType eLoopMortality = 0; eLoopMortality < mortalitiesNum(); eLoopMortality++)
+            {
+                BetterAIInfoMortality pLoopInfoMortality = (BetterAIInfoMortality)mortality(eLoopMortality);
+                int aX10, bX1000, cX100000;
+
+                //General
+                for (int iAge = pLoopInfoMortality.miMaxAgeGenYoungMinAge; iAge < Globals.GENERAL_RETIRE_AGE - 1; iAge++)
+                {
+                    getFactorsForExpectedMaxAge(iAge: iAge, bGeneral: true, pInfoMortality: pLoopInfoMortality, out aX10, out bX1000, out cX100000);
+                    pLoopInfoMortality.maiMaxAgeGeneralX10[iAge] = ((((iAge * iAge * cX100000 + 50) / 100) + (iAge * bX1000) + 50) / 100) + aX10;
+
+                }
+                //starting from 1 year below retirement age: max 1 more year remaining, next year will trigger retirement
+                for (int iAge = Globals.GENERAL_RETIRE_AGE - 1; iAge < pLoopInfoMortality.maiMaxAgeGeneralX10.Length; iAge++)
+                {
+                    pLoopInfoMortality.maiMaxAgeGeneralX10[iAge] = 10 * (iAge + 1);
+                }
+                //filling up afterwards
+                for (int iAge = pLoopInfoMortality.miMaxAgeGenYoungMinAge - 1; iAge >= 0; iAge--)
+                {
+                    pLoopInfoMortality.maiMaxAgeGeneralX10[iAge] = pLoopInfoMortality.maiMaxAgeGeneralX10[iAge + 1];
+                }
+
+                //Non-General
+                for (int iAge = pLoopInfoMortality.miMaxAgeYoungMinAge; iAge < pLoopInfoMortality.maiMaxAgeX10.Length; iAge++)
+                {
+                    getFactorsForExpectedMaxAge(iAge: iAge, bGeneral: false, pInfoMortality: pLoopInfoMortality, out aX10, out bX1000, out cX100000);
+                    pLoopInfoMortality.maiMaxAgeX10[iAge] = ((((iAge * iAge * cX100000 + 50) / 100) + (iAge * bX1000) + 50) / 100) + aX10;
+
+                }
+                //filling up afterwards
+                for (int iAge = pLoopInfoMortality.miMaxAgeYoungMinAge - 1; iAge >= 0; iAge--)
+                {
+                    pLoopInfoMortality.maiMaxAgeX10[iAge] = pLoopInfoMortality.maiMaxAgeX10[iAge + 1];
+                }
+            }
+
+
+            for (MortalityType eLoopMortality = 0; eLoopMortality < mortalitiesNum(); eLoopMortality++)
+            {
+                BetterAIInfoMortality pLoopInfoMortality = (BetterAIInfoMortality)mortality(eLoopMortality);
+                Debug.Log($"{pLoopInfoMortality.mzType}: General retirement {Globals.GENERAL_RETIRE_AGE}");
+                for (int i = 0; i < pLoopInfoMortality.maiMaxAgeGeneralX10.Length; i++)
+                {
+                    Debug.Log($"{i}: Life {pLoopInfoMortality.maiMaxAgeX10[i]}, General {pLoopInfoMortality.maiMaxAgeGeneralX10[i]} ");
+                }
+            }
+
+
+
+
 
             HashSet<EffectPlayerType> previousUnlockers = new HashSet<EffectPlayerType>();
             for (EffectPlayerType eLoopEffectPlayer = 0; eLoopEffectPlayer < effectPlayersNum(); eLoopEffectPlayer++)
@@ -464,16 +710,24 @@ namespace BetterAI
                             }
                             setAllAnyEffectPlayerEffectPlayers(eOuterLoopEffectPlayer);
                             setAllAnyEffectPlayerEffectPlayers(eInnerLoopEffectPlayer);
+                            ((BetterAIInfoEffectPlayer)effectPlayer(eInnerLoopEffectPlayer)).maeeSourceEffectPlayers.Add((eInnerLoopEffectPlayer, eOuterLoopEffectPlayer));
                         }
 
                         if (((BetterAIInfoEffectPlayer)effectPlayer(eInnerLoopEffectPlayer)).maeEffectPlayerEffectPlayer[eOuterLoopEffectPlayer] != EffectPlayerType.NONE)
                         {
                             setAllAnyEffectPlayerEffectPlayers(eOuterLoopEffectPlayer);
                             setAllAnyEffectPlayerEffectPlayers(eInnerLoopEffectPlayer);
+                            ((BetterAIInfoEffectPlayer)effectPlayer(eInnerLoopEffectPlayer)).maeeSourceEffectPlayers.Add((eOuterLoopEffectPlayer, eInnerLoopEffectPlayer));
                         }
                     }
                 }
             }
+
+            for (EffectPlayerType eLoopEffectPlayer = 0; eLoopEffectPlayer < effectPlayersNum(); eLoopEffectPlayer++)
+            {
+                setEffectPlayerPermanance(eLoopEffectPlayer);
+            }
+
 
             if (((BetterAIInfoGlobals)Globals).BAI_NO_DELAY == 1)
             {
@@ -676,6 +930,25 @@ namespace BetterAI
   ### Alternative GV bonuses             END ###
   ##############################################*/
 
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate         START ###
+  ##############################################*/
+        protected List<BetterAIInfoMortality> maBetterAIMortalities;
+
+        //line 2670
+        public override InfoMortality mortality(MortalityType eIndex) => maBetterAIMortalities.GetOrDefault((int)eIndex);
+        public override MortalityType mortalitiesNum() => (MortalityType)maBetterAIMortalities.Count;
+        public override List<InfoMortality> mortalities() => new List<InfoMortality>(maBetterAIMortalities);
+        public virtual List<BetterAIInfoMortality> BetterAImortalities() => maBetterAIMortalities;
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate           END ###
+  ##############################################*/
+
+
+
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
@@ -765,6 +1038,7 @@ namespace BetterAI
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/improvement"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/improvementClass"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/job"));
+            mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/mortality"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/terrain"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/trait"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/tribeLevel"));
@@ -777,6 +1051,7 @@ namespace BetterAI
             mInfoList.Add(new XmlDataListItem<BetterAIInfoImprovement, ImprovementType>("Infos/improvement", readInfoTypes<BetterAIInfoImprovement, ImprovementType>, ref maBetterAIImprovements));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoImprovementClass, ImprovementClassType>("Infos/improvementClass", readInfoTypes<BetterAIInfoImprovementClass, ImprovementClassType>, ref maBetterAIImprovementClasses));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoJob, JobType>("Infos/job", readInfoTypes<BetterAIInfoJob, JobType>, ref maBetterAIJobs));
+            mInfoList.Add(new XmlDataListItem<BetterAIInfoMortality, MortalityType>("Infos/mortality", readInfoTypes<BetterAIInfoMortality, MortalityType>, ref maBetterAIMortalities));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTerrain, TerrainType>("Infos/terrain", readInfoTypes<BetterAIInfoTerrain, TerrainType>, ref maBetterAITerrains));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTrait, TraitType>("Infos/trait", readInfoTypes<BetterAIInfoTrait, TraitType>, ref maBetterAITraits));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTribeLevel, TribeLevelType>("Infos/tribeLevel", readInfoTypes<BetterAIInfoTribeLevel, TribeLevelType>, ref maBetterAITribeLevels));
@@ -822,9 +1097,10 @@ namespace BetterAI
         }
     }
 
-
+    
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
+  ### Better TurnsLeftEstimate         START ###
   ##############################################*/
     //InfoBase.cs, line 6358
     public class BetterAIInfoEffectPlayer : InfoEffectPlayer
@@ -832,18 +1108,19 @@ namespace BetterAI
         public SparseList<EffectPlayerType, EffectPlayerType> maeEffectPlayerEffectPlayer = new SparseList<EffectPlayerType, EffectPlayerType>();
         public bool bAnyEffectPlayerEffectPlayer = false;
         public HashSet<EffectPlayerType> mseGetsUnlockedByEffectPlayers = new HashSet<EffectPlayerType>();
-        public JobType meSourceTraitJob = JobType.NONE;
-        public TraitType meSourceTraitTrait = TraitType.NONE;
+        public HashSet<JobType> mseSourceTraitJobs = new HashSet<JobType>();
+        public HashSet<TraitType> mseSourceTraitTraits = new HashSet<TraitType>();
+        public bool mbPermanent = true;
+        public HashSet<(EffectPlayerType, EffectPlayerType)> maeeSourceEffectPlayers = new HashSet<(EffectPlayerType, EffectPlayerType)>();
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
-            infos.readTypesByType(ctx, "aeEffectPlayerEffectPlayer", ref maeEffectPlayerEffectPlayer, EffectPlayerType.NONE); //not implemented
-            infos.readType(ctx, "SourceTraitJob", ref meSourceTraitJob);
-            infos.readType(ctx, "SourceTraitTrait", ref meSourceTraitTrait);
+            infos.readTypesByType(ctx, "aeEffectPlayerEffectPlayer", ref maeEffectPlayerEffectPlayer, EffectPlayerType.NONE);
         }
     }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
+  ### Better TurnsLeftEstimate           END ###
   ##############################################*/
 
     //InfoBase.cs, line 1701
@@ -871,6 +1148,7 @@ namespace BetterAI
   ##############################################*/
 
             //not yet implemented
+            //transform this into TerrainTarget form before implementing
             //public List<int> maiTerrainFromDefenseModifier = new List<int>();
             //public List<int> maiTerrainToAttackModifier = new List<int>();
             //public List<int> maiClearTerrainToAttackModifier = new List<int>();
@@ -1011,10 +1289,75 @@ namespace BetterAI
     public class BetterAIInfoJob : InfoJob
     {
         public bool bAnyTraitEffectPlayer = false;
+        public Dictionary<EffectPlayerType, List<TraitType>> mdlEffectPlayerTraits = new Dictionary<EffectPlayerType, List<TraitType>>();
     }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
   ##############################################*/
+
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate         START ###
+  ##############################################*/
+    public class BetterAIInfoMortality : InfoMortality
+    {
+        public int miMaxAgeGenCutOff = 0; //Years before max Age - to remove
+        public int miMaxAgeGenOldaX10 = 0;
+        public int miMaxAgeGenOldbX1000 = 0;
+        public int miMaxAgeGenOldcX100000 = 0;
+        public int miMaxAgeGenOld = 0;  //older than this will use Old calc
+
+        public int miMaxAgeGenYoungaX10 = 0;
+        public int miMaxAgeGenYoungbX1000 = 0;
+        public int miMaxAgeGenYoungcX100000 = 0;
+        public int miMaxAgeGenYoungMinAge = 0;
+
+        public int miMaxAgeOldaX10 = 0;
+        public int miMaxAgeOldbX1000 = 0;
+        public int miMaxAgeOldcX100000 = 0;
+        public int miMaxAgeOld = 0;  //older than this will use Old calc
+
+        public int miMaxAgeYoungaX10 = 0;
+        public int miMaxAgeYoungbX1000 = 0;
+        public int miMaxAgeYoungcX100000 = 0;
+        public int miMaxAgeYoungMinAge = 0;
+
+        public int[] maiMaxAgeGeneralX10 = new int[128];
+        public int[] maiMaxAgeX10 = new int[128];
+
+
+        public override void Read(Infos infos, Infos.ReadContext ctx)
+        {
+            base.Read(infos, ctx);
+            infos.readInt(ctx, "iMaxAgeGenCutOff", ref miMaxAgeGenCutOff);
+
+            infos.readInt(ctx, "iMaxAgeGenOldaX10", ref miMaxAgeGenOldaX10);
+            infos.readInt(ctx, "iMaxAgeGenOldbX1000", ref miMaxAgeGenOldbX1000);
+            infos.readInt(ctx, "iMaxAgeGenOldcX100000", ref miMaxAgeGenOldcX100000);
+            infos.readInt(ctx, "iMaxAgeGenOld", ref miMaxAgeGenOld);
+
+            infos.readInt(ctx, "iMaxAgeGenYoungaX10", ref miMaxAgeGenYoungaX10);
+            infos.readInt(ctx, "iMaxAgeGenYoungbX1000", ref miMaxAgeGenYoungbX1000);
+            infos.readInt(ctx, "iMaxAgeGenYoungcX100000", ref miMaxAgeGenYoungcX100000);
+            infos.readInt(ctx, "iMaxAgeGenYoungMinAge", ref miMaxAgeGenYoungMinAge);
+
+            infos.readInt(ctx, "iMaxAgeOldaX10", ref miMaxAgeOldaX10);
+            infos.readInt(ctx, "iMaxAgeOldbX1000", ref miMaxAgeOldbX1000);
+            infos.readInt(ctx, "iMaxAgeOldcX100000", ref miMaxAgeOldcX100000);
+            infos.readInt(ctx, "iMaxAgeOld", ref miMaxAgeOld);
+
+            infos.readInt(ctx, "iMaxAgeYoungaX10", ref miMaxAgeYoungaX10);
+            infos.readInt(ctx, "iMaxAgeYoungbX1000", ref miMaxAgeYoungbX1000);
+            infos.readInt(ctx, "iMaxAgeYoungcX100000", ref miMaxAgeYoungcX100000);
+            infos.readInt(ctx, "iMaxAgeYoungMinAge", ref miMaxAgeYoungMinAge);
+        }
+    }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Better TurnsLeftEstimate           END ###
+  ##############################################*/
+
 
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
@@ -1033,9 +1376,10 @@ namespace BetterAI
   ### City Biome                         END ###
   ##############################################*/
 
-
+    
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
+  ### Better TurnsLeftEstimate         START ###
   ##############################################*/
     //InfoBase.cs, line 6358
     public class BetterAIInfoTrait : InfoTrait
@@ -1043,6 +1387,12 @@ namespace BetterAI
         public SparseList<JobType, EffectPlayerType> maeJobEffectPlayer = new SparseList<JobType, EffectPlayerType>();
         public SparseList<TraitType, EffectPlayerType> maeTraitEffectPlayer = new SparseList<TraitType, EffectPlayerType>();
         public bool bAnyTraitEffectPlayer = false;
+        public Dictionary<EffectPlayerType, List<TraitType>> mleEffectPlayerTraits = new Dictionary<EffectPlayerType, List<TraitType>>();
+
+        public List<TraitType> maeDieTraitProbs = new List<TraitType>();
+        public List<TraitType> maeNoJobTraitProbs = new List<TraitType>();
+        public List<TraitType> maeAllTraitProbs = new List<TraitType>();
+        public int maiRemoveTurnsFromTraitProbsX10 = 0;
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
@@ -1052,6 +1402,7 @@ namespace BetterAI
     }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
+  ### Better TurnsLeftEstimate           END ###
   ##############################################*/
 
 
@@ -1136,7 +1487,6 @@ namespace BetterAI
         public int BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT = 100;
         public int BAI_NUM_IMPROVEMENT_FINISHED_UNITS = 1;
         public int BAI_ALT_CHARACTER_SORT = 0;
-        public int BAI_CITIES_IMMUNE_TO_CRITICAL = 0;
         public int BAI_NO_DELAY = 0;
 
         public int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 0;
@@ -1145,6 +1495,7 @@ namespace BetterAI
         public int AI_FAMILY_OPINION_VALUE_PER = 0;
         public int AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE = 0;
         public int AI_CITY_GOVERNOR_VALUE = 0;
+        public int AI_DEATHTRAIT_PROB_EVAL_DEPTH = 0;
 
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
@@ -1187,7 +1538,6 @@ namespace BetterAI
             BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT = infos.getGlobalInt("BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT");
             BAI_NUM_IMPROVEMENT_FINISHED_UNITS = infos.getGlobalInt("BAI_NUM_IMPROVEMENT_FINISHED_UNITS");
             BAI_ALT_CHARACTER_SORT = infos.getGlobalInt("BAI_ALT_CHARACTER_SORT");
-            BAI_CITIES_IMMUNE_TO_CRITICAL = infos.getGlobalInt("BAI_CITIES_IMMUNE_TO_CRITICAL");
             BAI_NO_DELAY = infos.getGlobalInt("BAI_NO_DELAY");
 
             AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");
@@ -1196,7 +1546,8 @@ namespace BetterAI
             AI_FAMILY_OPINION_VALUE_PER = infos.getGlobalAI("AI_FAMILY_OPINION_VALUE_PER");
             AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE = infos.getGlobalAI("AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE");
             AI_CITY_GOVERNOR_VALUE = infos.getGlobalAI("AI_CITY_GOVERNOR_VALUE");
-            
+            AI_DEATHTRAIT_PROB_EVAL_DEPTH = infos.getGlobalAI("AI_DEATHTRAIT_PROB_EVAL_DEPTH");
+
         }
     }
 /*####### Better Old World AI - Base DLL #######

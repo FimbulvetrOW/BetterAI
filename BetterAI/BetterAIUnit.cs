@@ -569,24 +569,6 @@ namespace BetterAI
             return false;
         }
 
-/*####### Better Old World AI - Base DLL #######
-  ### Cities immune to critial         START ###
-  ##############################################*/
-        //this is now in base game, and infos().Globals.ALLOW_CITY_CRITICAL_HITS is 0 by default
-        //lines 8210-8218
-        //public override int attackCityDamage(Tile pFromTile, City pToCity, TeamType eVisibilityTeam, bool bCritical, int iPercent = 100, int iExtraDamage = 0, bool bCheckOurUnits = true, int iExtraModifier = 0)
-        //{
-        //    int iDamage = infos().Helpers.getAttackDamage(attackCityStrength(pFromTile, pToCity, eVisibilityTeam, bCheckOurUnits, iExtraModifier), pToCity.strength(), iPercent);
-        //    if (bCritical && (((BetterAIInfoGlobals)infos().Globals).BAI_CITIES_IMMUNE_TO_CRITICAL != 1))
-        //    {
-        //        iDamage *= 2;
-        //    }
-        //    return Math.Min(iDamage, pToCity.getHP() - iExtraDamage);
-        //}
-/*####### Better Old World AI - Base DLL #######
-  ### Cities immune to critial           END ###
-  ##############################################*/
-
         //there are no real changes here but I got null ref errors before so this stays
         //lines 8219-8534
         public override void attackUnitOrCity(Tile pToTile, Player pActingPlayer)
