@@ -368,7 +368,7 @@ namespace BetterAI
                 foreach (int iCityID in getCities())
                 {
                     City pLoopCity = game.city(iCityID);
-                    if ((!bHolyCitiesOnly || pLoopCity.isReligionHolyCityAny()) && pLoopCity.calculateCurrentYield(eYield, true) > 0)
+                    if (pLoopCity != null && (!bHolyCitiesOnly || pLoopCity.isReligionHolyCityAny()) && pLoopCity.calculateCurrentYield(eYield, true) > 0)
                     {
                         int iTurnsLeft = pLoopCity.getYieldTurnsLeft(eYield);
                         if (iTurnsLeft < iValue)
@@ -1167,24 +1167,27 @@ namespace BetterAI
                 foreach (int iCityID in getCities())
                 {
                     City pLoopCity = game.city(iCityID);
-
-                    for (YieldType eYield = 0; eYield < infos.yieldsNum(); ++eYield)
+                    if (pLoopCity != null)
                     {
+                        for (YieldType eYield = 0; eYield < infos.yieldsNum(); ++eYield)
+                        {
 /*####### Better Old World AI - Base DLL #######
   ### AI: BuyTileUnits Planning         START  #
   ##############################################*/
-                        if (pLoopCity.canBuyTileUnlocked(eYield))
+                            if (pLoopCity.canBuyTileUnlocked(eYield))
 /*####### Better Old World AI - Base DLL #######
   ### AI: BuyTileUnits Planning           END  #
   ##############################################*/
-                        {
-                            (Tile pBuyTile, long iBuyValue) = getBestBuyTile(pLoopCity, eYield);
-                            if (pBuyTile != null)
                             {
-                                mpAICache.addExpense(pBuyTile, eYield, pLoopCity, iBuyValue, game);
+                                (Tile pBuyTile, long iBuyValue) = getBestBuyTile(pLoopCity, eYield);
+                                if (pBuyTile != null)
+                                {
+                                    mpAICache.addExpense(pBuyTile, eYield, pLoopCity, iBuyValue, game);
+                                }
                             }
                         }
                     }
+
                 }
 
 /*####### Better Old World AI - Base DLL #######
@@ -1236,18 +1239,21 @@ namespace BetterAI
                 foreach (int iCityID in getCities())
                 {
                     City pLoopCity = game.city(iCityID);
-
-                    (Tile pLoopCityTile, long iTileValue) = getBestUnitBuyTileInCity(pUnit, eYield, pCity: pLoopCity, bSkipIfUnlockedInCity: true);
-
-                    if (iTileValue > 0)
+                    if (pLoopCity != null)
                     {
-                        if (iTileValue > iBestValue)
+                        (Tile pLoopCityTile, long iTileValue) = getBestUnitBuyTileInCity(pUnit, eYield, pCity: pLoopCity, bSkipIfUnlockedInCity: true);
+
+                        if (iTileValue > 0)
                         {
-                            iBestValue = iTileValue;
-                            pBestCity = pLoopCity;   //+City
-                            pBestTile = pLoopCityTile;
+                            if (iTileValue > iBestValue)
+                            {
+                                iBestValue = iTileValue;
+                                pBestCity = pLoopCity;   //+City
+                                pBestTile = pLoopCityTile;
+                            }
                         }
                     }
+
                     
                 }
                 return (pBestTile, pBestCity, iBestValue); //+City
@@ -1487,14 +1493,23 @@ namespace BetterAI
                     {
                         foreach (int iCityID in player.getCities())
                         {
-                            getCityWaterUnitAreas(eUnit, game.city(iCityID), siCityAreas);
+                            City pLoopCity = game.city(iCityID);
+                            if (pLoopCity != null)
+                            {
+                                getCityWaterUnitAreas(eUnit, pLoopCity, siCityAreas);
+                            }
                         }
                     }
                     else if (tribe != null)
                     {
                         foreach (int iCityID in tribe.getCities())
                         {
-                            getCityWaterUnitAreas(eUnit, game.city(iCityID), siCityAreas);
+                            City pLoopCity = game.city(iCityID);
+                            if (pLoopCity != null)
+                            {
+
+                                getCityWaterUnitAreas(eUnit, pLoopCity, siCityAreas);
+                            }
                         }
                     }
                 }
@@ -5563,7 +5578,7 @@ namespace BetterAI
                 }
 
                 // upgrade at a higher priority, if we're less likely to build new units
-                if (isMilitaryLandUnit(eUnit) && getTargetMilitaryUnitNumber() > 0)
+                if (isLatestMilitaryLandUnit(eUnit) && getTargetMilitaryUnitNumber() > 0)
                 {
                     iModifier += Math.Min(50, 50 * getCurrentMilitaryUnitNumber() / getTargetMilitaryUnitNumber());
                 }

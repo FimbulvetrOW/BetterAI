@@ -952,6 +952,17 @@ namespace BetterAI
                             }
                         }
 
+                        if (infos().improvement(eImprovement).maeAdjacentImprovementValid.Count > 0)
+                        {
+                            using (builder.BeginScope(TextBuilder.ScopeType.COMMA_AND, surroundingText: TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_VALID_ADJACENT_IMPROVEMENTS")))
+                            {
+                                foreach (ImprovementType eLoopImprovement in infos().improvement(eImprovement).maeAdjacentImprovementValid)
+                                {
+                                    builder.Add(buildImprovementLinkVariable(eLoopImprovement, pGame, pTile));
+                                }
+                            }
+                        }
+
                         {
                             int iValue = infos().improvement(eImprovement).miUnitHeal;
                             if (iValue != 0)
@@ -2225,6 +2236,14 @@ namespace BetterAI
                             orList.AddItem(buildTerrainTargetLinkVariable(eTerrainTarget));
                         }
 
+                        for (ImprovementType eLoopImprovement = 0; eLoopImprovement < infos().improvementsNum(); eLoopImprovement++)
+                        {
+                            if (infos().improvement(eLoopImprovement).maeAdjacentImprovementValid.Contains(eImprovement))
+                            {
+                                orList.AddItem(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_ADJACENT_HEIGHT", buildImprovementLinkVariable(eLoopImprovement, pGame, pTile)));
+                            }
+                        }
+
                         if (infos().improvement(eImprovement).mbRiverValid)
                         {
                             orList.AddItem(buildRiverLinkVariable(pTile));
@@ -2280,9 +2299,14 @@ namespace BetterAI
                         }
                     }
 
-                    if (infos().improvement(eImprovement).mbNoAdjacentReligion)
+                    if (pTile == null && infos().improvement(eImprovement).mbNoAdjacentReligion)
                     {
                         lRequirements.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT_RELIGION"));
+                    }
+
+                    if (pTile == null && eImprovementClass != ImprovementClassType.NONE && infos().improvementClass(eImprovementClass).mbNoAdjacent)
+                    {
+                        lRequirements.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT", buildImprovementClassLinkVariable(eImprovementClass)));
                     }
 
                     if (eReligionPrereq != ReligionType.NONE)
@@ -2522,22 +2546,12 @@ namespace BetterAI
                                 if (pTile.adjacentToImprovementClassFinished(eImprovementClass))
                                 {
                                     bAdjacencyValid = true;
-                                    lRequirements.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENTCLASS_ADJACENCY_VALID", buildImprovementClassLinkVariable(eImprovementClass)));
                                 }
-
                             }
 
-                            if (infos().improvementClass(eImprovementClass).mbNoAdjacent)
+                            if (!bAdjacencyValid && infos().improvementClass(eImprovementClass).mbNoAdjacent && !(pTile.notAdjacentToImprovementClass(eImprovementClass)))
                             {
-                                TextVariable textvar = TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT", buildImprovementClassLinkVariable(eImprovementClass));
-                                if (!bAdjacencyValid && !(pTile.notAdjacentToImprovementClass(eImprovementClass)))
-                                {
-                                    lRequirements.Add(buildWarningTextVariable(textvar));
-                                }
-                                else
-                                {
-                                    lRequirements.Add(textvar);
-                                }
+                                lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_ADJACENT", buildImprovementClassLinkVariable(eImprovementClass))));
                             }
                         }
 
@@ -4254,7 +4268,7 @@ namespace BetterAI
 
                 if (pInfoEffectPlayer.mbNoOutsideConsumption)
                 {
-                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_NO_OUTSIDE_UNIT_CONSUMPTION", buildUnitConsumptionOutsideLinkVariable());
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_NO_OUTSIDE_UNIT_CONSUMPTION", buildUnitConsumptionOutsideLinkVariable(pPlayer));
                 }
 
                 if (pInfoEffectPlayer.mbPurgeReligions)
@@ -4274,7 +4288,7 @@ namespace BetterAI
 
                 if (pInfoEffectPlayer.mbLegitimacyOrders)
                 {
-                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_LEGITIMACY_ORDERS", buildLegitimacyLinkVariable());
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_LEGITIMACY_ORDERS", buildLegitimacyLinkVariable(pPlayer));
                 }
 
                 if (pInfoEffectPlayer.mbOrdersScience)
@@ -4284,7 +4298,7 @@ namespace BetterAI
 
                 if (pInfoEffectPlayer.mbRecruitMercenaries)
                 {
-                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_RECRUIT_MERCENARIES", buildLegitimacyLinkVariable());
+                    builder.AddTEXT("TEXT_HELPTEXT_EFFECT_PLAYER_HELP_RECRUIT_MERCENARIES", buildLegitimacyLinkVariable(pPlayer));
                 }
 
                 if (pInfoEffectPlayer.mbHireMercenaries)

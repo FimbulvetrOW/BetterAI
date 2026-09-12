@@ -1021,13 +1021,18 @@ namespace BetterAI
   ### Do Bonus only in valid cities    START ###
   ##############################################*/
                             //do only valid bonuses
-                            if (owner().canDoBonus(eBonusCities, pCity: game().city(iLoopCity)))
+                            City pLoopCity = game().city(iLoopCity);
+                            if (pLoopCity != null)
+                            {
+                                if (owner().canDoBonus(eBonusCities, pCity: pLoopCity))
 /*####### Better Old World AI - Base DLL #######
   ### Do Bonus only in valid cities      END ###
   ##############################################*/
-                            {
-                                owner().doBonus(eBonusCities, pCity: game().city(iLoopCity), logPrefix: () => HelpText.buildImprovementLinkVariable(getImprovement(), game(), this));
+                                {
+                                    owner().doBonus(eBonusCities, pCity: pLoopCity, logPrefix: () => HelpText.buildImprovementLinkVariable(getImprovement(), game(), this));
+                                }
                             }
+
                         }
                     }
                 }

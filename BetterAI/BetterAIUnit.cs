@@ -477,8 +477,12 @@ namespace BetterAI
                         //if we couldn't place it on the same continent, add all other remaining cities too
                         foreach (int iCityID in player().getCities())
                         {
-                            Tile pLoopCityTile = game().city(iCityID).tile();
-                            aiCityTiles.Add(pLoopCityTile);
+                            City pLoopCity = game().city(iCityID);
+                            if (pLoopCity != null)
+                            {
+                                Tile pLoopCityTile = pLoopCity.tile();
+                                aiCityTiles.Add(pLoopCityTile);
+                            }
                         }
 
                         return true;
@@ -493,23 +497,32 @@ namespace BetterAI
                 {
                     foreach (int iCityID in player().getCities())
                     {
-                        Tile pLoopCityTile = game().city(iCityID).tile();
-                        if (tile().getLandSection() == pLoopCityTile.getLandSection())
+                        City pLoopCity = game().city(iCityID);
+                        if (pLoopCity != null)
                         {
-                            aiCityTiles.Add(pLoopCityTile);
+                            Tile pLoopCityTile = pLoopCity.tile();
+                            if (tile().getLandSection() == pLoopCityTile.getLandSection())
+                            {
+                                aiCityTiles.Add(pLoopCityTile);
+                            }
                         }
+
                     }
                 }
                 else //isWater
                 {
                     foreach (int iCityID in player().getCities())
                     {
-                        foreach (int iLoopTileID in game().city(iCityID).getTerritoryTiles())
+                        City pLoopCity = game().city(iCityID);
+                        if (pLoopCity != null)
                         {
-                            Tile pLoopTile = game().tile(iLoopTileID);
-                            if (pLoopTile.isWater() && tile().getArea() == pLoopTile.getArea())
+                            foreach (int iLoopTileID in pLoopCity.getTerritoryTiles())
                             {
-                                aiCityTiles.Add(pLoopTile);
+                                Tile pLoopTile = game().tile(iLoopTileID);
+                                if (pLoopTile.isWater() && tile().getArea() == pLoopTile.getArea())
+                                {
+                                    aiCityTiles.Add(pLoopTile);
+                                }
                             }
                         }
                     }

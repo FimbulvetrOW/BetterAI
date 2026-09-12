@@ -50,16 +50,19 @@ namespace BetterAI
                 foreach (int iCityID in getCities())
                 {
                     City pLoopCity = game().city(iCityID);
-
-                    for (int iIndex = 0; iIndex < pLoopCity.getBuildCount(); ++iIndex)
+                    if (pLoopCity != null)
                     {
-                        CityQueueData pLoopBuild = pLoopCity.getBuildQueueNode(iIndex);
-
-                        if ((pLoopBuild.meBuild == infos().Globals.UNIT_BUILD) && infos().unit((UnitType)(pLoopBuild.miType)).mbFound)
+                        for (int iIndex = 0; iIndex < pLoopCity.getBuildCount(); ++iIndex)
                         {
-                            return (UnitType)(pLoopBuild.miType);
+                            CityQueueData pLoopBuild = pLoopCity.getBuildQueueNode(iIndex);
+
+                            if ((pLoopBuild.meBuild == infos().Globals.UNIT_BUILD) && infos().unit((UnitType)(pLoopBuild.miType)).mbFound)
+                            {
+                                return (UnitType)(pLoopBuild.miType);
+                            }
                         }
                     }
+
                 }
 
                 //return iCount;
@@ -575,7 +578,7 @@ namespace BetterAI
                         {
                             foreach (int iCityID in getCities())
                             {
-                                game().city(iCityID).changeEffectCityCount(infos().effectPlayer(eIndex).meEffectCity, iChange);
+                                game().city(iCityID)?.changeEffectCityCount(infos().effectPlayer(eIndex).meEffectCity, iChange);
                             }
                         }
 
@@ -583,7 +586,7 @@ namespace BetterAI
                         {
                             foreach (int iCityID in getCities())
                             {
-                                game().city(iCityID).changeEffectCityCount(infos().effectPlayer(eIndex).meEffectCityExtra, iChange);
+                                game().city(iCityID)?.changeEffectCityCount(infos().effectPlayer(eIndex).meEffectCityExtra, iChange);
                             }
                         }
 
@@ -603,7 +606,7 @@ namespace BetterAI
                             {
                                 City pLoopCity = game().city(iCityID);
 
-                                if (pLoopCity.isConnected())
+                                if (pLoopCity?.isConnected() ?? false)
                                 {
                                     pLoopCity.changeEffectCityCount(infos().effectPlayer(eIndex).meConnectedEffectCity, iChange);
                                 }
@@ -616,7 +619,7 @@ namespace BetterAI
                             {
                                 City pLoopCity = game().city(iCityID);
 
-                                if (!pLoopCity.hasGovernor())
+                                if (!(pLoopCity?.hasGovernor() ?? true))
                                 {
                                     pLoopCity.changeEffectCityCount(infos().effectPlayer(eIndex).meNoGovernorEffectCity, iChange);
                                 }
@@ -631,7 +634,7 @@ namespace BetterAI
                                 {
                                     City pLoopCity = game().city(iCityID);
 
-                                    if (pLoopCity.isReligion(getStateReligion()))
+                                    if (pLoopCity?.isReligion(getStateReligion()) ?? false)
                                     {
                                         pLoopCity.changeEffectCityCount(infos().effectPlayer(eIndex).meStateReligionEffectCity, iChange);
                                     }
@@ -644,7 +647,7 @@ namespace BetterAI
                             {
                                 City pLoopCity = game().city(iCityID);
 
-                                if (pLoopCity.hasFamily())
+                                if (pLoopCity?.hasFamily() ?? false)
                                 {
                                     if (infos().effectPlayer(eIndex).maeFamilyClassEffectCity[pLoopCity.getFamilyClass()] != EffectCityType.NONE)
                                     {
@@ -926,7 +929,7 @@ namespace BetterAI
             foreach (int iCityID in getCities())
             {
                 City pLoopCity = game().city(iCityID);
-                if ((!bHolyCitiesOnly || pLoopCity.isReligionHolyCityAny()) && pLoopCity.getCulture() >= eCulture)
+                if (pLoopCity != null && (!bHolyCitiesOnly || pLoopCity.isReligionHolyCityAny()) && pLoopCity.getCulture() >= eCulture)
                 {
                     ++iCount;
                 }
@@ -957,16 +960,19 @@ namespace BetterAI
                 foreach (int iCityID in getCities())
                 {
                     City pLoopCity = game().city(iCityID);
-
-                    for (int iIndex = 0; iIndex < pLoopCity.getBuildCount(); ++iIndex)
+                    if (pLoopCity != null)
                     {
-                        CityQueueData pLoopBuild = pLoopCity.getBuildQueueNode(iIndex);
-
-                        if ((pLoopBuild.meBuild == infos().Globals.UNIT_BUILD) && infos().unit((UnitType)(pLoopBuild.miType)).mbFound)
+                        for (int iIndex = 0; iIndex < pLoopCity.getBuildCount(); ++iIndex)
                         {
-                            iCount++;
+                            CityQueueData pLoopBuild = pLoopCity.getBuildQueueNode(iIndex);
+
+                            if ((pLoopBuild.meBuild == infos().Globals.UNIT_BUILD) && infos().unit((UnitType)(pLoopBuild.miType)).mbFound)
+                            {
+                                iCount++;
+                            }
                         }
                     }
+
                 }
 
                 foreach (int iUnitID in getUnits())
