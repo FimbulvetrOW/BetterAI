@@ -48,6 +48,8 @@ namespace BetterAI
 
             public override void initClient(Game pGame, Player pPlayer, Tribe pTribe)
             {
+                //UnityEngine.Debug.Log("PlayerAI.initClient");
+
                 base.initClient(pGame, pPlayer, pTribe);
                 BAI_mpAICache = new BetterAIPlayerCache();
             }
@@ -55,6 +57,8 @@ namespace BetterAI
             //lines 8034-8058
             protected override long getHurryCostValue(City pCity, CityBuildHurryType eHurry)
             {
+                //UnityEngine.Debug.Log("PlayerAI.getHurryCostValue");
+
                 long iValue = base.getHurryCostValue(pCity, eHurry);
 
                 if (player == null) return iValue;
@@ -85,6 +89,8 @@ namespace BetterAI
             //lines 1184-1194
             public override void refreshCachedValues()
             {
+                //UnityEngine.Debug.Log("PlayerAI.initClient");
+
                 base.refreshCachedValues();
                 BAI_mpAICache.clear();
             }
@@ -92,6 +98,8 @@ namespace BetterAI
             //restoring v1.0.70024 version of calculateYieldValue
             public override long calculateYieldValue(YieldType eYield, int iExtraStockpile, int iExtraRate)
             {
+                ////UnityEngine.Debug.Log("PlayerAI.calculateYieldValue");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.calculateYieldValue");
 
                 if (infos.yield(eYield).meSubtractFromYield != YieldType.NONE)
@@ -258,6 +266,8 @@ namespace BetterAI
 
             public virtual void cacheCityYieldSpecializationModifiers()
             {
+                //UnityEngine.Debug.Log("PlayerAI.cacheCityYieldSpecializationModifiers");
+
                 if (getCities().Count <= 1) return;
 
                 YieldType[] aProductionYields = new YieldType[] { infos.Globals.CIVICS_YIELD, infos.Globals.TRAINING_YIELD, infos.Globals.GROWTH_YIELD };
@@ -364,6 +374,8 @@ namespace BetterAI
 
             public virtual int getMinYieldTurnsLeft(YieldType eYield, bool bHolyCitiesOnly = false)
             {
+                //UnityEngine.Debug.Log("PlayerAI.getMinYieldTurnsLeft");
+
                 int iValue = int.MaxValue;
                 foreach (int iCityID in getCities())
                 {
@@ -385,6 +397,8 @@ namespace BetterAI
             //lines 1394-1418
             protected override void cacheCityYieldValues()
             {
+                //UnityEngine.Debug.Log("PlayerAI.cacheCityYieldValues");
+
                 base.cacheCityYieldValues();
                 cacheCityYieldSpecializationModifiers();
                 //attaching to cacheCityYieldValues
@@ -395,6 +409,8 @@ namespace BetterAI
 
             protected override void doExpansionTargets(bool bCanDeclareWar, int iPriorityTargets)
             {
+                //UnityEngine.Debug.Log("PlayerAI.doExpansionTargets");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.doExpansionTargets");
 
                 if (player != null)
@@ -662,6 +678,8 @@ namespace BetterAI
             //lines 4141-4240
             public override long calculateCityYieldValue(YieldType eYield, City pCity)
             {
+                ////UnityEngine.Debug.Log("PlayerAI.initClient");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.calculateCityYieldValue");
 
                 if (infos.yield(eYield).meSubtractFromYield != YieldType.NONE)
@@ -1136,6 +1154,8 @@ namespace BetterAI
             //lines 7140-7162
             protected override void doBuyTilePlanning()
             {
+                //UnityEngine.Debug.Log("PlayerAI.doBuyTilePlanning");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.doBuyTilePlanning");
                 //
                 //if (player == null)
@@ -1157,7 +1177,7 @@ namespace BetterAI
                 //    }
                 //}
 
-                using var profileScope = new UnityProfileScope("PlayerAI.doBuyTilePlanning");
+                //using var profileScope = new UnityProfileScope("PlayerAI.doBuyTilePlanning");
 
                 if (player == null)
                 {
@@ -1222,7 +1242,7 @@ namespace BetterAI
             //modified for unit
             public virtual (Tile, City, long) getBestUnitBuyTile(Unit pUnit, YieldType eYield, bool bSkipIfUnlockedInCity = true)
             {
-                using var profileScope = new UnityProfileScope("PlayerAI.getBestUnitBuyTile");
+                //using var profileScope = new UnityProfileScope("PlayerAI.getBestUnitBuyTile");
 
                 long iBestValue = 0;
                 City pBestCity = null; //+City
@@ -1348,6 +1368,8 @@ namespace BetterAI
             //lines 6951-6973
             protected override bool shouldRespectCitySiteOwnership(Player pOtherPlayer)
             {
+                //UnityEngine.Debug.Log("PlayerAI.shouldRespectCitySiteOwnership");
+
                 if (player == null)
                 {
                     return false;
@@ -1385,6 +1407,8 @@ namespace BetterAI
             //lines 7025-7082
             protected override bool shouldClaimCitySite(Tile pTile)
             {
+                //UnityEngine.Debug.Log("PlayerAI.shouldClaimCitySite");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.shouldClaimCitySite");
 
                 if (player == null)
@@ -1538,6 +1562,8 @@ namespace BetterAI
             //unused, to be reviewed later
             protected virtual void getWaterUnitTargetNumber(UnitType eUnit, City pCity, out int iTargetNumber, out int iCurrentNumber)
             {
+                //UnityEngine.Debug.Log("PlayerAI.getWaterUnitTargetNumber");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.getWaterUnitTargetNumber");
 
                 InfoUnit pUnitInfo = infos.unit(eUnit);
@@ -1677,6 +1703,8 @@ namespace BetterAI
             //lines 9401-9463
             protected override int calculateTargetMilitaryUnitNumber()
             {
+                //UnityEngine.Debug.Log("PlayerAI.calculateTargetMilitaryUnitNumber");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.calculateTargetUnitNumber");
 
                 if (player == null)
@@ -1854,6 +1882,8 @@ namespace BetterAI
             //unused, not sure if I will ever use this
             public virtual long productionCostValue(YieldType eYield, int iCost, City pCity)
             {
+                //UnityEngine.Debug.Log("PlayerAI.productionCostValue");
+
                 long iValue = 0;
                 iCost *= Constants.YIELDS_MULTIPLIER; //production costs are whole
                 bool bNeedsGrowth = cityNeedsGrowth(pCity);
@@ -1912,19 +1942,19 @@ namespace BetterAI
 
                 if (infos == null)
                 {
-                    UnityEngine.Debug.Log("infos is null");
+                    //UnityEngine.Debug.Log("infos is null");
                     return -1;
                 }
 
                 if (game == null)
                 {
-                    UnityEngine.Debug.Log("game is null");
+                    //UnityEngine.Debug.Log("game is null");
                     return -1;
                 }
 
                 if (pTile == null)
                 {
-                    UnityEngine.Debug.Log("infos is null");
+                    //UnityEngine.Debug.Log("infos is null");
                     return -1;
                 }
 
@@ -1938,7 +1968,7 @@ namespace BetterAI
 
                 if (pImprovementInfo == null)
                 {
-                    UnityEngine.Debug.Log("Improvement Info is null");
+                    //UnityEngine.Debug.Log("Improvement Info is null");
                     return -1;
                 }
 
@@ -2548,7 +2578,7 @@ namespace BetterAI
   ##############################################*/
                 //if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
                 //{
-                //    UnityEngine.Debug.Log("BonusAdjacentImprovement: AI eval start");
+                //    //UnityEngine.Debug.Log("BonusAdjacentImprovement: AI eval start");
                 //}
                 BetterAITile BAI_pTile = (BetterAITile)pTile;
                 BetterAICity BAI_pCity = (BetterAICity)pCity;
@@ -2564,7 +2594,7 @@ namespace BetterAI
                     {
                         if (BAI_pCity == null) //invalid
                         {
-                            UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovement is not NONE");
+                            //UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovement is not NONE");
                             return -1;
                         }
 
@@ -2577,7 +2607,7 @@ namespace BetterAI
                     {
                         if (BAI_pCity == null) //invalid
                         {
-                            UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovementClass is not NONE");
+                            //UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovementClass is not NONE");
                             return -1;
                         }
 
@@ -2616,7 +2646,7 @@ namespace BetterAI
                     {
                         if (BAI_pCity == null) //invalid
                         {
-                            UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovement is not NONE");
+                            //UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovement is not NONE");
                             return -1;
                         }
 
@@ -2624,7 +2654,7 @@ namespace BetterAI
 
                         if (!(BAI_pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, bTestTerritory: false, bTestReligion: true, bForceImprovement: true)))
                         {
-                            UnityEngine.Debug.Log("AI considering an invalid improvement (meBonusAdjacentImprovement)");
+                            //UnityEngine.Debug.Log("AI considering an invalid improvement (meBonusAdjacentImprovement)");
                             return -1;
                         }
                     }
@@ -2633,7 +2663,7 @@ namespace BetterAI
                     {
                         if (BAI_pCity == null) //invalid
                         {
-                            //UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovementClass is not NONE");
+                            ////UnityEngine.Debug.Log("Invalid: City is null, meBonusAdjacentImprovementClass is not NONE");
                             return -1;
                         }
 
@@ -2692,7 +2722,7 @@ namespace BetterAI
                 
                 //if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
                 //{
-                //    UnityEngine.Debug.Log("BonusAdjacentImprovement: AI eval end");
+                //    //UnityEngine.Debug.Log("BonusAdjacentImprovement: AI eval end");
                 //}
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
@@ -3358,6 +3388,8 @@ namespace BetterAI
 
             public override bool doDecision(DecisionData pDecision, bool bTransitionFromHuman)
             {
+                //UnityEngine.Debug.Log("PlayerAI.doDecision");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.doDecision");
 
                 //MohawkAssert.Assert(player != null, "Tribe event decisions not supported");
@@ -3521,7 +3553,9 @@ namespace BetterAI
 
             protected virtual void cacheCharacterTurnsRemaining()
             {
-                using (new UnityProfileScope("PlayerAI.cacheCharacterTurnsRemaining"))
+                //UnityEngine.Debug.Log("PlayerAI.cacheCharacterTurnsRemaining");
+
+                //using (new UnityProfileScope("PlayerAI.cacheCharacterTurnsRemaining"))
                 {
                     Action<int> loopCharacterMaxAgeDelegate = new Action<int>(iCharacterID =>
                     {
@@ -3789,7 +3823,7 @@ namespace BetterAI
                                         iAverageTurns = iSecondaryValue / iWeightDiff;
                                     }
                                     
-                                    Debug.Log($"Turn {i}, {pSecondaryDieInfoTrait.mzType} from {pDieInfoTrait.mzType}: Total secondary weight {iOriginalSecondaryWeight}, weight used {iWeightDiff}, average turns to die {iAverageTurns}(/10) at weight {iWeightDie}");
+                                    //Debug.Log($"Turn {i}, {pSecondaryDieInfoTrait.mzType} from {pDieInfoTrait.mzType}: Total secondary weight {iOriginalSecondaryWeight}, weight used {iWeightDiff}, average turns to die {iAverageTurns}(/10) at weight {iWeightDie}");
                                 }
 
                                 foreach (TraitType eOtherTrait in pSecondaryDieInfoTrait.maeAllTraitProbs)
@@ -3945,6 +3979,8 @@ namespace BetterAI
             //lines 11453-11465
             public virtual int calculateTurnsLeftEstimateX10(Character pCharacter, bool bGeneral, bool bJob = true)
             {
+                ////UnityEngine.Debug.Log("PlayerAI.initClient");
+
                 if (pCharacter == null || pCharacter.hasTraitDoomed())
                 {
                     return 0;
@@ -4030,7 +4066,7 @@ namespace BetterAI
                 {
                     int iTraitWeight = iTotalWeight - iRemainingWeight;
                     int iMaxAgeFromTraits = iValue / iTraitWeight;
-                    Debug.Log($"TraitMax {iMaxAgeFromTraits} at weight {iTraitWeight}, NormalMax {iMaxAgeX10} at weight {iRemainingWeight}");
+                    //Debug.Log($"TraitMax {iMaxAgeFromTraits} at weight {iTraitWeight}, NormalMax {iMaxAgeX10} at weight {iRemainingWeight}");
                 }
 
                 iValue += iValueForHealthyMaxAge;
@@ -4085,6 +4121,8 @@ namespace BetterAI
 
             protected virtual long traitValue(TraitType eTrait, Character pCharacter, bool bRemove, ref HashSet<TraitType> sTraitPlayerEffectIgnore, bool? bLeader = null, bool? bLeaderSpouse = null, bool? bSuccessor = null, CouncilType? eCouncil = null, int? iCityGovernor = null, UnitType? eUnitGeneral = null, int? iCityAgent = null)
             {
+                //UnityEngine.Debug.Log("PlayerAI.traitValue");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.traitValue");
 
                 BetterAIInfoTrait pInfoTrait = (BetterAIInfoTrait)infos.trait(eTrait);
@@ -4316,11 +4354,11 @@ namespace BetterAI
                 {
                     if (pCharacter.isTrait(eTrait) && !bRemove)
                     {
-                        UnityEngine.Debug.Log("[traitValue] traits already on a character can only be removed.");
+                        //UnityEngine.Debug.Log("[traitValue] traits already on a character can only be removed.");
                     }
                     else if (!pCharacter.isTrait(eTrait) && bRemove)
                     {
-                        UnityEngine.Debug.Log("[traitValue] traits not already on a character can only be added.");
+                        //UnityEngine.Debug.Log("[traitValue] traits not already on a character can only be added.");
                     }
 
                     if (!(sTraitPlayerEffectIgnore.Contains(eTrait)))
@@ -4574,6 +4612,8 @@ namespace BetterAI
             //lines 13344-15251
             protected override long bonusValue(BonusType eBonus, ref BonusParameters zParameters)
             {
+                //UnityEngine.Debug.Log("PlayerAI.bonusValue");
+
                 if (player == null)
                 {
                     return 0;
@@ -4743,6 +4783,8 @@ namespace BetterAI
             //lines 14763-14815
             protected override int getNeedSettlers(City pCity)
             {
+                //UnityEngine.Debug.Log("PlayerAI.getNeedSettlers");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.getNeedSettlers");
 
 /*####### Better Old World AI - Base DLL #######
@@ -5718,6 +5760,8 @@ namespace BetterAI
                     {
                         MohawkAssert.Assert(AreCacheWarningsMuted, "AI improvement value not cached:" + infos.improvement(eImprovement).mzType + " Tile:" + pTile.getID());
 
+                        //UnityEngine.Debug.Log("PlayerAI.calculateImprovementValueForTile unexpected");
+
                         iValue = calculateImprovementValueForTile(pTile, pImprovementCity, eImprovement);
                         if (iValue >= 0)
                         {
@@ -5827,6 +5871,8 @@ namespace BetterAI
             //I should do Peace and Truce too
             public override int getWarOfferPercent(PlayerType eOtherPlayer, bool bDeclare = true, bool bPreparedOnly = false, bool bCurrentPlayer = true)
             {
+                //UnityEngine.Debug.Log("PlayerAI.getWarOfferPercent Player");
+
                 //using var profileScope = new UnityProfileScope("PlayerAI.getWarOfferPercent");
 
                 if (player == null)
@@ -6086,6 +6132,7 @@ namespace BetterAI
 
             public override int getWarOfferPercent(TribeType eTribe)
             {
+                //UnityEngine.Debug.Log("PlayerAI.getWarOfferPercent Trie");
                 //using var profileScope = new UnityProfileScope("PlayerAI.getWarOfferPercent");
 
                 if (player == null)

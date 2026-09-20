@@ -82,10 +82,10 @@ namespace BetterAI
         {
             return new BetterAIClientUI(app);
         }
-        //public override ClientRenderer CreateClientRenderer(ClientManager pClientManager)
-        //{
-        //    return new BetterAIClientRenderer(pClientManager);
-        //}
+        public override ClientRenderer CreateClientRenderer(IApplication app)
+        {
+            return new BetterAIClientRenderer(app);
+        }
         public override ClientManager CreateClientManager(GameInterfaces gameInterfaces)
         {
             return new BetterAIClientManager(gameInterfaces);

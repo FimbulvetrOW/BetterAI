@@ -25,6 +25,7 @@ namespace BetterAI
     {
         public override TextVariable getAgeTextVariable()
         {
+            //UnityEngine.Debug.Log("Character.getAgeTextVariable");
             if (isAgeless())
             {
                 return HelpText.TEXTVAR_TYPE("TEXT_UI_CHARACTER_AGELESS");
@@ -55,6 +56,7 @@ namespace BetterAI
         //lines 4427-4438
         public override int getLegitimacy(int iIndex, int iNumLeaders)
         {
+            //UnityEngine.Debug.Log("Character.getLegitimacy");
             if (hasCognomen() && hasPlayer() && isOrWasLeader())
             {
                 if (iIndex != -1)
@@ -98,6 +100,7 @@ namespace BetterAI
         //lines 5982-5993
         public override void resetTraitEffectPlayer(TraitType eTrait, int iChange)
         {
+            //UnityEngine.Debug.Log("Character.resetTraitEffectPlayer");
             base.resetTraitEffectPlayer(eTrait, iChange);
             if (isJob())
             {
@@ -133,6 +136,7 @@ namespace BetterAI
 
         public virtual void resetJobTraitEffectPlayer(JobType eJob, int iChange)
         {
+            //UnityEngine.Debug.Log("Character.resetJobTraitEffectPlayer");
             foreach (TraitType eLoopTrait in getTraits())
             {
                 EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)infos().trait(eLoopTrait)).maeJobEffectPlayer[eJob];
@@ -150,6 +154,7 @@ namespace BetterAI
         //lines 7677-7701
         public override void generateRatingsCourtier(CourtierType eCourtier)
         {
+            //UnityEngine.Debug.Log("Character.generateRatingsCourtier");
             BetterAIInfoCourtier pCourtierInfo = ((BetterAIInfoCourtier)infos().courtier(eCourtier));
 /*####### Better Old World AI - Base DLL #######
   ### Additional fields for Courtiers  START ###
@@ -183,6 +188,7 @@ namespace BetterAI
 
         public override void doUpgradeEvent()
         {
+            //UnityEngine.Debug.Log("Character.doUpgradeEvent");
             if (!hasPlayer())
             {
                 return;
@@ -272,6 +278,7 @@ namespace BetterAI
         //damn protection levels again
         public virtual bool getTraitValid(TraitType eTrait)
         {
+            //UnityEngine.Debug.Log("Character.getTraitValid");
             return base.isTraitValid(eTrait);
         }
 

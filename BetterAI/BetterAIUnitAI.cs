@@ -24,6 +24,8 @@ namespace BetterAI
             //lines 1019-1064
             public override bool shouldTribePillage(Tile pTile)
             {
+                //UnityEngine.Debug.Log("UnitAI.shouldTribePillage");
+
                 //using var profileScope = new UnityProfileScope("UnitAI.shouldTribePillage");
 
                 if (!pTile.canUnitOccupy(unit, TeamType.NONE, bTestTheirUnits: false, bTestOurUnits: false, bFinalMoveTile: true, bBump: false))
@@ -96,7 +98,9 @@ namespace BetterAI
 
             public override Character getBestGeneral()
             {
-                using var profileScope = new UnityProfileScope("UnitAI.getBestGeneral");
+                //UnityEngine.Debug.Log("UnitAI.getBestGeneral");
+
+                //using var profileScope = new UnityProfileScope("UnitAI.getBestGeneral");
 
                 long iBestValue = 0;
                 Character pBestCharacter = null;
@@ -138,7 +142,7 @@ namespace BetterAI
 
             protected override Tile getBestBuyTile(City pCity, YieldType eYield)
             {
-                using var profileScope = new UnityProfileScope("UnitAI.getBestBuyTile");
+                //using var profileScope = new UnityProfileScope("UnitAI.getBestBuyTile");
 
                 //(Tile pBestTile, long iBestValue) = AI.getBestBuyTile(pCity, eYield);
                 (Tile pBuyTile, long iBuyValue) = ((BetterAIPlayer.BetterAIPlayerAI)AI).getBestUnitBuyTileInCity(unit, eYield, pCity, bSkipIfUnlockedInCity: false, bUnitInCity: true);

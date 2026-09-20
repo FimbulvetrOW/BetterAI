@@ -45,12 +45,14 @@ namespace BetterAI
         }
         protected override NetworkData createNetworkData()
         {
+            //UnityEngine.Debug.Log("City.createNetworkData");
             return new BetterAINetworkData(infos(), game());
         }
 
 
         protected override bool isDirty(Enum eType)
         {
+            //UnityEngine.Debug.Log("City.isDirty");
             if (!(eType is BetterAIDirtyType))
             {
                 return base.isDirty(eType);
@@ -63,6 +65,7 @@ namespace BetterAI
         }
         public override bool isAnyDirty()
         {
+            //UnityEngine.Debug.Log("City.isAnyDirty");
             if (base.isAnyDirty())
             {
                 return true;
@@ -71,6 +74,7 @@ namespace BetterAI
         }
         protected override void makeDirty(Enum eType)
         {
+            //UnityEngine.Debug.Log("City.makeDirty");
             if (eType is BetterAIDirtyType)
             {
                 mBetterAIDirtyBits.SetBit((int)(DirtyType)eType, true);
@@ -82,12 +86,14 @@ namespace BetterAI
         }
         public override void clearDirty()
         {
+            //UnityEngine.Debug.Log("City.clearDirty");
             base.clearDirty();
             mBetterAIDirtyBits.Clear();
         }
 
         public override void dirtyValuesIO(object pStream, bool bCurrent)
         {
+            //UnityEngine.Debug.Log("City.dirtyValuesIO");
             base.dirtyValuesIO(pStream, bCurrent);
 
             BetterAINetworkData data = bCurrent ? (BetterAINetworkData)mpCurrentData : (BetterAINetworkData)mpLastUpdateData;
@@ -105,14 +111,17 @@ namespace BetterAI
 
         protected virtual int getEnablesGovernorUnlock()
         {
+            //UnityEngine.Debug.Log("City.getEnablesGovernorUnlock");
             return ((BetterAINetworkData)mpCurrentData).miEnablesGovernorUnlock;
         }
         public virtual bool isEnablesGovernor(int iExtraUnlock = 0)
         {
+            //UnityEngine.Debug.Log("City.isEnablesGovernor");
             return (getEnablesGovernorUnlock() + iExtraUnlock > 0);
         }
         public virtual void changeEnablesGovernorUnlock(int iChange)
         {
+            //UnityEngine.Debug.Log("City.changeEnablesGovernorUnlock");
             if (iChange != 0)
             {
                 if (mpCurrentData != null)
@@ -128,6 +137,7 @@ namespace BetterAI
         }
         public override void changeEffectCityCount(EffectCityType eIndex, int iChange)
         {
+            //UnityEngine.Debug.Log("City.changeEffectCityCount");
             if (iChange == 0 || eIndex == EffectCityType.NONE)
             {
                 return;
@@ -152,6 +162,7 @@ namespace BetterAI
 
         public virtual void updateCityBiome()
         {
+            //UnityEngine.Debug.Log("City.updateCityBiome");
             //calculate only on demand
             if (mbTerritoryChanged || mbTerrainChanged)
             {
@@ -161,12 +172,14 @@ namespace BetterAI
 
         public virtual CityBiomeType getCityBiome()
         {
+            //UnityEngine.Debug.Log("City.getCityBiome");
             updateCityBiome();
             return meCityBiome;
         }
 
         public virtual void calculateCityBiome()
         {
+            //UnityEngine.Debug.Log("City.calculateCityBiome");
             if ((int)((BetterAIInfos)infos()).cityBiomesNum() <= 1)
             {
                 meCityBiome = CityBiomeType.NONE;
@@ -218,6 +231,7 @@ namespace BetterAI
   ##############################################*/
         public virtual bool isDiscontent()
         {
+            //UnityEngine.Debug.Log("City.isDiscontent");
             if (((BetterAIInfoGlobals)infos().Globals).BAI_DISCONTENT_LEVEL_ZERO == 2)
             {
                 return (getHappinessLevel() < 0);
@@ -589,6 +603,7 @@ namespace BetterAI
         //lines 1928-1948
         protected override void setGovernorID(int iNewValue)
         {
+            //UnityEngine.Debug.Log("City.setGovernorID");
             if (getGovernorID() != iNewValue)
             {
                 Character pOldGovernor = governor();
@@ -634,6 +649,7 @@ namespace BetterAI
 
         public virtual int getImprovementModifierForGovernor(ImprovementType eIndex, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
+            //UnityEngine.Debug.Log("City.getImprovementModifierForGovernor");
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
                 return base.getImprovementModifierForGovernor(eIndex, pGovernor);
@@ -686,6 +702,7 @@ namespace BetterAI
 
         public virtual int getImprovementRiverModifierForGovernor(ImprovementType eIndex, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
+            //UnityEngine.Debug.Log("City.getImprovementRiverModifierForGovernor");
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
                 return base.getImprovementRiverModifierForGovernor(eIndex, pGovernor);
@@ -719,6 +736,7 @@ namespace BetterAI
         //lines 4272-4282
         public override int getYieldTurnsLeft(YieldType eYield)
         {
+            //UnityEngine.Debug.Log("City.getYieldTurnsLeft");
 
             if ((eYield == infos().Globals.HAPPINESS_YIELD) && isDiscontent())
 
@@ -734,6 +752,7 @@ namespace BetterAI
         //lines 4291-4395
         protected override void setYieldProgress(YieldType eIndex, int iNewValue)
         {
+            //UnityEngine.Debug.Log("City.setYieldProgress");
             if (eIndex == infos().Globals.HAPPINESS_YIELD)
             {
 
@@ -821,6 +840,7 @@ namespace BetterAI
         //lines 4400-4422
         public override void changeYieldProgress(YieldType eIndex, int iChange)
         {
+            //UnityEngine.Debug.Log("City.changeYieldProgress");
             if (iChange != 0)
             {
                 player()?.changeYieldTotal(eIndex, iChange);
@@ -849,6 +869,7 @@ namespace BetterAI
         //lines 4885-4901
         public virtual int getEffectCityImprovementYieldForGovernor(ImprovementType eImprovement, YieldType eYield, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
+            ////UnityEngine.Debug.Log("City.getEffectCityImprovementYieldForGovernor");
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
                 return base.getEffectCityImprovementYieldForGovernor(eImprovement, eYield, pGovernor);
@@ -904,6 +925,7 @@ namespace BetterAI
         //lines 4959-4975
         public virtual int getEffectCityTerrainYieldForGovernor(TerrainType eTerrain, YieldType eYield, Character pGovernor, Dictionary<EffectCityType, int> dEffectCityExtraCounts)
         {
+            //UnityEngine.Debug.Log("City.getEffectCityTerrainYieldForGovernor");
             if (dEffectCityExtraCounts == null || dEffectCityExtraCounts.Count == 0)
             {
                 return base.getEffectCityTerrainYieldForGovernor(eTerrain, eYield, pGovernor);
@@ -936,6 +958,7 @@ namespace BetterAI
 
         public virtual bool isUnitEffectCityUnlock(EffectCityType eIndex, int iEffectExtra = 0, int iFreeUnlockExtra = 0)
         {
+            //UnityEngine.Debug.Log("City.isUnitEffectCityUnlock");
             if (isFreeUnitEffectCityUnlock(eIndex, iFreeUnlockExtra))
             {
                 return true;
@@ -952,6 +975,7 @@ namespace BetterAI
         //lines 5505-5530
         public override void setHappinessLevel(int iNewValue)
         {
+            //UnityEngine.Debug.Log("City.setHappinessLevel");
             if (!hasPlayer())
             {
                 return;
@@ -983,6 +1007,7 @@ namespace BetterAI
 
         public override int getNewHappinessLevel(int iChange)
         {
+            //UnityEngine.Debug.Log("City.getNewHappinessLevel");
             int iNewLevel = getHappinessLevel() + iChange;
             if (((BetterAIInfoGlobals)infos().Globals).BAI_DISCONTENT_LEVEL_ZERO == 0)
             {
@@ -1003,6 +1028,7 @@ namespace BetterAI
         //lines 5531-5561
         public override void changeHappinessLevel(int iChange)
         {
+            //UnityEngine.Debug.Log("City.changeHappinessLevel");
             if (((BetterAIInfoGlobals)infos().Globals).BAI_DISCONTENT_LEVEL_ZERO > 0)
             {
                 if (iChange > 0)
@@ -1055,6 +1081,7 @@ namespace BetterAI
 
         public override void loadAgentCharacterID(PlayerType eIndex, int iNewValue)
         {
+            //UnityEngine.Debug.Log("City.loadAgentCharacterID");
             if (getAgentCharacterID(eIndex) != iNewValue)
             {
                 resetVisibilty(eIndex, -1);
@@ -1099,6 +1126,7 @@ namespace BetterAI
         //lines 6613-6628
         protected override bool verifyBuildUnit(CityQueueData pBuild, bool bHurry = false)
         {
+            //UnityEngine.Debug.Log("City.verifyBuildUnit");
             UnitType eUnit = (UnitType)(pBuild.miType);
 
             if (pBuild.miProgress > 0)
@@ -1123,6 +1151,7 @@ namespace BetterAI
         //canBuildUnitCurrent: lines 9929-9306
         public virtual bool canContinueBuildUnitCurrent(UnitType eUnit, bool bTestEnabled = true)
         {
+            //UnityEngine.Debug.Log("City.canContinueBuildUnitCurrent");
             Player pPlayer = ((hasPlayer()) ? player() : lastPlayer());
 
 /*####### Better Old World AI - Base DLL #######
@@ -1214,6 +1243,7 @@ namespace BetterAI
         //lines 6385-6427
         protected override CityProductionYield getNetCityProductionYieldHelper(YieldType eYield)
         {
+            //UnityEngine.Debug.Log("City.getNetCityProductionYieldHelper");
             //using var profileScoped = new UnityProfileScope("City.getNetCityProductionYield");
 
             CityProductionYield zYield = new CityProductionYield();
@@ -1298,6 +1328,7 @@ namespace BetterAI
         //lines 6356-6365
         public override bool canCancelBuildQueue(CityQueueData pQueueData, int iOldIndex)
         {
+            //UnityEngine.Debug.Log("City.canCancelBuildQueue");
             if (base.canCancelBuildQueue(pQueueData, iOldIndex))
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry               START ###
@@ -1326,6 +1357,7 @@ namespace BetterAI
         //lines 6164-6166
         public override int getBuildDiffWholePositive(CityQueueData pQueueInfo, bool bIncludeOverflow = true)
         {
+            //UnityEngine.Debug.Log("City.getBuildDiffWholePositive");
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry               START ###
   ##############################################*/
@@ -1349,6 +1381,7 @@ namespace BetterAI
         //lines 6375-6539
         public override void moveBuildQueue(int iNewIndex, int iOldIndex)
         {
+            //UnityEngine.Debug.Log("City.moveBuildQueue");
 /*####### Better Old World AI - Base DLL #######
   ### Altnernative Hurry               START ###
   ##############################################*/
@@ -1375,12 +1408,14 @@ namespace BetterAI
         //lines 5981-5996 (add & remove)
         public override void addTerritoryTile(int iTileID)
         {
+            //UnityEngine.Debug.Log("City.addTerritoryTile");
             int iCount = getTerritoryTiles().Count;
             base.addTerritoryTile(iTileID);
             mbTerritoryChanged = mbTerritoryChanged || (iCount != getTerritoryTiles().Count);
         }
         public override void removeTerritoryTile(int iTileID)
         {
+            //UnityEngine.Debug.Log("City.removeTerritoryTile");
             int iCount = getTerritoryTiles().Count;
             base.removeTerritoryTile(iTileID);
             mbTerritoryChanged = mbTerritoryChanged || (iCount != getTerritoryTiles().Count);
@@ -1388,6 +1423,7 @@ namespace BetterAI
 
         public virtual void setTerrainChanged()
         {
+            //UnityEngine.Debug.Log("City.setTerrainChanged");
             mbTerrainChanged = true;
         }
 /*####### Better Old World AI - Base DLL #######
@@ -1398,6 +1434,7 @@ namespace BetterAI
         //lines 7447-7544
         public override bool doDistantRaid(bool bTest = false)
         {
+            //UnityEngine.Debug.Log("City.doDistantRaid");
             //using var profileScope = new UnityProfileScope("City.doDistantRaid");
 
             if (!canGetRaided())
@@ -1500,6 +1537,7 @@ namespace BetterAI
         //lines 9277-9292, adjusted for adjacent
         public virtual bool canAddImprovementTileNoTerritoryCheck(ImprovementType eImprovement, Tile pTile)
         {
+            //UnityEngine.Debug.Log("City.canAddImprovementTileNoTerritoryCheck");
             if (!hasPlayer())
             {
                 return false;
@@ -1524,6 +1562,7 @@ namespace BetterAI
 
         public virtual bool canAddImprovementTileAdjacent(Tile pTile, ImprovementType eImprovement)
         {
+            //UnityEngine.Debug.Log("City.canAddImprovementTileAdjacent");
             //using var profileScope = new UnityProfileScope("City.canAddImprovement");
 
             for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
@@ -1542,6 +1581,7 @@ namespace BetterAI
         //lines 9293-9314, adjusted for adjacent
         protected virtual Tile getBestImprovementTileAdjacent(Tile pTile, ImprovementType eImprovement, Predicate<int> condition)
         {
+            //UnityEngine.Debug.Log("City.getBestImprovementTileAdjacent");
             Tile pBestTile = null;
             long iBestValue = long.MinValue;
 
@@ -1578,6 +1618,7 @@ namespace BetterAI
         //lines 9315-9346, adjusted for adjacent
         public virtual bool addImprovementTileAdjacent(Tile pTile, ImprovementType eImprovement)
         {
+            //UnityEngine.Debug.Log("City.addImprovementTileAdjacent");
             Tile pBestTile = getBestImprovementTileAdjacent(pTile, eImprovement, iTileID => player().getTileImprovementPing(iTileID, false) == eImprovement);
 
             if (pBestTile == null)
@@ -1622,6 +1663,7 @@ namespace BetterAI
         //lines 10420-10563
         public override int getEffectCityYieldRate(EffectCityType eEffectCity, YieldType eYield, Character pGovernor, bool bComplete = false, Dictionary<EffectCityType, int> mapEffectCityChanges = null, Dictionary<SpecialistType, int> mapSpecialistChanges = null)
         {
+            //UnityEngine.Debug.Log("City.getEffectCityYieldRate");
             int iRate = base.getEffectCityYieldRate(eEffectCity, eYield, pGovernor, bComplete, mapEffectCityChanges, mapSpecialistChanges);
 
             if (bComplete)
@@ -1652,6 +1694,8 @@ namespace BetterAI
         //Player.isImprovementUnlocked: lines 17320-17338
         public virtual bool isImprovementUnlockedInCity(ImprovementType eImprovement, bool bTestEnabled = true, bool bTestTech = true, bool bTestCulture = true)
         {
+            //UnityEngine.Debug.Log("City.isImprovementUnlockedInCity");
+
             BetterAIPlayer pOwner = (BetterAIPlayer)player();
             BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             if (pOwner == null || pImprovementInfo == null) return false;
@@ -1836,6 +1880,7 @@ namespace BetterAI
         }
         public virtual bool canCityHaveImprovement(ImprovementType eImprovement, TeamType eTeamTerritory = TeamType.NONE, bool bTestEnabled = true, bool bTestTerritory = true, bool bTestReligion = true, bool bForceImprovement = false, bool bTestCulture = true, bool bTestImprovement = true)
         {
+            //UnityEngine.Debug.Log("City.canCityHaveImprovement");
             if (!bForceImprovement && !isImprovementUnlockedInCity(eImprovement, bTestEnabled, bTestTech: false, bTestCulture: bTestCulture)) //testing without tech
             {
                 return false;

@@ -1,21 +1,21 @@
 ﻿using Mohawk.SystemCore;
 using Mohawk.UIInterfaces;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
-using TenCrowns.AppCore;
-using TenCrowns.ClientCore;
 using TenCrowns.GameCore;
 using TenCrowns.GameCore.Text;
+using static TenCrowns.GameCore.Text.TextExtensions;
 using UnityEngine;
 using UnityEngine.UI;
-using static TenCrowns.GameCore.Text.TextExtensions;
-using static UnityEngine.UI.DefaultControls;
+using System.Threading.Tasks;
 using Constants = TenCrowns.GameCore.Constants;
 using Enum = System.Enum;
+using System.Threading;
+using System.Collections.Concurrent;
+using System.Linq.Expressions;
+using System.Reflection;
+using TenCrowns.ClientCore;
+
 
 namespace BetterAI
 {
@@ -25,12 +25,154 @@ namespace BetterAI
         {
         }
 
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters          START ###
+  ##############################################*/
+        public override void start()
+        {
+            //UnityEngine.Debug.Log("ClientUI.start - Start");
+            base.start();
+            for (int i = 0; i < mabUnitFilters.Count; i++)
+            {
+                mabUnitFilters[i] = false;
+            }
+
+            //UnityEngine.Debug.Log("ClientUI.start - End");
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters            END ###
+  ##############################################*/
+        public override void updateUnitList()
+        {
+            //UnityEngine.Debug.Log("ClientUI.updateUnitList - Start");
+            //using (new UnityProfileScope("ClientUI.updateUnitList"))
+            {
+                Player pActivePlayer = ClientMgr.activePlayer();
+                int numUnits = 0;
+
+                if (pActivePlayer?.getNumUnits() > 0)
+                {
+                    for (UnitCycleType eLoopUnitCycle = 0; eLoopUnitCycle < Infos.unitCyclesNum(); eLoopUnitCycle++)
+                    {
+                        for (UnitType eLoopUnit = 0; eLoopUnit < Infos.unitsNum(); eLoopUnit++)
+                        {
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters          START ###
+  ##############################################*/
+                            BetterAIInfoUnit pLoopInfoUnit = (BetterAIInfoUnit)Infos.unit(eLoopUnit);
+                            if (pLoopInfoUnit.meUnitCycle == eLoopUnitCycle)
+                            //if (Infos.unit(eLoopUnit).meUnitCycle == eLoopUnitCycle)
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters            END ###
+  ##############################################*/
+                            {
+                                for (int iUnitIndex = 0; iUnitIndex < pActivePlayer.getNumUnits(); ++iUnitIndex)
+                                {
+                                    Unit unit = pActivePlayer.unitAt(iUnitIndex);
+
+                                    if (unit != null && unit.getType() == eLoopUnit)
+                                    {
+                                        UIAttributeTag unitListTag = UI.GetUIAttributeTag("UnitList", numUnits);
+                                        unitListTag.SetInt("ID", unit.getID());
+                                        unitListTag.SetInt("Movement-Count", unit.getFatigueLimit());
+
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters          START ###
+  ##############################################*/
+                                        //bool bActive = false;
+
+                                        //switch (unit.info().meUnitCycle)
+                                        //{
+                                        //    case UnitCycleType.SCOUT:
+                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.SCOUT];
+                                        //        break;
+
+                                        //    case UnitCycleType.MILITARY_INFANTRY:
+                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY];
+                                        //        break;
+
+                                        //    case UnitCycleType.MILITARY_MOUNTED:
+                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED];
+                                        //        break;
+
+                                        //    case UnitCycleType.MILITARY_RANGED:
+                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED];
+                                        //        break;
+
+                                        //    case UnitCycleType.MILITARY_SIEGE:
+                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE];
+                                        //        break;
+
+                                        //    case UnitCycleType.MILITARY_WATER:
+                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER];
+                                        //        break;
+
+                                        //    default:
+                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.CIVILIAN];
+                                        //        break;
+                                        //}
+
+                                        //if (!bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
+                                        //{
+                                        //    bActive |= unit.info().maeUnitTrait.Contains(Infos.Globals.RANGED_TRAIT);
+                                        //}
+
+                                        //if (!bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE])
+                                        //{
+                                        //    bActive |= unit.info().maeUnitTrait.Contains(Infos.Globals.SIEGE_TRAIT);
+                                        //}
+
+                                        //if (!bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER])
+                                        //{
+                                        //    bActive |= unit.info().maeUnitTrait.Contains(Infos.Globals.SHIP_TRAIT);
+                                        //}
+
+                                        //if (!bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED])
+                                        //{
+                                        //    bActive |= unit.info().maeUnitTrait.Contains(Infos.Globals.MOUNTED_TRAIT);
+                                        //}
+
+                                        bool bActive = ( (!mabUnitFilters[(int)UnitListFilterType.SCOUT] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])
+                                            && (!mabUnitFilters[(int)UnitListFilterType.CIVILIAN] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.CIVILIAN])
+                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_INFANTRY])
+                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_MOUNTED])
+                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_RANGED])
+                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_SIEGE])
+                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_WATER]) );
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters            END ###
+  ##############################################*/
+
+                                        unitListTag.IsActive = bActive;
+
+                                        numUnits++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                UI.SetUIAttribute("NumUnits", numUnits.ToStringCached());
+            }
+
+            //UnityEngine.Debug.Log("ClientUI.updateUnitList - End");
+        }
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters            END ###
+  ##############################################*/
+
         private const string YIELD_ARROW = "Sprites/GuitarPickUp";
         private const string YIELD_NORMAL = "Sprites/GuitarPick";
+
         //copy-paste START
         //lines 9192-9436
         protected override void updateCitySelection(City pSelectedCity, bool bUpdateActions)
         {
+            //UnityEngine.Debug.Log("ClientUI.updateCitySelection - Start");
             //using (new UnityProfileScope("ClientUI.updateCitySelection"))
             {
                 if (pSelectedCity != null)
@@ -54,12 +196,12 @@ namespace BetterAI
                         }
                         else
                         {
-                            UnityEngine.Debug.Log("base_YIELD_ARROW/base_YIELD_NORMAL null");
+                            //UnityEngine.Debug.Log("base_YIELD_ARROW/base_YIELD_NORMAL null");
                         }
                     }
                     else
                     {
-                        UnityEngine.Debug.Log("FI_YIELD_ARROW/FI_YIELD_NORMAL null");
+                        //UnityEngine.Debug.Log("FI_YIELD_ARROW/FI_YIELD_NORMAL null");
                     }
                     if (!bIsReflectionWorking)
                     {
@@ -352,6 +494,8 @@ namespace BetterAI
                     makeDirty(DirtyType.ACTION_PANEL);
                 }
             }
+
+            //UnityEngine.Debug.Log("ClientUI.updateCitySelection - End");
         }
         //copy-paste END
 
@@ -359,6 +503,8 @@ namespace BetterAI
         protected override void updateReligionSelection(ReligionType eReligion, bool bUpdateActions)
         {
             //using var profileScope = new UnityProfileScope("ClientUI.updateReligionSelection");
+
+            //UnityEngine.Debug.Log("ClientUI.updateReligionSelection - Start");
 
             //damn protection levels
             int maxSelectedCharacterButtonsCount = (int)base.GetType().GetField("maxSelectedCharacterButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
@@ -648,6 +794,8 @@ namespace BetterAI
 
                 mSelectedPanel.SetBool("ScrollRect-IsVisible", bAnyFollowers || bCanHaveTheology);
             }
+
+            //UnityEngine.Debug.Log("ClientUI.updateReligionSelection - End");
         }
 
 
@@ -658,6 +806,8 @@ namespace BetterAI
         //lines 11725-11756
         public override void GetValidImprovementsForTile(List<ImprovementType> aeImprovements, Tile pTile, Unit pUnit, WorkerActionFilter eFilter = WorkerActionFilter.CURRENT_TILE)
         {
+            //UnityEngine.Debug.Log("ClientUI.GetValidImprovementsForTile - Start");
+
             bool bRunOriginal = true;
             if (pUnit != null && pTile != null && eFilter == WorkerActionFilter.CURRENT_TILE && ((BetterAIInfoGlobals)Infos.Globals).BAI_WORKERLIST_EXTRA > 0)
             {
@@ -837,10 +987,536 @@ namespace BetterAI
             {
                 base.GetValidImprovementsForTile(aeImprovements, pTile, pUnit, eFilter);
             }
+
+            //UnityEngine.Debug.Log("ClientUI.GetValidImprovementsForTile - End");
         }
 /*####### Better Old World AI - Base DLL #######
   ### Worker Default List Extra Items    END ###
   ##############################################*/
+
+
+
+
+        protected override bool CreateContextButtons(UIAttributeTag buttonRoot, List<UIActionButtonData> buttons, Character pSelectedCharacter, string zSelection, MissionClassType eMissionClass, SubjectClassType eTargetClass)
+        {
+            //UnityEngine.Debug.Log("ClientUI.CreateContextButtons - Start");
+
+            void SetDefaultIconType(UIAttributeTag tag)
+            {
+                tag.SetKey("IconState", "Default");
+                tag.SetKey("IconBG", "ActionButton");
+                tag.SetInt("CharacterID", -1);
+            };
+
+            using (var contextButtonDict = CollectionCache.GetDictionaryScoped<MissionType, int>())
+            using (var missionCountDict = CollectionCache.GetDictionaryScoped<MissionType, int>())
+            using (var missionAvailableDict = CollectionCache.GetDictionaryScoped<MissionType, bool>())
+            using (var contextActionList = CollectionCache.GetListScoped<int>())
+            using (var buttonsToRemove = CollectionCache.GetListScoped<int>())
+            {
+                Player pActivePlayer = ClientMgr.activePlayer();
+
+                for (int i = 0; i < buttons.Count; i++)
+                {
+                    if (buttons[i].Data.Type == nameof(ItemType.START_MISSION))
+                    {
+                        MissionType eMission = buttons[i].Data.GetDataEnum<MissionType>(0, Infos);
+
+                        if (eMissionClass == MissionClassType.NONE || Infos.mission(eMission).meClass == eMissionClass)
+                        {
+                            if (!missionCountDict.Value.TryGetValue(eMission, out int iCount))
+                            {
+                                missionCountDict.Value.Add(eMission, 1);
+                            }
+                            else
+                            {
+                                missionCountDict.Value[eMission] = iCount + 1;
+                            }
+
+                            if (!missionAvailableDict.Value.TryGetValue(eMission, out bool bEnabled))
+                            {
+                                missionAvailableDict.Value.Add(eMission, buttons[i].IsInteractable);
+                            }
+                            else
+                            {
+                                missionAvailableDict.Value[eMission] = bEnabled || buttons[i].IsInteractable;
+                            }
+                        }
+                    }
+                }
+
+                for (int i = 0; i < buttons.Count; i++)
+                {
+                    UIActionButtonData button = buttons[i];
+
+                    if (button.Data.Type == nameof(ItemType.START_MISSION))
+                    {
+                        MissionType eMission = buttons[i].Data.GetDataEnum<MissionType>(0, Infos);
+
+                        if (eMissionClass == MissionClassType.NONE || Infos.mission(eMission).meClass == eMissionClass)
+                        {
+                            InfoMission mission = Infos.mission(eMission);
+                            SubjectClassType eSubjectTargetClass = Infos.subject(mission.meSubjectTarget)?.meClass ?? SubjectClassType.NONE;
+
+                            bool isTarget = false;
+
+                            if (eTargetClass == eSubjectTargetClass)
+                            {
+                                if (button.Data[2] == zSelection)
+                                {
+                                    isTarget = true;
+                                }
+                            }
+
+                            if (!isTarget && pSelectedCharacter != null)
+                            {
+                                if (eSubjectTargetClass == Infos.Globals.PLAYER_SUBJECTCLASS)
+                                {
+                                    if (button.Data.GetDataInt(2) == pSelectedCharacter.getPlayerInt())
+                                    {
+                                        isTarget = true;
+                                    }
+                                }
+                                else if (eSubjectTargetClass == Infos.Globals.TRIBE_SUBJECTCLASS)
+                                {
+                                    if (button.Data.GetDataEnum<TribeType>(2, Infos) == pSelectedCharacter.getTribe())
+                                    {
+                                        isTarget = true;
+                                    }
+                                }
+                            }
+
+                            if (isTarget || (eSubjectTargetClass != SubjectClassType.NONE))
+                            {
+                                if (missionCountDict.Value[mission.meType] > 1)
+                                {
+                                    if (!contextButtonDict.Value.TryGetValue(mission.meType, out int index))
+                                    {
+                                        index = contextButtonDict.Value.Count;
+                                        contextButtonDict.Value.Add(mission.meType, index);
+                                        contextActionList.Value.Add(0);
+
+                                        UIAttributeTag contextButtonTag = buttonRoot.GetSubTag("-ContextButton", index);
+                                        contextButtonTag.SetKey("Icon", mission.mzIcon);
+                                        contextButtonTag.SetBool("CloseOnClick", true);
+                                        contextButtonTag.Label = TEXT(mission.meName);
+                                        contextButtonTag.IsActive = true;
+                                        contextButtonTag.IsInteractable = missionAvailableDict.Value[mission.meType];
+                                    }
+
+                                    if (pSelectedCharacter != null)
+                                    {
+                                        bool bActive = false;
+
+                                        if (pActivePlayer.isCharacterMission(pSelectedCharacter, mission.meType, button.Data[2]))
+                                        {
+                                            bActive = true;
+                                        }
+
+                                        if (!bActive)
+                                        {
+                                            for (MissionType eLoopMission = 0; eLoopMission < Infos.missionsNum(); eLoopMission++)
+                                            {
+                                                if (Infos.mission(eLoopMission).meMissionRoot == mission.meType)
+                                                {
+                                                    if (pActivePlayer.isCharacterMission(pSelectedCharacter, eLoopMission, button.Data[2]))
+                                                    {
+                                                        bActive = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        if (bActive)
+                                        {
+                                            buttonRoot.GetSubTag("-ContextButton", index).Label = TEXT("TEXT_UI_CHARACTER_ACTIONS_ACTIVE_MISSION", TEXTVAR_TYPE(mission.meName), HelpText.buildMissionTurnsRemainingVariable(pActivePlayer.getCharacterMission(pSelectedCharacter), Game));
+                                        }
+                                    }
+
+                                    UIAttributeTag actionButtonTag = buttonRoot.GetSubTag("-ContextButton", index).GetSubTag("-Button", contextActionList.Value[index]);
+                                    actionButtonTag.ItemType = button.Data.Type;
+                                    actionButtonTag.IsInteractable = button.IsInteractable;
+                                    actionButtonTag.SetBool("Label-HasExtra", false);
+
+                                    using (var dataScope = CollectionCache.GetStringBuilderScoped())
+                                    {
+                                        button.Data.AppendDataString(dataScope.Value);
+                                        actionButtonTag.DataSB = dataScope.Value;
+                                    }
+
+                                    if (isTarget || eSubjectTargetClass == Infos.Globals.CHARACTER_SUBJECTCLASS)
+                                    {
+                                        int subjectIndex = isTarget ? 1 : 2;
+                                        Character pCharacter = Game.character(button.Data.GetDataInt(subjectIndex));
+
+                                        if (pCharacter == null)
+                                        {
+                                            buttonsToRemove.Value.Add(i);
+                                            continue;
+                                        }
+
+                                        using TextBuilder builder = TextBuilder.GetTextBuilder(TextManager);
+                                        TextVariable characterVar = HelpText.buildCharacterLinkVariable(pCharacter, pActivePlayer, false, bFamilyCrest: !mission.mbShowReligionIcons, bReligionCrest: mission.mbShowReligionIcons, bSelect: false, bArchetypeCrest: true);
+                                        builder.Add(characterVar);
+
+                                        getActionButtonCharacterOpinionText(builder, pCharacter.getID());
+
+                                        if (mission.mbShowCharacterSuccession && pCharacter.isSuccessor())
+                                        {
+                                            builder.Add(TEXT(HelpText.getCharacterHeirTextType(pCharacter), characterVar));
+                                        }
+
+                                        actionButtonTag.SetKey("Label", builder.StringBuilder);
+
+                                        actionButtonTag.SetKey("IconBG", GetCharacterPortraitBackgroundPath(SpriteRepo, pCharacter));
+                                        actionButtonTag.SetKey("Icon", SpriteRepo.GetSpritePath(pCharacter.getCharacterPortrait(), pCharacter.getAgeGroup()));
+                                        actionButtonTag.SetKey("IconColor", Infos.color(Infos.Globals.COLOR_WHITE).mzHexValue);
+                                        actionButtonTag.SetKey("IconState", "Portrait");
+                                        actionButtonTag.SetInt("CharacterID", pCharacter.getID());
+                                    }
+                                    else
+                                    {
+                                        SetDefaultIconType(actionButtonTag);
+
+                                        if (eSubjectTargetClass == Infos.Globals.PLAYER_SUBJECTCLASS)
+                                        {
+                                            Player player = Game.player(button.Data.GetDataEnum<PlayerType>(2, Infos));
+
+                                            using TextBuilder builder = TextBuilder.GetTextBuilder(TextManager);
+                                            builder.Add(HelpText.buildPlayerLinkVariable(player, pActivePlayer, bSelect: false));
+                                            getActionButtonPlayerOpinionText(builder, player.getPlayer());
+                                            actionButtonTag.SetKey("Label", builder.StringBuilder);
+
+                                            actionButtonTag.SetKey("Icon", SpriteRepo.GetSpriteName(player.getCrest()));
+                                            actionButtonTag.SetKey("IconColor", Infos.color(player.getPlayerNameColor(pActivePlayer)).mzHexValue);
+                                        }
+                                        else if (eSubjectTargetClass == Infos.Globals.TRIBE_SUBJECTCLASS)
+                                        {
+                                            InfoTribe tribe = Infos.tribe(button.Data.GetDataEnum<TribeType>(2, Infos));
+
+                                            using TextBuilder builder = TextBuilder.GetTextBuilder(TextManager);
+                                            builder.Add(HelpText.buildTribeLinkVariable(tribe.meType, Game, bSelect: false));
+                                            getActionButtonTribeOpinionText(builder, tribe.meType);
+                                            actionButtonTag.SetKey("Label", builder.StringBuilder);
+
+                                            actionButtonTag.SetKey("Icon", SpriteRepo.GetSpriteName(tribe.meCrest));
+                                            actionButtonTag.SetKey("IconColor", Infos.color(Infos.playerColor(Infos.teamColor(tribe.meTeamColor).maePlayerColors[0]).meCrestColor).mzHexValue);
+                                        }
+                                        else if (eSubjectTargetClass == Infos.Globals.RELIGION_SUBJECTCLASS)
+                                        {
+                                            InfoReligion religion = Infos.religion(button.Data.GetDataEnum<ReligionType>(2, Infos));
+
+                                            using TextBuilder builder = TextBuilder.GetTextBuilder(TextManager);
+                                            builder.Add(HelpText.buildReligionLinkVariable(religion.meType, Game, pActivePlayer, bSelect: false));
+                                            getActionButtonReligionOpinionText(builder, religion.meType);
+                                            actionButtonTag.SetKey("Label", builder.StringBuilder);
+
+                                            actionButtonTag.SetKey("Icon", religion.mzIconName);
+                                            actionButtonTag.SetKey("IconColor", Infos.color(Game.religionColor(religion.meType, pActivePlayer))?.mzHexValue ?? Infos.color(Infos.Globals.COLOR_UNDEFINED).mzHexValue);
+                                        }
+                                        else if (eSubjectTargetClass == Infos.Globals.FAMILY_SUBJECTCLASS)
+                                        {
+                                            InfoFamily family = Infos.family(button.Data.GetDataEnum<FamilyType>(2, Infos));
+
+                                            using TextBuilder builder = TextBuilder.GetTextBuilder(TextManager);
+                                            builder.Add(HelpText.buildFamilyLinkVariable(family.meType, Game, false, bSelect: false));
+                                            getActionButtonFamilyOpinionText(builder, family.meType);
+                                            actionButtonTag.SetKey("Label", builder.StringBuilder);
+
+                                            actionButtonTag.SetKey("Icon", SpriteRepo.GetSpriteName(Infos.familyClass(Game.getFamilyClass(family.meType)).meCrest));
+                                            actionButtonTag.SetKey("IconColor", Infos.color(Infos.playerColor(Infos.teamColor(family.meTeamColor).maePlayerColors[family.miColorIndex]).meCrestColor).mzHexValue);
+                                        }
+                                        else if (eSubjectTargetClass == Infos.Globals.CITY_SUBJECTCLASS)
+                                        {
+                                            City pCity = Game.city(button.Data.GetDataInt(2));
+                                            {
+                                                using TextBuilder builder = TextBuilder.GetTextBuilder(TextManager);
+                                                builder.Add(HelpText.buildCityLinkVariable(pCity, pActivePlayer, false, bSelect: false));
+
+                                                if (mission.mbShowCityDiscontent)
+                                                {
+                                                    getActionButtonCityHappinessText(builder, pCity);
+                                                }
+
+                                                actionButtonTag.SetKey("Icon", SpriteRepo.GetSpriteName(pCity.getCrest(pActivePlayer)));
+                                                actionButtonTag.SetKey("IconColor", getCityCrestHexString(pCity, pActivePlayer));
+                                                actionButtonTag.SetKey("Label", builder.StringBuilder);
+                                            }
+                                        }
+                                        else if (eSubjectTargetClass == Infos.Globals.UNIT_SUBJECTCLASS)
+                                        {
+                                            Unit pUnit = Game.unit(button.Data.GetDataInt(2));
+
+                                            actionButtonTag.SetTEXT("Label", TextManager, HelpText.buildUnitLinkVariable(pUnit, pActivePlayer, bSelect: false));
+                                            actionButtonTag.SetKey("Icon", SpriteRepo.GetPortraitSpritePath(pUnit.getType()));
+                                        }
+                                        else if (eSubjectTargetClass == Infos.Globals.TILE_SUBJECTCLASS)
+                                        {
+                                            Tile pTile = Game.tile(button.Data.GetDataInt(2));
+
+                                            actionButtonTag.SetTEXT("Label", TextManager, HelpText.buildTileLinkVariable(pTile));
+                                            actionButtonTag.SetKey("Icon", pTile.terrain().mzIconName);
+                                        }
+                                    }
+
+                                    contextActionList.Value[index]++;
+                                    buttonsToRemove.Value.Add(i);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for (int iLoopIndex = buttonsToRemove.Value.Count - 1; iLoopIndex >= 0; iLoopIndex--)
+                {
+                    buttons.RemoveAt(buttonsToRemove.Value[iLoopIndex]);
+                }
+
+                foreach (MissionType eMission in contextButtonDict.Value.Keys)
+                {
+                    UIAttributeTag buttonTag = buttonRoot.GetSubTag("-ContextButton", contextButtonDict.Value[eMission]);
+                    buttonTag.SetInt("Buttons-Count", contextActionList.Value[contextButtonDict.Value[eMission]]);
+                }
+
+                int numContextButtons = contextButtonDict.Value.Count;
+                if (eMissionClass == MissionClassType.NONE)
+                {
+                    {
+                        bool isAnyEnabled = false;
+                        int iLuxuryButtons = 0;
+
+                        UIAttributeTag contextButtonTag = buttonRoot.GetSubTag("-ContextButton", numContextButtons);
+                        contextButtonTag.SetBool("CloseOnClick", true);
+
+                        for (int i = buttons.Count - 1; i >= 0; i--)
+                        {
+                            if ((buttons[i].Data.Type == nameof(ItemType.TRADE_PLAYER_LUXURY)) ||
+                                (buttons[i].Data.Type == nameof(ItemType.TRADE_FAMILY_LUXURY)) ||
+                                (buttons[i].Data.Type == nameof(ItemType.TRADE_TRIBE_LUXURY)))
+                            {
+
+                                if (iLuxuryButtons == 0)
+                                {
+                                    contextButtonTag.SetKey("Icon", "TRADE_FAMILY_LUXURY");
+                                    contextButtonTag.Label = TEXT("TEXT_MANAGE_LUXURIES");
+                                }
+
+                                UIAttributeTag actionButtonTag = contextButtonTag.GetSubTag("-Button", iLuxuryButtons);
+                                InfoResource luxury = Infos.resource(buttons[i].Data.GetDataEnum<ResourceType>(1, Infos));
+
+                                actionButtonTag.Label = buttons[i].Label;
+                                actionButtonTag.SetKey("Icon", luxury.mzIconName);
+                                SetDefaultIconType(actionButtonTag);
+                                actionButtonTag.SetKey("IconColor", "#ffffffff");
+                                actionButtonTag.IsInteractable = buttons[i].IsInteractable;
+                                actionButtonTag.ItemType = buttons[i].Data.Type;
+
+                                isAnyEnabled |= buttons[i].IsInteractable;
+
+                                using (var dataScope = CollectionCache.GetStringBuilderScoped())
+                                {
+                                    buttons[i].Data.AppendDataString(dataScope.Value);
+                                    actionButtonTag.DataSB = dataScope.Value;
+                                }
+
+                                buttons.RemoveAt(i);
+                                iLuxuryButtons++;
+                            }
+                        }
+
+                        if (iLuxuryButtons > 0)
+                        {
+                            contextButtonTag.SetInt("Buttons-Count", iLuxuryButtons);
+                            contextButtonTag.SetBool("ContextMenu-IsActive", shouldOpenLuxuryMenu, force: true);
+                            shouldOpenLuxuryMenu = false;
+                            contextButtonTag.IsActive = iLuxuryButtons > 0;
+                            contextButtonTag.IsInteractable = isAnyEnabled;
+                            numContextButtons++;
+                        }
+                    }
+
+                    {
+                        bool isAnyEnabled = false;
+                        int iYieldButtons = 0;
+
+                        UIAttributeTag contextButtonTag = buttonRoot.GetSubTag("-ContextButton", numContextButtons);
+
+                        for (int i = buttons.Count - 1; i >= 0; i--)
+                        {
+                            if (buttons[i].Data.Type == nameof(ItemType.GIFT_YIELD))
+                            {
+                                UIAttributeTag actionButtonTag = contextButtonTag.GetSubTag("-Button", iYieldButtons);
+                                InfoYield yield = Infos.yield(buttons[i].Data.GetDataEnum<YieldType>(0, Infos));
+
+                                actionButtonTag.Label = buttons[i].Label;
+                                actionButtonTag.SetKey("Icon", yield.mzIconName);
+                                SetDefaultIconType(actionButtonTag);
+                                actionButtonTag.SetKey("IconColor", "#ffffffff");
+                                actionButtonTag.IsInteractable = buttons[i].IsInteractable;
+                                actionButtonTag.ItemType = buttons[i].Data.Type;
+
+                                isAnyEnabled |= buttons[i].IsInteractable;
+
+                                using (var dataScope = CollectionCache.GetStringBuilderScoped())
+                                {
+                                    buttons[i].Data.AppendDataString(dataScope.Value);
+                                    actionButtonTag.DataSB = dataScope.Value;
+                                }
+
+                                buttons.RemoveAt(i);
+                                iYieldButtons++;
+                            }
+                        }
+
+                        if (iYieldButtons > 0)
+                        {
+                            contextButtonTag.SetKey("Icon", "GIFT_YIELD");
+                            contextButtonTag.Label = TEXT("TEXT_GIFT_YIELD");
+                            contextButtonTag.IsActive = true;
+                            contextButtonTag.SetInt("Buttons-Count", iYieldButtons);
+                            contextButtonTag.IsActive = iYieldButtons > 0;
+                            contextButtonTag.IsInteractable = isAnyEnabled;
+                            contextButtonTag.SetBool("CloseOnClick", false);
+
+                            numContextButtons++;
+                        }
+                    }
+
+                    {
+                        bool isAnyEnabled = false;
+                        int numAgentNetworks = 0;
+
+                        UIAttributeTag contextButtonTag = buttonRoot.GetSubTag("-ContextButton", numContextButtons);
+                        contextButtonTag.SetBool("CloseOnClick", true);
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### Agents without Spymaster         START ###
+  ##############################################*/
+                        //if (pSelectedCharacter != null && pSelectedCharacter.getPlayer() == pActivePlayer.getPlayer() && pSelectedCharacter.getCouncil() == Infos.Globals.SPYMASTER_COUNCIL)
+                        if (pSelectedCharacter != null && pSelectedCharacter.getPlayer() == pActivePlayer.getPlayer()
+                            && (pSelectedCharacter.getCouncil() == Infos.Globals.SPYMASTER_COUNCIL || (pActivePlayer.isAgentUnlock() && pActivePlayer.councilCharacter(Infos.Globals.SPYMASTER_COUNCIL) == null && pSelectedCharacter.isLeader())))
+/*####### Better Old World AI - Base DLL #######
+  ### Agents without Spymaster           END ###
+  ##############################################*/
+                        {
+                            foreach (City city in Game.getCities())
+                            {
+                                if (city.isAgentPlayer(pActivePlayer.getPlayer()))
+                                {
+                                    UIAttributeTag actionButtonTag = contextButtonTag.GetSubTag("-Button", numAgentNetworks);
+                                    actionButtonTag.SetTEXT("Label", TextManager, HelpText.buildCityLinkVariable(city, pActivePlayer, false, false, bSelect: false));
+
+                                    if (city.hasAgentCharacter(pActivePlayer.getPlayer()))
+                                    {
+                                        actionButtonTag.SetTEXT("ExtraLabel", TextManager, HelpText.buildCharacterLinkVariable(city.agentCharacter(pActivePlayer.getPlayer()), pActivePlayer));
+                                        actionButtonTag.SetBool("ExtraLabel-IsActive", true);
+                                    }
+                                    else
+                                    {
+                                        actionButtonTag.SetBool("ExtraLabel-IsActive", false);
+                                    }
+
+                                    actionButtonTag.SetKey("Icon", SpriteRepo.GetSpritePath(city.getCrest(pActivePlayer)));
+                                    SetDefaultIconType(actionButtonTag);
+                                    actionButtonTag.SetKey("IconColor", getCityCrestHexString(city, pActivePlayer));
+
+                                    bool canMakeAgent = city.canMakeAgentCharacter(pPlayer: pActivePlayer);
+                                    actionButtonTag.IsInteractable = canMakeAgent;
+                                    isAnyEnabled |= canMakeAgent;
+
+                                    using (var missionDataScope = new WidgetDataScope(nameof(ItemType.CHOOSE_AGENT), city.getID().ToStringCached()))
+                                    {
+                                        actionButtonTag.ItemType = missionDataScope.Type;
+                                        actionButtonTag.DataSB = missionDataScope.DataList;
+                                    }
+
+                                    numAgentNetworks++;
+                                }
+                            }
+                        }
+
+                        if (numAgentNetworks > 0)
+                        {
+                            contextButtonTag.SetKey("Icon", "CREATE_AGENT_NETWORK");
+                            contextButtonTag.Label = TEXT("TEXT_ASSIGN_CHARACTER_AGENTS");
+                            contextButtonTag.SetInt("Buttons-Count", numAgentNetworks);
+                            contextButtonTag.IsActive = numAgentNetworks > 0;
+                            contextButtonTag.IsInteractable = isAnyEnabled;
+
+                            numContextButtons++;
+                        }
+                    }
+
+                    {
+                        bool isAnyEnabled = false;
+                        int numAgentActions = 0;
+
+                        UIAttributeTag contextButtonTag = buttonRoot.GetSubTag("-ContextButton", numContextButtons);
+                        contextButtonTag.SetBool("CloseOnClick", true);
+
+                        if (pSelectedCharacter != null && pSelectedCharacter.getPlayer() == pActivePlayer.getPlayer() && pSelectedCharacter.getCouncil() == Infos.Globals.SPYMASTER_COUNCIL && pActivePlayer.countAgentCharacters() > 0)
+                        {
+                            using (var charListScoped = CollectionCache.GetListScoped<int>())
+                            {
+                                pActivePlayer.getActiveCharacters(charListScoped.Value);
+
+                                foreach (int iLoopCharacter in charListScoped.Value)
+                                {
+                                    Character pLoopCharacter = Game.character(iLoopCharacter);
+
+                                    if (pLoopCharacter.isCityAgent())
+                                    {
+                                        string cityTarget = pLoopCharacter.getCityAgentID().ToStringCached();
+
+                                        foreach (InfoMission mission in Infos.missions())
+                                        {
+                                            if (mission.meSubjectTarget != SubjectType.NONE && Infos.subject(mission.meSubjectTarget).meClass == Infos.Globals.CITY_SUBJECTCLASS && pActivePlayer.canStartMission(mission.meType, iLoopCharacter, cityTarget, false))
+                                            {
+                                                UIAttributeTag actionButtonTag = contextButtonTag.GetSubTag("-Button", numAgentActions);
+                                                actionButtonTag.SetKey("Label", TEXT("TEXT_AGENT_MISSION_NAME", TEXTVAR_TYPE(mission.meName), HelpText.buildCityLinkVariable(pLoopCharacter.cityAgent(), pActivePlayer, false, false, bSelect: false)));
+                                                actionButtonTag.SetKey("Icon", mission.mzIcon);
+                                                SetDefaultIconType(actionButtonTag);
+
+                                                bool isMissionEnabled = pActivePlayer.testMissionEnabled(mission.meType, pLoopCharacter, cityTarget, bControl: Interfaces.Input.isControlPressed());
+                                                actionButtonTag.IsInteractable = isMissionEnabled;
+                                                isAnyEnabled |= isMissionEnabled;
+
+                                                using (var missionDataScope = new WidgetDataScope(nameof(ItemType.START_MISSION), mission.SafeTypeString(), pLoopCharacter.getID().ToStringCached(), cityTarget))
+                                                {
+                                                    actionButtonTag.ItemType = missionDataScope.Type;
+                                                    actionButtonTag.DataSB = missionDataScope.DataList;
+                                                }
+
+                                                numAgentActions++;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (numAgentActions > 0)
+                        {
+                            contextButtonTag.SetKey("Icon", "CREATE_AGENT_NETWORK");
+                            contextButtonTag.Label = TEXT("TEXT_AGENT_MISSIONS");
+                            contextButtonTag.SetInt("Buttons-Count", numAgentActions);
+                            contextButtonTag.IsActive = numAgentActions > 0;
+                            contextButtonTag.IsInteractable = isAnyEnabled;
+
+                            numContextButtons++;
+                        }
+                    }
+                }
+
+                buttonRoot.SetInt("ContextButtons-Count", numContextButtons);
+
+                return numContextButtons > 0;
+            }
+        }
+
+
 
 
         //lines 16872-17142
@@ -1516,7 +2192,7 @@ namespace BetterAI
                                     int numCharacters = 0;
                                     foreach (int iLoopCharacter in orderedIDList)
                                     {
-                                        using (new UnityProfileScope("ClientUI.updateCharacters.SetUIData"))
+                                        //using (new UnityProfileScope("ClientUI.updateCharacters.SetUIData"))
                                         {
                                             UIAttributeTag characterListTag = UI.GetUIAttributeTag("CharacterListCharacter", numCharacters);
                                             characterListTag.SetKey("State", GetCharacterCardBG(iLoopCharacter));
@@ -1556,6 +2232,9 @@ namespace BetterAI
                     }
                 }
             }
+
+
+            //UnityEngine.Debug.Log("ClientUI.CreateContextButtons - End");
         }
 
 
@@ -1563,6 +2242,11 @@ namespace BetterAI
         //lines 17830-17937
         protected override void updateQueuePanel()
         {
+            if (ClientMgr.Selection.getSelectedCity() != null)
+            {
+                //UnityEngine.Debug.Log("ClientUI.updateQueuePanel - Start");
+            }
+
             base.updateQueuePanel();
 
 /*####### Better Old World AI - Base DLL #######
@@ -1592,12 +2276,16 @@ namespace BetterAI
                 //queueTag.IsActive = true;
                 //queueTag.SetBool("Effect-IsActive", !addedToFront && lastSelectedCityID == pSelectedCity.getID() && lastSelectedCityQueue.Count <= i);
             }
+
+            //UnityEngine.Debug.Log("ClientUI.updateQueuePanel - End");
         }
 
         //lines 18846-21341
         //Intercept and redirect illegal queue moves at doWidgetAction
         public override bool doWidgetAction(WidgetData pWidget)
         {
+            //UnityEngine.Debug.Log("ClientUI.doWidgetAction - Start");
+
             ItemType eType = pWidget.GetWidgetType();
             if (eType == ItemType.BUILD_QUEUE)
             {
@@ -1622,13 +2310,157 @@ namespace BetterAI
                         ClientMgr.sendBuildQueue(pCity, pWidget.GetDataInt(1), 0);
                     }
                 }
+
+                //UnityEngine.Debug.Log("ClientUI.doWidgetAction - END BUILD_QUEUE");
+
                 return true;
             }
-            else
 /*####### Better Old World AI - Base DLL #######
   ### Alternative Hurry                  END ###
   ##############################################*/
+
+            else if (eType == ItemType.UNIT_LIST_FILTER)
             {
+
+                UnitListFilterType eFilter = (UnitListFilterType)pWidget.GetDataInt(0);
+
+                if (eFilter == UnitListFilterType.NONE)
+                {
+                    for (UnitListFilterType eLoopFilter = 0; eLoopFilter < UnitListFilterType.NUM_TYPES; eLoopFilter++)
+                    {
+                        mabUnitFilters[(int)eLoopFilter] = true;
+                        mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
+                    }
+                }
+                else
+                {
+                    mabUnitFilters[(int)eFilter] = !mabUnitFilters[(int)eFilter];
+                    mUnits.GetSubTag("-Filter", (int)eFilter).SetKey("Icon", GetUnitListFilterIcon(eFilter));
+
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters          START ###
+  ##############################################*/
+                    if (mabUnitFilters[(int)eFilter])
+                    {
+                        //CIVILIAN,
+                        //SCOUT,
+                        //MILITARY_WATER,
+                        //MILITARY_SIEGE,
+                        //MILITARY_RANGED,
+                        //MILITARY_MOUNTED,
+                        //MILITARY_INFANTRY,
+
+                        //when turning on a filter, switch off other filters if not compatible
+                        if (eFilter == UnitListFilterType.CIVILIAN || eFilter == UnitListFilterType.SCOUT)
+                        {
+                            for (UnitListFilterType eLoopFilter = 0; eLoopFilter < UnitListFilterType.NUM_TYPES; eLoopFilter++)
+                            {
+                                if (eLoopFilter == UnitListFilterType.CIVILIAN || eLoopFilter == UnitListFilterType.SCOUT || eLoopFilter == UnitListFilterType.MILITARY_INFANTRY) continue;
+
+                                if (eLoopFilter == UnitListFilterType.MILITARY_MOUNTED
+                                    && mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] && ((BetterAIInfoGlobals)Infos.Globals).BAI_ALL_CIVILIAN_AND_SCOUT_IS_INFANTRY) //allow mounted civilians/scouts if added by mods
+                                {
+                                    mabUnitFilters[(int)eLoopFilter] = false;
+                                    mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
+                                }
+                                else if (eLoopFilter == UnitListFilterType.MILITARY_WATER && mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER])
+                                {
+                                    if ( (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_CIVILIAN && eFilter == UnitListFilterType.CIVILIAN)
+                                        || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_SCOUT && eFilter == UnitListFilterType.SCOUT) )
+                                    {
+                                        mabUnitFilters[(int)eLoopFilter] = false;
+                                        mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
+                                    }
+                                }
+                                else if (mabUnitFilters[(int)eLoopFilter])
+                                {
+                                    mabUnitFilters[(int)eLoopFilter] = false;
+                                    mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
+                                }
+                            }
+
+                        }
+                        else if (eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE
+                            || eFilter == UnitListFilterType.MILITARY_RANGED || eFilter == UnitListFilterType.MILITARY_MOUNTED || eFilter == UnitListFilterType.MILITARY_INFANTRY)
+                        {
+                            if (mabUnitFilters[(int)UnitListFilterType.CIVILIAN])
+                            {
+                                mabUnitFilters[(int)UnitListFilterType.CIVILIAN] = false;
+                                mUnits.GetSubTag("-Filter", (int)UnitListFilterType.CIVILIAN).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.CIVILIAN));
+                            }
+                            
+                            if (mabUnitFilters[(int)UnitListFilterType.SCOUT])
+                            {
+                                mabUnitFilters[(int)UnitListFilterType.SCOUT] = false;
+                                mUnits.GetSubTag("-Filter", (int)UnitListFilterType.SCOUT).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.SCOUT));
+                            }
+
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY])
+                            {
+                                if (eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE || eFilter == UnitListFilterType.MILITARY_MOUNTED)
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_INFANTRY).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_INFANTRY));
+                                }
+                            }
+
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER])
+                            {
+                                if (eFilter == UnitListFilterType.MILITARY_SIEGE || eFilter == UnitListFilterType.MILITARY_MOUNTED || eFilter == UnitListFilterType.MILITARY_INFANTRY
+                                || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_RANGED && eFilter == UnitListFilterType.MILITARY_RANGED) )
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_WATER).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_WATER));
+                                }
+                            }
+
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE])
+                            {
+                                if (eFilter == UnitListFilterType.MILITARY_INFANTRY || eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_MOUNTED)
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_SIEGE).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_SIEGE));
+                                }
+                            }
+
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
+                            {
+                                if ((eFilter == UnitListFilterType.MILITARY_WATER && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_RANGED)
+                                || (eFilter == UnitListFilterType.MILITARY_MOUNTED && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED))
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_RANGED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_RANGED));
+                                }
+                            }
+
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED])
+                            {
+                                if (eFilter == UnitListFilterType.MILITARY_INFANTRY || eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE)
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_MOUNTED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_MOUNTED));
+                                }
+                            }
+
+                        }
+                    }
+                    
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters            END ###
+  ##############################################*/
+
+                }
+
+                updateUnitList();
+
+                //UnityEngine.Debug.Log("ClientUI.doWidgetAction - END UNIT_LIST_FILTER");
+
+                return true;
+            }
+            else
+            {
+
+                //UnityEngine.Debug.Log("ClientUI.doWidgetAction - END start base");
                 return base.doWidgetAction(pWidget);
             }
         }
@@ -1715,6 +2547,7 @@ namespace BetterAI
             }
             //copy-paste end
         }
+
 
     }
 }

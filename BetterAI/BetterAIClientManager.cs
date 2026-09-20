@@ -9,7 +9,7 @@ using TenCrowns.ClientCore;
 
 namespace BetterAI
 {
-    public  class BetterAIClientManager : ClientManager
+    public class BetterAIClientManager : ClientManager
     {
         public BetterAIClientManager(GameInterfaces gameInterfaces)
             : base(gameInterfaces)
@@ -19,6 +19,7 @@ namespace BetterAI
         //lines 1011-1018
         public override bool sendBuildQueue(City pCity, int iOldSlot, int iNewSlot)
         {
+            //UnityEngine.Debug.Log("ClientManager.sendBuildQueue");
 /*####### Better Old World AI - Base DLL #######
   ### Alternative Hurry                START ###
   ##############################################*/

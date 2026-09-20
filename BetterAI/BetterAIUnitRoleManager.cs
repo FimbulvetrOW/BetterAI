@@ -85,7 +85,7 @@ namespace BetterAI
 
                 protected override bool assignAttackUnits(AttackTactics eTactics, AttackThreat eMinThreat, bool bExpansionOnly = false, bool bAllowFatigue = false, bool bPlayerOnly = false, bool bReinforce = false, bool bInPlaceOnly = false, int iMinPowerPercent = 0, int iMaxPowerPercent = int.MaxValue)
                 {
-                    using var profileScope = new UnityProfileScope("UnitRoleManager.assignAttackUnits");
+                    //using var profileScope = new UnityProfileScope("UnitRoleManager.assignAttackUnits");
 
                     using var tileSetScoped = CollectionCache.GetHashSetScoped<int>();
                     HashSet<int> targetsChecked = tileSetScoped.Value;

@@ -496,7 +496,7 @@ namespace BetterAI
 
             //if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
             //{
-            //    UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement start");
+            //    //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement start");
             //}
             bool bImprovementSpreadsBorders = improvementSpreadsBorders(eImprovement, (pCity != null) ? pCity.getPlayer() : PlayerType.NONE);
 
@@ -506,7 +506,7 @@ namespace BetterAI
                 {
                     if (!canCityTileAddImprovementAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovement, bImprovementSpreadsBorders))
                     {
-                        //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 1");
+                        ////UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 1");
                         return false;
                     }
                 }
@@ -514,7 +514,7 @@ namespace BetterAI
                 {
                     if (!canCityTileAddImprovementClassAdjacent(pCity, pImprovementInfo.meBonusAdjacentImprovementClass, bImprovementSpreadsBorders, out _))
                     {
-                        //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 2");
+                        ////UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 2");
                         return false;
                     }
                 }
@@ -526,7 +526,7 @@ namespace BetterAI
                 {
                     if (pCity.player() == null || pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true) || !pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory, bTestTerritory: bTestTerritory, bTestReligion: bTestReligion, bForceImprovement: true))
                     {
-                        //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 3");
+                        ////UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 3");
                         return false;
                     }
                     eTestImprovement = pImprovementInfo.meBonusAdjacentImprovement;
@@ -550,21 +550,21 @@ namespace BetterAI
 
                     if (!bFound)
                     {
-                        //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 4");
+                        ////UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 4");
                         return false;
                     }
                 }
 
                 if (!adjacentToPassableLandSameCityWithoutImprovement(bImprovementSpreadsBorders, eTestImprovement))
                 {
-                    //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 5");
+                    ////UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 5");
                     return false;
                 }
             }
 
             //if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
             //{
-            //    UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 6");
+            //    //UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 6");
             //}
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
@@ -782,7 +782,7 @@ namespace BetterAI
             {
                 //if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
                 //{
-                //    UnityEngine.Debug.Log("BonusAdjacentImprovement: isImprovementValid start");
+                //    //UnityEngine.Debug.Log("BonusAdjacentImprovement: isImprovementValid start");
                 //}
 
                 //check if the BonusAdjacentImprovements are also valid
@@ -847,7 +847,7 @@ namespace BetterAI
 
                 //if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE || pImprovementInfo.meBonusAdjacentImprovementClass != ImprovementClassType.NONE)
                 //{
-                //    UnityEngine.Debug.Log("BonusAdjacentImprovement: isImprovementValid end");
+                //    //UnityEngine.Debug.Log("BonusAdjacentImprovement: isImprovementValid end");
                 //}
             }
 /*####### Better Old World AI - Base DLL #######
@@ -862,6 +862,8 @@ namespace BetterAI
   ##############################################*/
         public virtual bool placeUnownedAdjacentImprovement(ImprovementType eImprovement)
         {
+            //UnityEngine.Debug.Log("Tile.doImprovementFinished");
+
             City pCityTerritory = cityTerritory();
             int iOffset = game().randomNext((int)DirectionType.NUM_TYPES); //0-5
             int iStep = iOffset / ((int)DirectionType.NUM_TYPES / 2);  //0 or 1
@@ -904,6 +906,8 @@ namespace BetterAI
         //lines 5588-5784
         public override void doImprovementFinished()
         {
+            //UnityEngine.Debug.Log("Tile.doImprovementFinished");
+
             //START base.doImprovementFinished()
             ImprovementClassType eImprovementClass = getImprovementClass();
             City pCityTerritory = cityTerritory();
@@ -1328,7 +1332,7 @@ namespace BetterAI
         //lines 10061-10097
         public override bool isHostileZOC(Unit pUnit, TeamType eTeamVisibility, bool bIgnoreRiver = false, Dictionary<(int, DirectionType), bool> zocMap = null)
         {
-            using var profileScope = new UnityProfileScope("Tile.isHostileZOC");
+            //using var profileScope = new UnityProfileScope("Tile.isHostileZOC");
 
             if (impassable())
             {

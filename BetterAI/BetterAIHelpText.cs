@@ -34,6 +34,8 @@ namespace BetterAI
         //lines 56-63
         public virtual TextVariable buildCityLinkVariableWithReligiousImprovements(Game pGame, City pCity, Player pActivePlayer, ReligionType eReligion, List<ImprovementType> ImprovementTypes, Dictionary<ImprovementType, string> ImprovementShortNames, bool bCrest = true, bool bAddColor = true, bool bSelect = true)
         {
+            //UnityEngine.Debug.Log("HelpText.buildCityLinkVariableWithReligiousImprovements");
+
             if (pCity == null)
             {
                 return TEXTVAR(false);
@@ -95,6 +97,8 @@ namespace BetterAI
         //lines 1079-1093
         public override TextVariable buildHappinessLevelLinkVariable(City pCity, bool bShort = false)
         {
+            //UnityEngine.Debug.Log("HelpText.buildHappinessLevelLinkVariable");
+
             //using (new UnityProfileScope("HelpText.buildHappinessLevelLinkVariable"))
             {
 /*####### Better Old World AI - Base DLL #######
@@ -129,6 +133,8 @@ namespace BetterAI
         //}
         public virtual TextVariable buildIgnoreZOCWithExceptionsLinkVariable(UnitType eUnit)
         {
+            //UnityEngine.Debug.Log("HelpText.buildIgnoreZOCWithExceptionsLinkVariable");
+
             CommaListVariableGenerator blockerList = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.AND, TextManager);
             BetterAIInfoUnit pUnitInfo = (BetterAIInfoUnit)infos().unit(eUnit);
             foreach (EffectUnitType ZOCBlockerEffect in pUnitInfo.maeBlockZOCEffectUnits)
@@ -143,6 +149,8 @@ namespace BetterAI
         //HelpText.Widget.cs
         public override TextBuilder buildWidgetHelp(TextBuilder builder, WidgetData pWidget, ClientManager pManager, bool bIncludeEncyclopediaFooter = true)
         {
+            //UnityEngine.Debug.Log("HelpText.buildWidgetHelp");
+
             if (pWidget.GetWidgetType() == ItemType.CREATE_AGENT_NETWORK)
             {
                 Player pActivePlayer = pManager.activePlayer();
@@ -186,6 +194,8 @@ namespace BetterAI
         //5385-5466
         public override TextBuilder buildTileDebugText(TextBuilder builder, Tile pTile, ClientManager pManager)
         {
+            //UnityEngine.Debug.Log("HelpText.buildTileDebugText");
+
             //using (new UnityProfileScope("buildTileDebugText"))
             {
                 TeamType eActiveTeam = pManager.getActiveTeam();
@@ -286,6 +296,8 @@ namespace BetterAI
         //lines 426-899
         public override TextBuilder buildImprovementBreakdown(TextBuilder builder, ImprovementType eImprovement, SpecialistType eSpecialist, Tile pTile, ClientManager pManager)
         {
+            //UnityEngine.Debug.Log("HelpText.buildImprovementBreakdown");
+
             Game pGame = pManager.GameClient;
             Player pActivePlayer = pManager.activePlayer();
 
@@ -793,6 +805,8 @@ namespace BetterAI
         //lines 943-1861 + 1864-2183 (buildImprovementPotentialBonuses)
         public override TextBuilder buildImprovementHelp(TextBuilder builder, ImprovementType eImprovement, Tile pTile, ClientManager pManager, bool bName = true, bool bCosts = true, bool bDetails = true, bool bEncyclopedia = false, bool bShowTotal = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.NONE)
         {
+            //UnityEngine.Debug.Log("HelpText.buildImprovementHelp");
+
             //using (new UnityProfileScope("HelpText.buildImprovementHelp"))
             using (var effectListScoped = CollectionCache.GetListScoped<EffectCityType>())
             {
@@ -2052,6 +2066,8 @@ namespace BetterAI
         //lines 2219-2798
         public override void buildImprovementRequiresHelp(List<TextVariable> lRequirements, ImprovementType eImprovement, Game pGame, Player pActivePlayer, Tile pTile, Unit pUnit = null, bool bUpgradeImprovement = false)
         {
+            //UnityEngine.Debug.Log("HelpText.buildImprovementRequiresHelp");
+
             BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
             {
                 //here goes the copy-pasting
@@ -2754,6 +2770,8 @@ namespace BetterAI
         //lines 1186-2295
         public override TextBuilder buildUnitTypeHelp(TextBuilder builder, UnitType eUnit, City pCity, Player pPlayer, TribeType eTribe, Game pGame, Player pActivePlayer, bool bName = true, bool bCosts = true, bool bStats = true, bool bDetails = true)
         {
+            //UnityEngine.Debug.Log("HelpText.buildUnitTypeHelp");
+
             //using (new UnityProfileScope("HelpText.buildUnitTypeHelp"))
             {
                 if (bName)
@@ -3275,6 +3293,8 @@ namespace BetterAI
         //lines 2575-2928
         public override void buildUnitTooltip(Unit pUnit, ClientManager pManager, UIUnitTooltipData outUnitData)
         {
+            //UnityEngine.Debug.Log("HelpText.buildUnitTooltip");
+
             //using (new UnityProfileScope("HelpText.buildUnitTooltip"))
             {
                 Player pActivePlayer = pManager.activePlayer();
@@ -3649,6 +3669,8 @@ namespace BetterAI
         //lines 727-1851
         public override TextBuilder buildEffectUnitHelp(TextBuilder builder, EffectUnitType eEffectUnit, Game pGame, bool bSkipIcons = false, bool bRightJustify = false, bool bIncludeIndirect = true, bool bEncyclopedia = false, bool bLine = false)
         {
+            //UnityEngine.Debug.Log("HelpText.buildEffectUnitHelp");
+
             //ToDo: group maiImprovementToModifier effects by improvementClasses, like specialist improvement prereqs
 
             builder = base.buildEffectUnitHelp(builder, eEffectUnit, pGame, bSkipIcons, bRightJustify);
@@ -3700,6 +3722,8 @@ namespace BetterAI
 
         public override TextBuilder buildEffectCityHelpNoYields(TextBuilder builder, EffectCityType eEffectCity, Game pGame, List<(City, Character, int)> apCities, Player pPlayer, Player pActivePlayer)
         {
+            //UnityEngine.Debug.Log("HelpText.buildEffectCityHelpNoYields");
+
             builder = base.buildEffectCityHelpNoYields(builder, eEffectCity, pGame, apCities, pPlayer, pActivePlayer);
 
 /*####### Better Old World AI - Base DLL #######
@@ -3723,7 +3747,9 @@ namespace BetterAI
         //lines 5416-5484
         public override TextBuilder buildChooseGovernorHelp(TextBuilder builder, City pCity, ClientManager pManager, bool bDetails, bool bName = false)
         {
-            using (new UnityProfileScope("HelpText.buildChooseGovernorHelp"))
+            //UnityEngine.Debug.Log("HelpText.buildChooseGovernorHelp");
+
+            //using (new UnityProfileScope("HelpText.buildChooseGovernorHelp"))
             {
                 Player pActivePlayer = pManager.activePlayer();
                 Game pGame = pManager.GameClient;
@@ -3816,7 +3842,8 @@ namespace BetterAI
         //lines 2849-3988
         public override TextBuilder buildEffectPlayerHelp(TextBuilder builder, EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer, Player pActivePlayer, ReligionType eStateReligion = ReligionType.NONE, bool bAllCities = false, bool bShowTotal = false, TextBuilder.ScopeType effectCityScopeType = TextBuilder.ScopeType.COMMA)
         {
-            
+            //UnityEngine.Debug.Log("HelpText.buildEffectPlayerHelp");
+
             using (var ignoreEffectPlayerListScoped = CollectionCache.GetListScoped<EffectPlayerType>())
             {
                 List<EffectPlayerType> effectPlayerIgnore = ignoreEffectPlayerListScoped.Value;
@@ -3825,8 +3852,9 @@ namespace BetterAI
         }
 
         public virtual TextBuilder buildEffectPlayerHelp(TextBuilder builder, EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer, Player pActivePlayer, ref List<EffectPlayerType> effectPlayerIgnore, ReligionType eStateReligion = ReligionType.NONE, bool bAllCities = false, bool bShowTotal = false, TextBuilder.ScopeType effectCityScopeType = TextBuilder.ScopeType.COMMA)
-
         {
+            //UnityEngine.Debug.Log("HelpText.buildEffectPlayerHelp");
+
             //using (new UnityProfileScope("HelpText.buildEffectPlayerHelp"))
 
             if (pPlayer == null || (pActivePlayer != null && (pActivePlayer.getTeam() != pPlayer.getTeam() || !pActivePlayer.isPlayerOption(infos().Globals.ADVANCED_HELP))))
@@ -5027,6 +5055,8 @@ namespace BetterAI
 
         public override TextVariable buildEffectPlayerSourceLinkVariable(EffectPlayerType eEffectPlayer, Game pGame, Player pPlayer = null)
         {
+            //UnityEngine.Debug.Log("HelpText.buildEffectPlayerSourceLinkVariable");
+
             //this method assumes that there is only one source for the player effect
             TextVariable result = base.buildEffectPlayerSourceLinkVariable(eEffectPlayer, pGame, pPlayer);
 
@@ -5103,6 +5133,8 @@ namespace BetterAI
         //lines 12816-12956
         public override TextBuilder buildResourceHelp(TextBuilder builder, ResourceType eResource, Game pGame, Player pPlayer, Tile pTile, Player pActivePlayer, bool bName = true, bool bEncyclopedia = false)
         {
+            //UnityEngine.Debug.Log("HelpText.buildResourceHelp");
+
             //using (new UnityProfileScope("HelpText.buildResourceHelp"))
             {
                 City pCityTerritory = pTile?.cityTerritory();
@@ -5558,6 +5590,8 @@ namespace BetterAI
         //lines 2643-2683
         public override TextBuilder buildUrbanHelp(TextBuilder builder, Game pGame)
         {
+            //UnityEngine.Debug.Log("HelpText.buildUrbanHelp");
+
             using (builder.BeginScope(TextBuilder.ScopeType.BULLET))
             {
                 builder.AddTEXT("TEXT_HELPTEXT_LINK_HELP_URBAN");
@@ -5616,6 +5650,8 @@ namespace BetterAI
         //lines 42813-43676
         public override TextBuilder buildTraitHelp(TextBuilder builder, TraitType eTrait, Game pGame, Player pActivePlayer, Character pCharacter = null, bool bName = false, bool bInvalidTraits = false, bool bRestrictions = false, bool bDetails = false, bool bRelevantOnly = false, bool bEncyclopedia = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.BULLET)
         {
+            //UnityEngine.Debug.Log("HelpText.buildTraitHelp");
+
             //using (new UnityProfileScope("HelpText.buildTraitHelp"))
             {
 
@@ -6760,7 +6796,9 @@ namespace BetterAI
         //lines 8237-8506
         public override TextBuilder buildLawHelp(TextBuilder builder, LawType eLaw, Game pGame, Player pPlayer, Player pActivePlayer, bool bName = true, bool bDetails = true, bool bEncyclopedia = false, TextBuilder.ScopeType scopeType = TextBuilder.ScopeType.NONE)
         {
-            using (new UnityProfileScope("HelpText.buildLawHelp"))
+            //UnityEngine.Debug.Log("HelpText.buildLawHelp");
+
+            //using (new UnityProfileScope("HelpText.buildLawHelp"))
             {
                 LawClassType eLawClass = infos().law(eLaw).meLawClass;
 

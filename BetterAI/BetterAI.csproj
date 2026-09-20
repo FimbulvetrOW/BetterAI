@@ -98,9 +98,13 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
+    <None Include="KushTurn1.zip" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="HelpText\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="savegame for testing.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

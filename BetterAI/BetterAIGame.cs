@@ -26,6 +26,7 @@ namespace BetterAI
 
         public virtual CultureType getHighestWonderCulture(BetterAIPlayer pPlayer, bool bIncludeHolyCityValid = false)
         {
+            //UnityEngine.Debug.Log("Game.getHighestWonderCulture");
             CultureType eHighestWonderCulture = infos().Globals.CITY_START_CULTURE;
 
             if (pPlayer == null)
@@ -71,6 +72,7 @@ namespace BetterAI
         //lines 9232-9359
         public virtual Tile findUnitTileNearby(UnitType eUnit, Tile pTile, PlayerType ePlayer, TribeType eTribe, TeamType eTeamAvoid, bool bTestTile, bool bSpecialTile, int iRequiresArea, City pRequiresCity, Predicate<Tile> predicate = null, Tile pAvoidTile = null, Unit pIgnoreUnit = null)
         {
+            //UnityEngine.Debug.Log("Game.findUnitTileNearby");
             TeamType eTeam = getPlayerTeam(ePlayer);
             bool bPredicateTrue = predicate?.Invoke(pTile) ?? false;
 
@@ -229,6 +231,7 @@ namespace BetterAI
         //lines 12234-12274
         public override ReligionType doReligionFound(PlayerType ePlayer, bool bTestPrereq)
         {
+            //UnityEngine.Debug.Log("Game.doReligionFound");
 /*####### Better Old World AI - Base DLL #######
   ### Respect Preferred Religion       START ###
   ##############################################*/
@@ -296,6 +299,7 @@ namespace BetterAI
         //lines 12275-12297
         public override ReligionType doReligionFoundCity(City pCity, bool bTestPrereq)
         {
+            //UnityEngine.Debug.Log("Game.doReligionFoundCity");
 /*####### Better Old World AI - Base DLL #######
   ### Respect Preferred Religion       START ###
   ##############################################*/
@@ -328,6 +332,7 @@ namespace BetterAI
         //lines 12073-12117
         protected override int getReligionCityFoundValue(ReligionType eReligion, City pCity, bool bTestPrereq)
         {
+            //UnityEngine.Debug.Log("Game.getReligionCityFoundValue");
             int iValue = 0;
 
             if (!infos().religion(eReligion).mbHidden && isWorldReligion(eReligion) && pCity.canFoundReligion(eReligion, bTestPrereq))
@@ -409,6 +414,7 @@ namespace BetterAI
         //lines 12090-12154
         protected override void postStart()
         {
+            //UnityEngine.Debug.Log("Game.postStart");
             base.postStart();
 
             foreach (BetterAICity pLoopCity in getCities().Cast<BetterAICity>())
@@ -421,6 +427,7 @@ namespace BetterAI
         //lines 13155-13176
         public override void doBorderFill()
         {
+            //UnityEngine.Debug.Log("Game.doBorderFill");
             base.doBorderFill();
             if (!IsInitializing)
             {

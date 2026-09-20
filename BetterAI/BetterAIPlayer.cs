@@ -27,6 +27,8 @@ namespace BetterAI
   ##############################################*/
         protected virtual UnitType getCurrentFoundUnitType()
         {
+            //UnityEngine.Debug.Log("Player.getCurrentFoundUnitType");
+
             //simplified, assuming there is only 1 founding Unittype at any given time
             //copied from countFoundUnitsAndBuilds, and adapted/rearranged
 
@@ -90,6 +92,8 @@ namespace BetterAI
   ##############################################*/
         public virtual void getUnlockTechCount(TechType eTech, ref int iCount, ref bool bInvalid)
         {
+            //UnityEngine.Debug.Log("Player.getUnlockTechCount");
+
             if (!isTechValid(eTech, true) || isTechTrashed(eTech) || isTechLocked(eTech))
             {
                 bInvalid = true;
@@ -126,6 +130,8 @@ namespace BetterAI
         //lines 8855-9323
         public override void changeEffectPlayerCount(EffectPlayerType eIndex, int iChange)
         {
+            //UnityEngine.Debug.Log("Player.changeEffectPlayerCount");
+
             if (iChange != 0 && eIndex != EffectPlayerType.NONE)
             {
 /*####### Better Old World AI - Base DLL #######
@@ -717,6 +723,7 @@ namespace BetterAI
 
         public virtual void getDependentEffectPlayerCountChanges(EffectPlayerType eIndex, int iChange, ref List<EffectPlayerType> aeEffectPlayerIgnore, ref Dictionary<EffectPlayerType, int> effectPlayerCountChange, int iMaxDepth = 100)
         {
+            //UnityEngine.Debug.Log("Player.getDependentEffectPlayerCountChanges");
 
             using (var effectPlayerTurnsRemainingDictionaryScoped = CollectionCache.GetDictionaryScoped<EffectPlayerType, int>())
             {
@@ -781,6 +788,8 @@ namespace BetterAI
 
         public virtual void getDependentEffectPlayerCountChangesWithTurnsRemaining(EffectPlayerType eIndex, int iChange, int iMaxTurnsRemainingX10, ref List<EffectPlayerType> aeEffectPlayerIgnore, ref Dictionary<EffectPlayerType, int> effectPlayerCountChange, ref Dictionary<EffectPlayerType, int> effectPlayerTurnsRemainingX10, bool bSkipTurnsRemaining = true, int iMaxDepth = 100)
         {
+            //UnityEngine.Debug.Log("Player.getDependentEffectPlayerCountChangesWithTurnsRemaining");
+
             if (iChange != 0)
             {
                 BetterAIInfoEffectPlayer pEffectPlayer = (BetterAIInfoEffectPlayer)infos().effectPlayer(eIndex);
@@ -852,6 +861,8 @@ namespace BetterAI
         //lines 10388-10391
         public override int findLeaderIndex(Character pCharacter, bool bIncludeRegents)
         {
+            ////UnityEngine.Debug.Log("Player.findLeaderIndex");
+
             int iLeaderIndex = getLeaders().IndexOf(pCharacter.getID());
             if (!bIncludeRegents || iLeaderIndex == -1)
             {
@@ -886,6 +897,8 @@ namespace BetterAI
 
         public override int getNumLeaders(bool bIncludeRegents = true)
         {
+            ////UnityEngine.Debug.Log("Player.getNumLeaders");
+
             if (bIncludeRegents)
             {
                 return mpCurrentData.mliLeaders.Count;
@@ -913,6 +926,8 @@ namespace BetterAI
         //lines 15239-15242
         public override bool isStartCityNumberFlexible()
         {
+            //UnityEngine.Debug.Log("Player.isStartCityNumberFlexible");
+
             return base.isStartCityNumberFlexible() && (((BetterAIInfoGlobals)(infos().Globals)).BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT > 0);
         }
 
@@ -923,7 +938,9 @@ namespace BetterAI
 
         public virtual int countMinCultureCities(CultureType eCulture, bool bHolyCitiesOnly = false)
         {
-            using var profileGame = new UnityProfileScope("Player.countMinCultureCities");
+            //UnityEngine.Debug.Log("Player.countMinCultureCities");
+
+            //using var profileGame = new UnityProfileScope("Player.countMinCultureCities");
 
             int iCount = 0;
             foreach (int iCityID in getCities())
@@ -944,6 +961,8 @@ namespace BetterAI
         //lines 16282-16285
         public override bool isCityMaxReached()
         {
+            //UnityEngine.Debug.Log("Player.isCityMaxReached");
+
             return ((getNumCities() + countFoundUnitsAndBuilds()) >= getCityMax());
         }
 /*####### Better Old World AI - Base DLL #######
@@ -953,6 +972,8 @@ namespace BetterAI
         //removed in 1.0.66355
         protected virtual int countFoundUnitsAndBuilds()
         {
+            ////UnityEngine.Debug.Log("Player.countFoundUnitsAndBuilds");
+
             //using (new UnityProfileScope("Player.countFoundUnitsAndBuilds"))
             {
                 int iCount = 0;
@@ -997,6 +1018,8 @@ namespace BetterAI
         //canBuildUnit: lines 17183-17222
         public virtual bool canContinueBuildUnit(UnitType eUnit)
         {
+            //UnityEngine.Debug.Log("Player.canContinueBuildUnit");
+
             if (!canEverBuildUnit(eUnit))
             {
                 return false;
@@ -1049,6 +1072,7 @@ namespace BetterAI
         //lines 17320-17338
         public override bool isImprovementUnlocked(ImprovementType eImprovement, City pCity)
         {
+            ////UnityEngine.Debug.Log("Player.isImprovementUnlocked");
 
             if (pCity == null)
             {
@@ -1075,6 +1099,8 @@ namespace BetterAI
         //lines 18983-19002
         protected override Character addCourtier(CourtierType eType, GenderType eGender, FamilyType eFamily, Player pFromPlayer = null)
         {
+            //UnityEngine.Debug.Log("Player.addCourtier");
+
             RandomStruct pRandom = new RandomStruct(game().getNextCharacterID());
 
             if (eType == CourtierType.NONE)
@@ -1109,6 +1135,8 @@ namespace BetterAI
 
         public override bool addPing(PingData sPing)
         {
+            //UnityEngine.Debug.Log("Player.addPing");
+
             removePing(sPing.miTileID);
 
             if (sPing.meType == PingType.NONE)
@@ -1128,6 +1156,8 @@ namespace BetterAI
         }
         protected override bool removePing(PingType ePing)
         {
+            //UnityEngine.Debug.Log("Player.removePing");
+
             int iBestPingTurn = -1;
             int iBestPingTile = -1;
 

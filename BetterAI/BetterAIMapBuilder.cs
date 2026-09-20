@@ -10,6 +10,8 @@ namespace BetterAI
     {
         protected override void assignPlayerCitySites(Game pGame)
         {
+            //UnityEngine.Debug.Log("MapBuilder.assignPlayerCitySites");
+
             //using var profileScope = new UnityProfileScope("MapBuilder.assignPlayerCitySites");
 
             assignPlayerStarts(pGame);

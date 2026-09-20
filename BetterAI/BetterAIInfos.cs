@@ -289,7 +289,7 @@ namespace BetterAI
             if (bGeneral)
             {
                 //General job/life expectancy formula by age (x >= 20), respecting ill and severely ill, by mortality
-                if (iAge > pInfoMortality.miMaxAgeGenOld)
+                if (iAge >= pInfoMortality.miMaxAgeGenOld)
                 {
                     aX10 = pInfoMortality.miMaxAgeGenOldaX10;
                     bX1000 = pInfoMortality.miMaxAgeGenOldbX1000;
@@ -304,7 +304,7 @@ namespace BetterAI
             }
             else
             {
-                if (iAge > pInfoMortality.miMaxAgeOld)
+                if (iAge >= pInfoMortality.miMaxAgeOld)
                 {
                     aX10 = pInfoMortality.miMaxAgeOldaX10;
                     bX1000 = pInfoMortality.miMaxAgeOldbX1000;
@@ -326,6 +326,8 @@ namespace BetterAI
 
         protected virtual void calculateDerivativeInfo()
         {
+            //UnityEngine.Debug.Log("Infos.calculateDerivativeInfo - Start");
+
 /*####### Better Old World AI - Base DLL #######
   ### Fix ZOC display                  START ###
   ##############################################*/
@@ -444,13 +446,108 @@ namespace BetterAI
             for (UnitType eLoopUnit = 0; eLoopUnit < unitsNum(); eLoopUnit++)
             {
                 //add direct upgrades too, no recursion here
-                foreach (UnitType eDirectUpgradeUnit in ((BetterAIInfoUnit)unit(eLoopUnit)).maeDirectUpgradeUnit)
+                BetterAIInfoUnit pLoopUnitInfo = (BetterAIInfoUnit)unit(eLoopUnit);
+                foreach (UnitType eDirectUpgradeUnit in pLoopUnitInfo.maeDirectUpgradeUnit)
                 {
-                    ((BetterAIInfoUnit)unit(eLoopUnit)).mseUpgradeUnitAccumulated.Add(eDirectUpgradeUnit);
+                    pLoopUnitInfo.mseUpgradeUnitAccumulated.Add(eDirectUpgradeUnit);
                 }
 
                 //cleanup in case of circular unit upgrade references
-                ((BetterAIInfoUnit)unit(eLoopUnit)).mseUpgradeUnitAccumulated.Remove(eLoopUnit);
+                pLoopUnitInfo.mseUpgradeUnitAccumulated.Remove(eLoopUnit);
+
+                //categories
+                {
+                    for (int i = 0; i < (int)ClientUI.UnitListFilterType.NUM_TYPES; i++)
+                    {
+                        pLoopUnitInfo.maeUnitCategories.Add(false);
+                    }
+
+                    bool bMilitary = false;
+                    if (pLoopUnitInfo.miRangeMax > 0)
+                    {
+                        //ranged
+                        bMilitary = true;
+                        pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_RANGED] = true;
+
+                    }
+                    else if (pLoopUnitInfo.mbMelee)
+                    {
+                        //melee
+                        bMilitary = true;
+                    }
+
+                    if (bMilitary)
+                    {
+                        if (pLoopUnitInfo.meUnitCycle == UnitCycleType.MILITARY_SIEGE || pLoopUnitInfo.maeUnitTrait.Contains(Globals.SIEGE_TRAIT))
+                        {
+                            pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_SIEGE] = true;
+                        }
+                    }
+                    else
+                    {
+                        //civilian
+                        pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.CIVILIAN] = true;
+                    }
+                    
+
+                    if (!pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_SIEGE]) //siege can't be water, mounted or infantry or scout
+                    {
+                        if (pLoopUnitInfo.meUnitCycle == UnitCycleType.SCOUT || pLoopUnitInfo.miReveal > 0) //military can be scout too
+                        {
+                            //scout
+                            pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.SCOUT] = true;
+                        }
+
+                        if (pLoopUnitInfo.meUnitCycle == UnitCycleType.MILITARY_WATER || pLoopUnitInfo.maeUnitTrait.Contains(Globals.SHIP_TRAIT) || pLoopUnitInfo.mbWater)
+                        {
+                            pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_WATER] = true;
+                        }
+                        else if (pLoopUnitInfo.meUnitCycle == UnitCycleType.MILITARY_MOUNTED || pLoopUnitInfo.maeUnitTrait.Contains(Globals.MOUNTED_TRAIT))
+                        {
+                            pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_MOUNTED] = true;
+                        }
+                        else if (pLoopUnitInfo.meUnitCycle == UnitCycleType.MILITARY_INFANTRY || pLoopUnitInfo.maeUnitTrait.Contains(((BetterAIInfoGlobals)Globals).INFANTRY_TRAIT))
+                        {
+                            pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_INFANTRY] = true;
+                        }
+                    }
+
+
+                    {
+                        //public bool BAI_NO_MOUNTED_IS_RANGED = true;
+                        //public bool BAI_NO_WATER_IS_RANGED = true;
+                        //public bool BAI_NO_WATER_IS_SCOUT = true;
+                        //public bool BAI_NO_WATER_IS_CIVILIAN = true;
+                        //public bool BAI_ALL_CIVILIAN_AND_SCOUT_IS_INFANTRY = true;
+                        if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_MOUNTED] && pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_RANGED])
+                        {
+                            ((BetterAIInfoGlobals)Globals).BAI_NO_MOUNTED_IS_RANGED = false;
+                        }
+                        else if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_WATER])
+                        {
+                            if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_RANGED])
+                            {
+                                ((BetterAIInfoGlobals)Globals).BAI_NO_WATER_IS_RANGED = false;
+                            }
+                            else
+                            {
+                                if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.SCOUT])
+                                {
+                                    ((BetterAIInfoGlobals)Globals).BAI_NO_WATER_IS_SCOUT = false;
+                                }
+                                else if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.CIVILIAN])
+                                {
+                                    ((BetterAIInfoGlobals)Globals).BAI_NO_WATER_IS_CIVILIAN = false;
+                                }
+                            }
+                        }
+
+                        if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.CIVILIAN] && !pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_INFANTRY])
+                        {
+                            ((BetterAIInfoGlobals)Globals).BAI_ALL_CIVILIAN_AND_SCOUT_IS_INFANTRY = false;
+                        }
+                    }
+                }
             }
 
 
@@ -661,15 +758,15 @@ namespace BetterAI
             }
 
 
-            for (MortalityType eLoopMortality = 0; eLoopMortality < mortalitiesNum(); eLoopMortality++)
-            {
-                BetterAIInfoMortality pLoopInfoMortality = (BetterAIInfoMortality)mortality(eLoopMortality);
-                Debug.Log($"{pLoopInfoMortality.mzType}: General retirement {Globals.GENERAL_RETIRE_AGE}");
-                for (int i = 0; i < pLoopInfoMortality.maiMaxAgeGeneralX10.Length; i++)
-                {
-                    Debug.Log($"{i}: Life {pLoopInfoMortality.maiMaxAgeX10[i]}, General {pLoopInfoMortality.maiMaxAgeGeneralX10[i]} ");
-                }
-            }
+            //for (MortalityType eLoopMortality = 0; eLoopMortality < mortalitiesNum(); eLoopMortality++)
+            //{
+            //    BetterAIInfoMortality pLoopInfoMortality = (BetterAIInfoMortality)mortality(eLoopMortality);
+            //    Debug.Log($"{pLoopInfoMortality.mzType}: General retirement {Globals.GENERAL_RETIRE_AGE}");
+            //    for (int i = 0; i < pLoopInfoMortality.maiMaxAgeGeneralX10.Length; i++)
+            //    {
+            //        Debug.Log($"{i}: Life {pLoopInfoMortality.maiMaxAgeX10[i]}, General {pLoopInfoMortality.maiMaxAgeGeneralX10[i]} ");
+            //    }
+            //}
 
 
 
@@ -762,7 +859,7 @@ namespace BetterAI
                 }
             }
 
-
+            //UnityEngine.Debug.Log("Infos.calculateDerivativeInfo - End");
         }
 
 
@@ -1215,6 +1312,8 @@ namespace BetterAI
     public class BetterAIInfoImprovement : InfoImprovement
     {
         //new stuff here
+        public int miRangeChange = 0;
+        public EffectUnitType meApplyEffectUnit = EffectUnitType.NONE; //not implemented.
         public CityBiomeType meCityBiomePrereq = CityBiomeType.NONE;
         public TechType meSecondaryUnlockTechPrereq = TechType.NONE;
         public CultureType meSecondaryUnlockCulturePrereq = CultureType.NONE;
@@ -1249,6 +1348,8 @@ namespace BetterAI
         {
             base.Read(infos, ctx);
 
+            infos.readInt(ctx, "iRangeChange", ref miRangeChange);
+            infos.readType(ctx, "ApplyEffectUnit", ref meApplyEffectUnit);
             infos.readType(ctx, "CityBiomePrereq", ref meCityBiomePrereq);
             infos.readType(ctx, "SecondaryUnlockTechPrereq", ref meSecondaryUnlockTechPrereq);
             infos.readType(ctx, "SecondaryUnlockCulturePrereq", ref meSecondaryUnlockCulturePrereq);
@@ -1302,7 +1403,6 @@ namespace BetterAI
   ##############################################*/
     public class BetterAIInfoMortality : InfoMortality
     {
-        public int miMaxAgeGenCutOff = 0; //Years before max Age - to remove
         public int miMaxAgeGenOldaX10 = 0;
         public int miMaxAgeGenOldbX1000 = 0;
         public int miMaxAgeGenOldcX100000 = 0;
@@ -1330,7 +1430,6 @@ namespace BetterAI
         public override void Read(Infos infos, Infos.ReadContext ctx)
         {
             base.Read(infos, ctx);
-            infos.readInt(ctx, "iMaxAgeGenCutOff", ref miMaxAgeGenCutOff);
 
             infos.readInt(ctx, "iMaxAgeGenOldaX10", ref miMaxAgeGenOldaX10);
             infos.readInt(ctx, "iMaxAgeGenOldbX1000", ref miMaxAgeGenOldbX1000);
@@ -1433,6 +1532,7 @@ namespace BetterAI
         public List<EffectUnitType> maeBlockZOCEffectUnits = new List<EffectUnitType>();
         public List<UnitType> maeTribeUpgradesFromAccumulated = new List<UnitType>();
         public HashSet<UnitType> mseUpgradeUnitAccumulated = new HashSet<UnitType>();  //ToDo: make the AI use this too
+        public List<bool> maeUnitCategories = new List<bool>();
 /*####### Better Old World AI - Base DLL #######
   ### Fix ZOC display                    END ###
   ##############################################*/
@@ -1497,6 +1597,16 @@ namespace BetterAI
         public int AI_CITY_GOVERNOR_VALUE = 0;
         public int AI_DEATHTRAIT_PROB_EVAL_DEPTH = 0;
 
+        public bool BAI_NO_MOUNTED_IS_RANGED = true; //to be set to false
+        public bool BAI_NO_WATER_IS_RANGED = true;
+        public bool BAI_NO_WATER_IS_SCOUT = true;
+        public bool BAI_NO_WATER_IS_CIVILIAN = true;
+        public bool BAI_ALL_CIVILIAN_AND_SCOUT_IS_INFANTRY = true;
+
+        public UnitTraitType INFANTRY_TRAIT = UnitTraitType.NONE;
+        public ColorType COLOR_RIVER_EDGE = ColorType.NONE;
+
+
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
         //override for more variables
@@ -1548,6 +1658,9 @@ namespace BetterAI
             AI_CITY_GOVERNOR_VALUE = infos.getGlobalAI("AI_CITY_GOVERNOR_VALUE");
             AI_DEATHTRAIT_PROB_EVAL_DEPTH = infos.getGlobalAI("AI_DEATHTRAIT_PROB_EVAL_DEPTH");
 
+            INFANTRY_TRAIT = infos.getGlobalType<UnitTraitType>("INFANTRY_TRAIT");
+
+            COLOR_RIVER_EDGE = infos.getType<ColorType>("COLOR_RIVER_EDGE");
         }
     }
 /*####### Better Old World AI - Base DLL #######

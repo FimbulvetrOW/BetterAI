@@ -28,6 +28,8 @@ namespace BetterAI
         //restoring version from before v1.0.84365: faster spawning after tribe unit killing
         protected override void makeDead()
         {
+            //UnityEngine.Debug.Log("Unit.makeDead");
+
             if (isAlive())
             {
                 loadAlive(false);
@@ -97,6 +99,7 @@ namespace BetterAI
 
         protected override void setGeneralID(int iNewValue)
         {
+            //UnityEngine.Debug.Log("Unit.setGeneralID");
 
             if (getGeneralID() != iNewValue)
             {
@@ -188,6 +191,8 @@ namespace BetterAI
         //lines 4438-4473
         public override Unit convert(PlayerType ePlayer, TribeType eTribe)
         {
+            //UnityEngine.Debug.Log("Unit.convert");
+
             Unit pUnit = base.convert(ePlayer, eTribe);
             if (pUnit != null)
             {
@@ -203,7 +208,66 @@ namespace BetterAI
             return pUnit;
         }
 /*####### Better Old World AI - Base DLL #######
-  ### No Family for Enlisted Units     START ###
+  ### No Family for Enlisted Units       END ###
+  ##############################################*/
+
+        public override void changeAdjacentEffectUnitUs(Tile pTile, int iChange, bool bPreview = false)
+        {
+            //UnityEngine.Debug.Log("Unit.changeAdjacentEffectUnitUs");
+
+            if (iChange != 0 && pTile != null)
+            {
+                base.changeAdjacentEffectUnitUs(pTile, iChange, bPreview);
+
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect    START ###
+  ##############################################*/
+                if (pTile.hasActiveImprovement())
+                {
+                    BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(pTile.getActiveImprovement()));
+                    EffectUnitType eImprovementEffectUnit = pImprovementInfo.meApplyEffectUnit;
+                    if (eImprovementEffectUnit != EffectUnitType.NONE)
+                    {
+                        if (isEffectUnitValid(eImprovementEffectUnit))
+                        {
+                            if (bPreview)
+                            {
+                                changeEffectUnitDictionary(eImprovementEffectUnit, iChange);
+                            }
+                            else
+                            {
+                                changeEffectUnit(eImprovementEffectUnit, SourceEffectUnitType.ADJACENT, iChange);
+                            }
+                        }
+                    }
+                }
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect      END ###
+  ##############################################*/
+
+            }
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement Extra Range          START ###
+  ##############################################*/
+        public override int range(Tile pFromTile = null)
+        {
+            int iValue = base.range(pFromTile);
+            if (pFromTile != null && iValue > 0 && pFromTile.hasActiveImprovement())
+            {
+                BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(pFromTile.getActiveImprovement()));
+                iValue += pImprovementInfo.miRangeChange;
+                return infos().utils().range(iValue, 1, infos().Globals.MAX_RANGE);
+            }
+            else
+            {
+                return iValue;
+            }
+        }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement Extra Range            END ###
   ##############################################*/
 
         //copy-pasted from Unit.cs START
@@ -449,6 +513,8 @@ namespace BetterAI
         //lines 6929-6939
         public override Tile bounceTile(TeamType eTeamTerritoryAvoid = TeamType.NONE, Tile pAvoidTile = null, Unit pIgnoreUnit = null, bool bHiddenOnly = false)
         {
+            //UnityEngine.Debug.Log("Unit.bounceTile");
+
             if (((BetterAIInfoGlobals)infos().Globals).BAI_BETTER_BOUNCE == 0 || player() == null || player().getCities() == null || player().getCities().Count() == 0)
             {
                 return base.bounceTile(eTeamTerritoryAvoid, pAvoidTile, pIgnoreUnit, bHiddenOnly);

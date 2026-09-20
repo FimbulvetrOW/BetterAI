@@ -17,6 +17,8 @@ namespace BetterAI
   ##############################################*/
         public virtual bool improvementSpreadsBorders(ImprovementType eImprovement, Game pGame = null, Player pPlayer = null, Tile pTile = null)
         {
+            //UnityEngine.Debug.Log("InfoHelpers.improvementSpreadsBorders");
+
             if (eImprovement != ImprovementType.NONE && pGame != null)
             {
                 if (pGame.infos().improvement(eImprovement).mbUrban || pGame.infos().improvement(eImprovement).mbSpreadsBorders)
@@ -50,6 +52,8 @@ namespace BetterAI
         //lines 623-640
         public override int getAttackDamage(int iFromStrength, int iToStrength, int iPercent)
         {
+            //UnityEngine.Debug.Log("InfoHelpers.getAttackDamage");
+
             if (((BetterAIInfoGlobals)mInfos.Globals).BAI_PRECISE_COLLATERAL_DAMAGE == 0)
             {
                 return base.getAttackDamage(iFromStrength, iToStrength, iPercent);
@@ -83,6 +87,8 @@ namespace BetterAI
         //lines 1035-1048
         public override int modifyRating(int iValue, int iRating, int iOffset, Game pGame)
         {
+            //UnityEngine.Debug.Log("InfoHelpers.modifyRating");
+
 /*####### Better Old World AI - Base DLL #######
   ### Old Competitive yield reduction  START ###
   ##############################################*/
@@ -105,6 +111,8 @@ namespace BetterAI
         //lines 1049-1062
         public override int boostRating(int iValue, int iRating, Game pGame)
         {
+            //UnityEngine.Debug.Log("InfoHelpers.boostRating");
+
 /*####### Better Old World AI - Base DLL #######
   ### Old Competitive yield reduction  START ###
   ##############################################*/
@@ -127,6 +135,8 @@ namespace BetterAI
         //lines 1063-1085
         protected override int getRatingYieldRateCourt(RatingType eRating, YieldType eYield, int iValue, int iModifier, OpinionCharacterType eOpinionCharacter, Game pGame)
         {
+            //UnityEngine.Debug.Log("InfoHelpers.getRatingYieldRateCourt");
+
             if (iValue == 0)
             {
                 return 0;
@@ -166,6 +176,8 @@ namespace BetterAI
         //lines 1086-1089
         public override int getRatingYieldRateLeader(RatingType eRating, YieldType eYield, int iValue, OpinionCharacterType eOpinionCharacter, Game pGame)
         {
+            //UnityEngine.Debug.Log("InfoHelpers.improvementSpreadsBorders");
+
             return getRatingYieldRateCourt(eRating, eYield, iValue, 0, OpinionCharacterType.NONE, pGame);
         }
 /*####### Better Old World AI - Base DLL #######
@@ -178,6 +190,8 @@ namespace BetterAI
         //lines 2521-2528
         public override int getNumEmptySites(TribeLevelType eTribeLevel, DifficultyType eDifficulty)
         {
+            //UnityEngine.Debug.Log("InfoHelpers.getNumEmptySites");
+
             if (eTribeLevel == TribeLevelType.NONE || ((BetterAIInfoTribeLevel)(mInfos.tribeLevel(eTribeLevel))).miEmptySites < 0)
             {
                 if (eDifficulty == DifficultyType.NONE)
