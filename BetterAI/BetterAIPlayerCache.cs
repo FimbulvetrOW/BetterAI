@@ -13,6 +13,7 @@ namespace BetterAI
 
         protected ConcurrentDictionary<(YieldType, int), int> mdCityYieldSpecializationModifiers = new ConcurrentDictionary<(YieldType, int), int>();
 
+        protected ConcurrentDictionary<(int, ImprovementType), long> mdCityImprovementValues = new ConcurrentDictionary<(int, ImprovementType), long>();
 
         protected ConcurrentDictionary<int, int> mdCachedTurnsLeftGeneralX10 = new ConcurrentDictionary<int, int>();
         protected ConcurrentDictionary<int, int> mdCachedTurnsLeftAnyJobX10 = new ConcurrentDictionary<int, int>();
@@ -34,7 +35,10 @@ namespace BetterAI
         {
             return mdCityYieldSpecializationModifiers.TryGetValue((eYield, iCityID), out iModifier);
         }
-
+        public virtual bool getCityImprovementValue(int iCityID, ImprovementType eImprovement, out long iValue)
+        {
+            return mdCityImprovementValues.TryGetValue((iCityID, eImprovement), out iValue);
+        }
 
         public virtual bool getCharacterGeneralTurnsLeftX10(int iCharacterID, out int iTurnsLeft)
         {
@@ -52,6 +56,10 @@ namespace BetterAI
         public virtual void setCityYieldSpecializationModifier(YieldType eYield, int iCityID, int iModifier)
         {
             mdCityYieldSpecializationModifiers[(eYield, iCityID)] = iModifier;
+        }
+        public virtual void setCityImprovementValue(int iCityID, ImprovementType eImprovement, long iValue)
+        {
+            mdCityImprovementValues[(iCityID, eImprovement)] = iValue;
         }
 
 

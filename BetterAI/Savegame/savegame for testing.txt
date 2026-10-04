@@ -1,8 +1,0 @@
-KushTurn1.zip
-
-Hanging occurs quickly, not always at the same place.
-
-Load the game - might get stuck on Initializing Renderer
-With game loaded, pane upwards, select the Scout and try to explore the ruins. Mostly hangs there.
-If you get through that, select the Slums, and try to place them. Hangs before you can place.
-If you get through that, select a worker and try to build an improvement or chop wood. Has always failed for me so far.

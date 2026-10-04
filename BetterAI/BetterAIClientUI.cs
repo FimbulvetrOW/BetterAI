@@ -35,6 +35,7 @@ namespace BetterAI
             for (int i = 0; i < mabUnitFilters.Count; i++)
             {
                 mabUnitFilters[i] = false;
+                mUnits.GetSubTag("-Filter", i).SetKey("Icon", GetUnitListFilterIcon((UnitListFilterType)i));
             }
 
             //UnityEngine.Debug.Log("ClientUI.start - End");
@@ -134,12 +135,17 @@ namespace BetterAI
                                         //}
 
                                         bool bActive = ( (!mabUnitFilters[(int)UnitListFilterType.SCOUT] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])
-                                            && (!mabUnitFilters[(int)UnitListFilterType.CIVILIAN] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.CIVILIAN])
+                                            && (!mabUnitFilters[(int)UnitListFilterType.CIVILIAN] || (pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.CIVILIAN] && (mabUnitFilters[(int)UnitListFilterType.SCOUT] || !pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])) )
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_INFANTRY])
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_MOUNTED])
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_RANGED])
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_SIEGE])
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_WATER]) );
+                                        if (bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] && !mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
+                                        {
+                                            //if not MILITARY_RANGED then show only melee infantry
+                                            bActive = pLoopInfoUnit.mbMelee;
+                                        }
 /*####### Better Old World AI - Base DLL #######
   ### Unit Filters as Filters            END ###
   ##############################################*/
@@ -846,6 +852,8 @@ namespace BetterAI
                     using (var remainingTerrainTargetScope = CollectionCache.GetListScoped<TerrainTargetType>())
                     using (var cityTerrainTargetSetScoped = CollectionCache.GetHashSetScoped<TerrainTargetType>())
                     using (var cityResourcesScope = CollectionCache.GetHashSetScoped<ResourceType>())
+                    using (var secondaryImprovementListImprovementReq = CollectionCache.GetListScoped<ImprovementType>())
+                    using (var secondaryImprovementListImprovementAdjacentValid = CollectionCache.GetListScoped<ImprovementType>())
                     {
                         {
                             for (TerrainTargetType eLoopTerrainTarget = 0; eLoopTerrainTarget < Infos.terrainTargetsNum(); eLoopTerrainTarget++)
@@ -870,7 +878,7 @@ namespace BetterAI
                                     cityResourcesScope.Value.Add(eTileResource);
                                 }
 
-                                if (eTileImprovement != ImprovementType.NONE || eTileResource != ResourceType.NONE)
+                                if (eTileImprovement == ImprovementType.NONE || eTileResource != ResourceType.NONE)
                                 {
                                     for (int i = remainingTerrainTargetScope.Value.Count - 1; i >= 0; i--)
                                     {
@@ -887,32 +895,66 @@ namespace BetterAI
 
                         for (ImprovementType eLoopImprovement = 0; eLoopImprovement < Infos.improvementsNum(); eLoopImprovement++)
                         {
-                            bool bShowButton = false;
+                            //bool bShowButton = false;
                             InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
                             if (pImprovementInfo == null) continue;
                             if (!(pUnit.canBuildImprovementType(eLoopImprovement))) continue;
-
-                            else if (pUnit.canBuildImprovement(pTile, eLoopImprovement, pActivePlayer, isBuyGoods(), bTestEnabled: false, bTestOrders: false, bTestGoods: false))
+                            else if (pUnit.canBuildImprovement(pTile, eLoopImprovement, pActivePlayer, isBuyGoods(), 
+                                bTestEnabled: pTile.canHaveImprovementAdjacentTest(eLoopImprovement, bTestReligion: true, bUpgradeImprovement: false), 
+                                bTestOrders: false, bTestGoods: false))
                             {
-                                bShowButton = true;
+                                //bShowButton = true;
+                                aeImprovements.Add(eLoopImprovement);
+                                continue;
                             }
                             else
                             {
                                 if (pActivePlayer.canStartImprovement(eLoopImprovement, null))
                                 {
-                                    if (!(pCityTerritory.canCityHaveImprovement(eLoopImprovement, bTestEnabled: false)))
+                                    if (!(pCityTerritory.canCityHaveImprovement(eLoopImprovement, bTestEnabled: false, bTestCulture: false, bTestImprovement: false)))  //bTestImprovement: false - show improvement even if you still need to build another improvement to unlock it
                                     {
                                         continue;
+                                    }
+
+                                    CultureType eCulturePrereq = pImprovementInfo.meCulturePrereq;
+                                    if (eCulturePrereq != CultureType.NONE)
+                                    {
+                                        //display improvements even if they only unlock at next culture level
+                                        if (Infos.Helpers.isCultureHigher(eCulturePrereq, Infos.Helpers.getNextCulture(pCityTerritory.getCulture())))
+                                        {
+                                            continue;
+                                        }
+                                    }
+
+                                    {
+                                        //from public virtual bool canCityHaveImprovement
+                                        ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
+
+                                        if (eImprovementPrereq != ImprovementType.NONE)
+                                        {
+                                            int iCount = pCityTerritory.getActiveImprovementCount(eImprovementPrereq);
+
+                                            if (iCount == 0)
+                                            {
+                                                secondaryImprovementListImprovementReq.Value.Add(eLoopImprovement);
+                                                continue;
+                                            }
+                                        }
+                                    }
+
+                                    {
+
                                     }
 
                                     //check valids, including resources (resources have to be in the list)
                                     {
 
-                                        if (!(pImprovementInfo.mbCityValid))
+                                        //if (!(pImprovementInfo.mbCityValid))
                                         {
                                             //bool bAnyValid = false;
 
-                                            if (pImprovementInfo.mbCityValid)
+                                            if (pImprovementInfo.mbCityValid || pImprovementInfo.mbRiverValid //assume there is always a river, at least nearby
+                                                || !pImprovementInfo.mbTerritoryOnly)
                                             {
                                                 //bShowButton = true;
                                                 aeImprovements.Add(eLoopImprovement);
@@ -937,27 +979,39 @@ namespace BetterAI
                                                 }
                                             }
 
+                                            //vegetation and river
+
                                             ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
                                             if (eImprovementClass != ImprovementClassType.NONE)
                                             {
+                                                bool bShowButton = false;
                                                 InfoImprovementClass pImprovementClassInfo = Infos.improvementClass(eImprovementClass);
 
                                                 foreach (ResourceType cityResource in cityResourcesScope.Value)
                                                 {
                                                     if (pImprovementClassInfo.mabResourceValid[(int)cityResource])
                                                     {
-                                                        bShowButton = true;
+                                                        //bShowButton = true;
                                                         aeImprovements.Add(eLoopImprovement);
                                                         break;
                                                     }
                                                 }
                                                 if (bShowButton) continue;
 
-                                                if (pImprovementClassInfo.mbAdjacentValid && pCityTerritory.getImprovementClassCount(eImprovementClass) > 0)
+                                                //this needs to be the last item checked, since it fills a secondary list
+                                                if (pImprovementClassInfo.mbAdjacentValid)
                                                 {
-                                                    //bShowButton = true;
-                                                    aeImprovements.Add(eLoopImprovement);
-                                                    continue;
+                                                    if (pCityTerritory.getImprovementClassCount(eImprovementClass) > 0)
+                                                    {
+                                                        //bShowButton = true;
+                                                        aeImprovements.Add(eLoopImprovement);
+                                                        continue;
+                                                    }
+                                                    else
+                                                    {
+                                                        secondaryImprovementListImprovementAdjacentValid.Value.Add(eLoopImprovement);
+                                                        continue;
+                                                    }
                                                 }
 
                                             }
@@ -978,6 +1032,35 @@ namespace BetterAI
 
                             //if (bShowButton) aeImprovements.Add(eLoopImprovement);
                         }
+
+                        //test for secondary
+                        //meImprovementPrereq
+                        foreach (ImprovementType eLoopImprovement in secondaryImprovementListImprovementReq.Value)
+                        {
+                            InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
+                            ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
+                            if (aeImprovements.Contains(eImprovementPrereq))
+                            {
+                                aeImprovements.Add(eLoopImprovement);
+                            }
+                        }
+
+                        //mbAdjacentValid: not used in base game. This part makes improvements show up if you can build an improvement of the same class, which makes the improvement with mbAdjacentValid valid
+                        foreach (ImprovementType eLoopImprovement in secondaryImprovementListImprovementAdjacentValid.Value)
+                        {
+                            InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
+                            InfoImprovementClass pImprovementClassInfo = Infos.improvementClass(pImprovementInfo.meClass);
+                            foreach (ImprovementType eLoopAdjacentImprovement in aeImprovements)
+                            {
+                                InfoImprovement pAdjacentImprovementInfo = Infos.improvement(eLoopAdjacentImprovement);
+                                if (pAdjacentImprovementInfo.meClass == pImprovementInfo.meClass)
+                                {
+                                    aeImprovements.Add(eLoopImprovement);
+                                    break;
+                                }
+                            }
+                        }
+
                     }
 
                 }
@@ -2353,46 +2436,70 @@ namespace BetterAI
                         //when turning on a filter, switch off other filters if not compatible
                         if (eFilter == UnitListFilterType.CIVILIAN || eFilter == UnitListFilterType.SCOUT)
                         {
-                            for (UnitListFilterType eLoopFilter = 0; eLoopFilter < UnitListFilterType.NUM_TYPES; eLoopFilter++)
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY])
                             {
-                                if (eLoopFilter == UnitListFilterType.CIVILIAN || eLoopFilter == UnitListFilterType.SCOUT || eLoopFilter == UnitListFilterType.MILITARY_INFANTRY) continue;
-
-                                if (eLoopFilter == UnitListFilterType.MILITARY_MOUNTED
-                                    && mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] && ((BetterAIInfoGlobals)Infos.Globals).BAI_ALL_CIVILIAN_AND_SCOUT_IS_INFANTRY) //allow mounted civilians/scouts if added by mods
+                                if (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_INFANTRY && eFilter == UnitListFilterType.SCOUT) //civilians are assumed to be infantry only
                                 {
-                                    mabUnitFilters[(int)eLoopFilter] = false;
-                                    mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
-                                }
-                                else if (eLoopFilter == UnitListFilterType.MILITARY_WATER && mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER])
-                                {
-                                    if ( (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_CIVILIAN && eFilter == UnitListFilterType.CIVILIAN)
-                                        || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_SCOUT && eFilter == UnitListFilterType.SCOUT) )
-                                    {
-                                        mabUnitFilters[(int)eLoopFilter] = false;
-                                        mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
-                                    }
-                                }
-                                else if (mabUnitFilters[(int)eLoopFilter])
-                                {
-                                    mabUnitFilters[(int)eLoopFilter] = false;
-                                    mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_INFANTRY).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_INFANTRY));
                                 }
                             }
 
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED])
+                            {
+                                if (eFilter == UnitListFilterType.CIVILIAN || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_MOUNTED && eFilter == UnitListFilterType.SCOUT)) //civilians are assumed to not be mounted
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_MOUNTED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_MOUNTED));
+                                }
+                            }
+
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER])
+                            {
+                                if ((((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_CIVILIAN && eFilter == UnitListFilterType.CIVILIAN)
+                                    || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_SCOUT && eFilter == UnitListFilterType.SCOUT))
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_WATER).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_WATER));
+                                }
+                            }
+
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE])
+                            {
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_SIEGE).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_SIEGE));
+                                }
+                            }
+
+                            if (mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
+                            {
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_RANGED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_RANGED));
+                                }
+                            }
                         }
-                        else if (eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE
-                            || eFilter == UnitListFilterType.MILITARY_RANGED || eFilter == UnitListFilterType.MILITARY_MOUNTED || eFilter == UnitListFilterType.MILITARY_INFANTRY)
+                        else // if (eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE || eFilter == UnitListFilterType.MILITARY_RANGED || eFilter == UnitListFilterType.MILITARY_MOUNTED || eFilter == UnitListFilterType.MILITARY_INFANTRY)
                         {
                             if (mabUnitFilters[(int)UnitListFilterType.CIVILIAN])
                             {
-                                mabUnitFilters[(int)UnitListFilterType.CIVILIAN] = false;
-                                mUnits.GetSubTag("-Filter", (int)UnitListFilterType.CIVILIAN).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.CIVILIAN));
+                                if (!(((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_CIVILIAN) || eFilter != UnitListFilterType.MILITARY_WATER)
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.CIVILIAN] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.CIVILIAN).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.CIVILIAN));
+                                }
                             }
                             
                             if (mabUnitFilters[(int)UnitListFilterType.SCOUT])
                             {
-                                mabUnitFilters[(int)UnitListFilterType.SCOUT] = false;
-                                mUnits.GetSubTag("-Filter", (int)UnitListFilterType.SCOUT).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.SCOUT));
+                                if ( (!(((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_INFANTRY) || eFilter != UnitListFilterType.MILITARY_INFANTRY) 
+                                    && (!(((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_MOUNTED) || eFilter != UnitListFilterType.MILITARY_MOUNTED)
+                                    && (!(((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_SCOUT) || eFilter != UnitListFilterType.MILITARY_WATER) )
+                                {
+                                    mabUnitFilters[(int)UnitListFilterType.SCOUT] = false;
+                                    mUnits.GetSubTag("-Filter", (int)UnitListFilterType.SCOUT).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.SCOUT));
+                                }
                             }
 
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY])
@@ -2425,8 +2532,8 @@ namespace BetterAI
 
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
                             {
-                                if ((eFilter == UnitListFilterType.MILITARY_WATER && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_RANGED)
-                                || (eFilter == UnitListFilterType.MILITARY_MOUNTED && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED))
+                                if ((eFilter == UnitListFilterType.MILITARY_WATER  && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_RANGED)
+                                || (eFilter == UnitListFilterType.MILITARY_MOUNTED && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_RANGED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_RANGED));
@@ -2435,20 +2542,18 @@ namespace BetterAI
 
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED])
                             {
-                                if (eFilter == UnitListFilterType.MILITARY_INFANTRY || eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE)
+                                if (eFilter == UnitListFilterType.MILITARY_INFANTRY || eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE
+                                    || (eFilter == UnitListFilterType.MILITARY_RANGED && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_MOUNTED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_MOUNTED));
                                 }
                             }
-
                         }
                     }
-                    
 /*####### Better Old World AI - Base DLL #######
   ### Unit Filters as Filters            END ###
   ##############################################*/
-
                 }
 
                 updateUnitList();

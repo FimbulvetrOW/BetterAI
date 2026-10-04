@@ -328,22 +328,30 @@ namespace BetterAI
                 protected override void getUnitCitySiteGuardValues(PathFinder pPathfinder, Unit pUnit, int iMaxSteps, int iMaxTargets)
                 {
                     //using var profileScope = new UnityProfileScope("UnitRoleManager.getUnitCitySiteGuardValues");
-                    base.getUnitCitySiteGuardValues(pPathfinder, pUnit, iMaxSteps, iMaxTargets * 2);
+
+                    if (!pUnit.canDamage() || pUnit.info().mbWater)
+                    {
+                        return;
+                    }
+
+                    base.getUnitCitySiteGuardValues(pPathfinder, pUnit, iMaxSteps, iMaxTargets);
+
 
 /*####### Better Old World AI - Base DLL #######
   ### Don't defend free City Sites     START ###
   ##############################################*/
+
+                    //only for players
+                    if (((BetterAIPlayer)BAI_AI.player) == null)
+                    {
+                        return;
+                    }
+
                     //don't defend starting tiles at the start of the game with your only military unit, but allow using Militia for defending free city sites.
                     if (Infos.Helpers.isRegularMilitary(pUnit.getType()) || (Game.getTurn() >= ((Game.isGameOption(Infos.Globals.GAMEOPTION_PLAY_TO_WIN)) ? BAI_AI.AI_PLAY_TO_WIN_GRACE_TURNS : BAI_AI.AI_GRACE_TURNS)))
                     {
                         return;
                     }
-
-
-                    //if (!pUnit.canDamage())
-                    //{
-                    //    return;
-                    //}
 
                     UnitType eFoundUnit = ((BetterAIPlayer)BAI_AI.player).getCurrentFoundUnitType();
 
@@ -352,6 +360,12 @@ namespace BetterAI
                         int iCitySiteTileID = p.Key;
                         long iPriority = p.Value / 2; //we don't really need to defend it
                         Tile pCitySite = Game.tile(iCitySiteTileID);
+
+                        if (pCitySite == null)
+                        {
+                            UnityEngine.Debug.Log("getUnitCitySiteGuardValues: pCitySite null");
+                            continue;
+                        }
 
                         if (eFoundUnit != UnitType.NONE)
                         {
@@ -379,6 +393,13 @@ namespace BetterAI
                                     foreach (int iTargetTileID in BAI_AI.getAttackTargets())
                                     {
                                         Tile pTargetTile = Game.tile(iTargetTileID);
+
+                                        if (pTargetTile == null)
+                                        {
+                                            UnityEngine.Debug.Log("getUnitCitySiteGuardValues: pTargetTile null");
+                                            continue;
+                                        }
+
                                         if (pUnit.canTargetTile(pCitySite, pTargetTile))
                                         {
                                             iStrength += pUnit.attackUnitStrength(pCitySite, pTargetTile, pTargetTile.defendingUnit(), BAI_AI.Team);

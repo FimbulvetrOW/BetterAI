@@ -518,7 +518,10 @@ namespace BetterAI
                         //public bool BAI_NO_WATER_IS_RANGED = true;
                         //public bool BAI_NO_WATER_IS_SCOUT = true;
                         //public bool BAI_NO_WATER_IS_CIVILIAN = true;
-                        //public bool BAI_ALL_CIVILIAN_AND_SCOUT_IS_INFANTRY = true;
+                        
+                        //public bool BAI_NO_SCOUT_IS_INFANTRY = true;
+                        //public bool BAI_NO_SCOUT_IS_MOUNTED = true;
+
                         if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_MOUNTED] && pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_RANGED])
                         {
                             ((BetterAIInfoGlobals)Globals).BAI_NO_MOUNTED_IS_RANGED = false;
@@ -541,11 +544,18 @@ namespace BetterAI
                                 }
                             }
                         }
-
-                        if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.CIVILIAN] && !pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_INFANTRY])
+                        else if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.SCOUT])
                         {
-                            ((BetterAIInfoGlobals)Globals).BAI_ALL_CIVILIAN_AND_SCOUT_IS_INFANTRY = false;
+                            if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_INFANTRY])
+                            {
+                                ((BetterAIInfoGlobals)Globals).BAI_NO_SCOUT_IS_INFANTRY = false;
+                            }
+                            else if (pLoopUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.MILITARY_MOUNTED])
+                            {
+                                ((BetterAIInfoGlobals)Globals).BAI_NO_SCOUT_IS_MOUNTED = false;
+                            }
                         }
+
                     }
                 }
             }
@@ -1601,7 +1611,8 @@ namespace BetterAI
         public bool BAI_NO_WATER_IS_RANGED = true;
         public bool BAI_NO_WATER_IS_SCOUT = true;
         public bool BAI_NO_WATER_IS_CIVILIAN = true;
-        public bool BAI_ALL_CIVILIAN_AND_SCOUT_IS_INFANTRY = true;
+        public bool BAI_NO_SCOUT_IS_INFANTRY = true;
+        public bool BAI_NO_SCOUT_IS_MOUNTED = true;
 
         public UnitTraitType INFANTRY_TRAIT = UnitTraitType.NONE;
         public ColorType COLOR_RIVER_EDGE = ColorType.NONE;
