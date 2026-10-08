@@ -2984,7 +2984,7 @@ namespace BetterAI
                         {
                             Tile pExpansionTile = game.tile(p.iTileID);
                             //if (pExpansionTile.isLand() || pExpansionTile.hasResource())
-                            if (pExpansionTile.hasResource())
+                            if (pExpansionTile.hasResource() || pExpansionTile.urbanEligible())
                             {
                                 City pExpansionCity = game.city(p.zCityTerritory.iCityID);
                                 //using (var secondTileExpansionScoped = CollectionCache.GetListScoped<TileTerritory>())

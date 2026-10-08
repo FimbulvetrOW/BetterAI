@@ -24,6 +24,9 @@ namespace BetterAI
     public class BetterAICity : City
     {
 
+/*####### Better Old World AI - Base DLL #######
+  ### bEnablesGovernor (EffectCity)    START ###
+  ##############################################*/
         protected enum BetterAIDirtyType
         {
             FIRST,
@@ -151,7 +154,29 @@ namespace BetterAI
             }
         }
 
+        public override bool canHaveGovenor()
+        {
+            if (!(game().isCharacters()))
+            {
+                return false;
+            }
 
+            if (!hasPlayer())
+            {
+                return false;
+            }
+
+            if ((player().getNumFamilies() > 0) && !hasFamily())
+            {
+                return false;
+            }
+
+            //return true;
+            return isEnablesGovernor();
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### bEnablesGovernor (EffectCity)      END ###
+  ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
@@ -1887,6 +1912,7 @@ namespace BetterAI
             }
             else
             {
+                //original City.canHaveImprovement runs only with bTestEnabled and tests for: miMaxFamilyCount, miMaxCultureCount, miMaxCityCount, miMaxPlayerCount
                 BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos().improvement(eImprovement);
 
                 //check new Biome prereq
@@ -1908,6 +1934,8 @@ namespace BetterAI
                 //following: a lot of base game code (from Tile.canHaveImprovement)
                 //basically canHaveImprovement without the culture check. Tech is checked elsewhere
                 //city-specific only
+
+                //this is also in canTileHaveImprovement
                 {
                     ReligionType eReligionSpread = game().getImprovementReligionSpread(eImprovement);
 
@@ -1922,51 +1950,43 @@ namespace BetterAI
 
                 ReligionType eReligionPrereq = pImprovementInfo.meReligionPrereq;
 
-                //as of v1.0.69678, Improvement religion checks are changed and mostly also run with bTestReligion = false.
-                //This makes sense since bTestReligion is only false when called by PlayerAI.calculateImprovementValueForTile
-                if (bTestReligion)
+                if (eReligionPrereq != ReligionType.NONE)
                 {
-                    if (eReligionPrereq != ReligionType.NONE)
+                    if (bTestReligion)
                     {
                         if (!(isReligion(eReligionPrereq)))
                         {
                             return false;
                         }
-
-                        if (pImprovementInfo.mbHolyCity)
+                    }
+                    else
+                    {
+                        if (!hasPlayer())
                         {
-                            if (!(isReligionHolyCity(eReligionPrereq)))
-                            {
-                                return false;
-                            }
+                            return false;
                         }
-                    }
-                }
-                else if (eReligionPrereq != ReligionType.NONE)
-                {
-                    if (!hasPlayer())
-                    {
-                        return false;
-                    }
-                    if (player().getReligionCount(eReligionPrereq) == 0 && !hasBuildAnyReligionUnitUnlock())
-                    {
-                        return false;
-                    }
-
-                    if (pImprovementInfo.mbHolyCity)
-                    {
-                        if (!(isReligionHolyCity(eReligionPrereq)))
+                        if (player().getReligionCount(eReligionPrereq) == 0 && !hasBuildAnyReligionUnitUnlock())
                         {
                             return false;
                         }
                     }
                 }
 
-                if (pImprovementInfo.mbHolyCity && eReligionPrereq == ReligionType.NONE) 
+                if (pImprovementInfo.mbHolyCity)
                 {
-                    if (!isReligionHolyCityAny())  // this is now valid
+                    if (eReligionPrereq != ReligionType.NONE)
                     {
-                        return false;
+                        if (!isReligionHolyCity(eReligionPrereq))
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (!isReligionHolyCityAny())
+                        {
+                            return false;
+                        }
                     }
                 }
 
@@ -1980,12 +2000,6 @@ namespace BetterAI
                         }
                     }
                 }
-
-                //tile-specific
-                //if (!isImprovementValid(eImprovement))
-                //{
-                //    return false;
-                //}
 
                 if (!bForceImprovement)
                 {
@@ -2019,11 +2033,6 @@ namespace BetterAI
 
                         if (eImprovementPrereq != ImprovementType.NONE)
                         {
-                            //if (pCityTerritory == null)
-                            //{
-                            //    return false;
-                            //}
-
                             int iCount = getActiveImprovementCount(eImprovementPrereq);
 
                             if (iCount == 0)
@@ -2059,11 +2068,6 @@ namespace BetterAI
 
                         if (eEffectCityPrereq != EffectCityType.NONE)
                         {
-                            //if (pCityTerritory == null)
-                            //{
-                            //    return false;
-                            //}
-
                             if (getEffectCityCount(eEffectCityPrereq) == 0)
                             {
                                 return false;
@@ -2094,11 +2098,6 @@ namespace BetterAI
 
                 }
 
-                //tile-specific
-                //if (isUrban() && !(infos().improvement(eImprovement).mbUrban))
-                //{
-                //    return false;
-                //}
                 if (bTestTerritory)
                 {
                     if (eTeamTerritory != TeamType.NONE)
@@ -2111,140 +2110,57 @@ namespace BetterAI
                     }
                 }
 
-                //tile-specific
-                //else if (infos().improvement(eImprovement).mbTerritoryOnly)
-                //{
-                //    if (!hasOwner())
-                //    {
-                //        return false;
-                //    }
-                //}
-
-                //tile-specific
-                //if (hasActiveImprovement())
-                //{
-                //    if (improvement().mbPermanent)
-                //    {
-                //        return false;
-                //    }
-                //}
-
-                if (eImprovementClass != ImprovementClassType.NONE)
-                {
-                    //if (pCityTerritory != null)
-                    //{
-                        foreach (EffectCityType eLoopEffectCity in infos().improvementClass(eImprovementClass).maeEffectCityDisabled)
-                        {
-                    //      if (pCityTerritory.getEffectCityCount(eLoopEffectCity) > 0)
-                            if (getEffectCityCount(eLoopEffectCity) > 0)
-                            {
-                                return false;
-                            }
-                        }
-                    //}
-                }
-
-                //tile-specific
-                //if (bTestAdjacent)
-                //{
-                //    if (infos().improvement(eImprovement).mbRequiresUrban)
-                //    {
-                //        if (!urbanEligible())
-                //        {
-                //            return false;
-                //        }
-                //    }
-                //}
-
                 if (bTestEnabled)
                 {
-                    //ImprovementClassType eImprovementClass = infos().improvement(eImprovement).meClass;
-
-                    //tile-specific. returns true for city center
-                    //if (hasCity())
+                    //if (!bForceImprovement)
                     //{
-                    //    return false;
-                    //}
-
-                    //if (bTestAdjacent)
-                    //{
-                    //    if (bTestReligion && eReligionPrereq != ReligionType.NONE)
+                    //    //base game now only has this check in canStartImprovement
+                    //    int iRequiresLaws = pImprovementInfo.miPrereqLaws;
+                    //    if (iRequiresLaws > 0)
                     //    {
-                    //        if (infos().improvement(eImprovement).mbNoAdjacentReligion)
+                    //        if (!(hasPlayer()))
                     //        {
-                    //            if (adjacentToOtherImprovementReligion(eReligionPrereq))
-                    //            {
-                    //                return false;
-                    //            }
+                    //            return false;
                     //        }
-                    //    }
-
-                    //    if (!bUpgradeImprovement)
-                    //    {
-                    //        ImprovementType eAdjacentImprovementPrereq = infos().improvement(eImprovement).meAdjacentImprovementPrereq;
-
-                    //        if (eAdjacentImprovementPrereq != ImprovementType.NONE)
-                    //        {
-                    //            if (!adjacentToCityImprovementFinished(eAdjacentImprovementPrereq))
-                    //            {
-                    //                return false;
-                    //            }
-                    //        }
-                    //    }
-
-                    //    if (eImprovementClass != ImprovementClassType.NONE)
-                    //    {
-                    //        if (infos().improvementClass(eImprovementClass).mbNoAdjacent && !notAdjacentToImprovementClass(eImprovementClass))
+                    //
+                    //        if (player().countActiveLaws() < iRequiresLaws)
                     //        {
                     //            return false;
                     //        }
                     //    }
                     //}
 
-                    //if (pCityTerritory != null)
+                    if (game().isCharacters() && hasFamily())
                     {
-                        if (!bForceImprovement)
+                        int iMaxFamilyCount = pImprovementInfo.miMaxFamilyCount;
+                        if (iMaxFamilyCount > 0)
                         {
-                            int iRequiresLaws = pImprovementInfo.miPrereqLaws;
-                            if (iRequiresLaws > 0)
+                            if (game().countFamilyImprovements(getFamily(), eImprovement) >= iMaxFamilyCount)
                             {
-                                if (!(hasPlayer()))
-                                {
-                                    return false;
-                                }
-
-                                if (player().countActiveLaws() < iRequiresLaws)
-                                {
-                                    return false;
-                                }
+                                return false;
                             }
                         }
+                    }
 
-                        if (hasFamily())
+                    if (eImprovementClass != ImprovementClassType.NONE)
+                    {
+                        //in base game, NoImprovementClassMax doesn't apply to miMaxCultureCount
+                        int iMaxPerCulture = infos().improvementClass(eImprovementClass).miMaxCultureCount;
+                        if (iMaxPerCulture > 0)
                         {
-                            int iMaxFamilyCount = pImprovementInfo.miMaxFamilyCount;
-                            if (iMaxFamilyCount > 0)
+                            if (getImprovementClassCount(eImprovementClass) >= (iMaxPerCulture * (int)(getCulture() + getCultureStep() + 1)))
                             {
-                                if (game().countFamilyImprovements(getFamily(), eImprovement) >= iMaxFamilyCount)
-                                {
-                                    return false;
-                                }
+                                return false;
                             }
                         }
+                    }
 
+                    if (eImprovementClass == ImprovementClassType.NONE || !isNoImprovementClassMaxUnlock(eImprovementClass))
+                    {
                         if (eImprovementClass != ImprovementClassType.NONE)
                         {
-                            int iMaxPerCulture = infos().improvementClass(eImprovementClass).miMaxCultureCount;
-                            if (iMaxPerCulture > 0)
-                            {
-                                if (getImprovementClassCount(eImprovementClass) >= (iMaxPerCulture * (int)(getCulture() + getCultureStep() + 1)))
-                                {
-                                    return false;
-                                }
-                            }
-
                             int iMaxCity = infos().improvementClass(eImprovementClass).miMaxCityCount;
-                            if (iMaxCity > 0 && !isNoImprovementClassMaxUnlock(eImprovementClass))
+                            if (iMaxCity > 0)
                             {
                                 if (getImprovementClassCount(eImprovementClass) >= iMaxCity)
                                 {
@@ -2255,7 +2171,7 @@ namespace BetterAI
 
                         if (hasPlayer())
                         {
-                            if (eImprovementClass == ImprovementClassType.NONE || !isNoImprovementClassMaxUnlock(eImprovementClass))
+                            //if (eImprovementClass == ImprovementClassType.NONE || !isNoImprovementClassMaxUnlock(eImprovementClass))
                             {
                                 int iMaxPlayerCount = infos().improvement(eImprovement).miMaxPlayerCount;
                                 if (iMaxPlayerCount > 0)
@@ -2267,7 +2183,17 @@ namespace BetterAI
                                 }
                             }
                         }
+                    }
+                }
 
+                if (eImprovementClass != ImprovementClassType.NONE)
+                {
+                    foreach (EffectCityType eLoopEffectCity in infos().improvementClass(eImprovementClass).maeEffectCityDisabled)
+                    {
+                        if (getEffectCityCount(eLoopEffectCity) > 0)
+                        {
+                            return false;
+                        }
                     }
                 }
 

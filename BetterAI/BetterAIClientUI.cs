@@ -135,15 +135,17 @@ namespace BetterAI
                                         //}
 
                                         bool bActive = ( (!mabUnitFilters[(int)UnitListFilterType.SCOUT] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])
-                                            && (!mabUnitFilters[(int)UnitListFilterType.CIVILIAN] || (pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.CIVILIAN] && (mabUnitFilters[(int)UnitListFilterType.SCOUT] || !pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])) )
+                                            && (!mabUnitFilters[(int)UnitListFilterType.CIVILIAN]
+                                               || (pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.CIVILIAN] && (mabUnitFilters[(int)UnitListFilterType.SCOUT] || !pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])) )
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_INFANTRY])
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_MOUNTED])
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_RANGED])
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_SIEGE])
                                             && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_WATER]) );
-                                        if (bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] && !mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
+                                        if (bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] && !mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED]
+                                            && !mabUnitFilters[(int)UnitListFilterType.SCOUT] && !mabUnitFilters[(int)UnitListFilterType.CIVILIAN])
                                         {
-                                            //if not MILITARY_RANGED then show only melee infantry
+                                            //if not MILITARY_RANGED or any other filter then show only melee infantry
                                             bActive = pLoopInfoUnit.mbMelee;
                                         }
 /*####### Better Old World AI - Base DLL #######
@@ -164,6 +166,59 @@ namespace BetterAI
             }
 
             //UnityEngine.Debug.Log("ClientUI.updateUnitList - End");
+        }
+
+
+        protected override bool updateCityWidgetGovernorData(City city)
+        {
+            UIAttributeTag cityTag = UI.GetUIAttributeTag("City", city.getID());
+            bool bAvailable = false;
+
+            if (Game.isCharacters())
+            {
+/*####### Better Old World AI - Base DLL #######
+  ### bEnablesGovernor (EffectCity)    START ###
+  ##############################################*/
+                //cityTag.SetBool("GovernorMarker-IsActive", true);
+                cityTag.SetBool("GovernorMarker-IsActive", city.canHaveGovenor());
+/*####### Better Old World AI - Base DLL #######
+  ### bEnablesGovernor (EffectCity)      END ###
+  ##############################################*/
+
+                if (city.hasGovernor())
+                {
+                    cityTag.SetKey("GovernorIcon-State", "Active");
+                    if (city.governor().hasArchetype())
+                    {
+                        bool isGovernorLeader = city.isGovernorLeader();
+                        cityTag.SetKey("GovernorIcon", Infos.trait(city.governor().getArchetype()).mzIconName + (isGovernorLeader ? "" : "_SILVER"));
+                    }
+                    else
+                    {
+                        if (city.isGovernorLeader())
+                            cityTag.SetKey("GovernorIcon", "CHAR_FILTER_GOVERNOR_HIGH");
+                        else
+                            cityTag.SetKey("GovernorIcon", "JOB_GOVERNOR");
+                    }
+
+                    cityTag.SetTEXT("Governor", TextManager, HelpText.buildCharacterLinkVariable(city.governor(), ClientMgr.activePlayer()));
+                    updateCityGovernorPortrait(cityTag, city, city.governor());
+                }
+                else
+                {
+                    bAvailable = city.canMakeGovernor(bJobValid: false);
+                    cityTag.SetKey("GovernorIcon", "JOB_GOVERNOR");
+                    cityTag.SetKey("GovernorIcon-State", bAvailable ? "Available" : "None");
+
+                    using (TextBuilder builder = TextBuilder.GetTextBuilder(TextManager))
+                    {
+                        HelpText.buildChooseGovernorHelp(builder, city, ClientMgr, false);
+                        cityTag.SetKey("Governor", builder.StringBuilder);
+                    }
+                }
+            }
+
+            return bAvailable;
         }
 
 
@@ -1076,8 +1131,6 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Worker Default List Extra Items    END ###
   ##############################################*/
-
-
 
 
         protected override bool CreateContextButtons(UIAttributeTag buttonRoot, List<UIActionButtonData> buttons, Character pSelectedCharacter, string zSelection, MissionClassType eMissionClass, SubjectClassType eTargetClass)
@@ -2484,7 +2537,7 @@ namespace BetterAI
                         {
                             if (mabUnitFilters[(int)UnitListFilterType.CIVILIAN])
                             {
-                                if (!(((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_CIVILIAN) || eFilter != UnitListFilterType.MILITARY_WATER)
+                                if (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_CIVILIAN && eFilter == UnitListFilterType.MILITARY_WATER)
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.CIVILIAN] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.CIVILIAN).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.CIVILIAN));
@@ -2493,9 +2546,9 @@ namespace BetterAI
                             
                             if (mabUnitFilters[(int)UnitListFilterType.SCOUT])
                             {
-                                if ( (!(((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_INFANTRY) || eFilter != UnitListFilterType.MILITARY_INFANTRY) 
-                                    && (!(((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_MOUNTED) || eFilter != UnitListFilterType.MILITARY_MOUNTED)
-                                    && (!(((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_SCOUT) || eFilter != UnitListFilterType.MILITARY_WATER) )
+                                if ( (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_INFANTRY && eFilter == UnitListFilterType.MILITARY_INFANTRY)
+                                    || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_MOUNTED && eFilter == UnitListFilterType.MILITARY_MOUNTED)
+                                    || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_SCOUT && eFilter == UnitListFilterType.MILITARY_WATER) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.SCOUT] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.SCOUT).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.SCOUT));
@@ -2532,8 +2585,8 @@ namespace BetterAI
 
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
                             {
-                                if ((eFilter == UnitListFilterType.MILITARY_WATER  && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_RANGED)
-                                || (eFilter == UnitListFilterType.MILITARY_MOUNTED && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED) )
+                                if ( (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_RANGED && eFilter == UnitListFilterType.MILITARY_WATER)
+                                || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED && eFilter == UnitListFilterType.MILITARY_MOUNTED) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_RANGED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_RANGED));
@@ -2543,7 +2596,7 @@ namespace BetterAI
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED])
                             {
                                 if (eFilter == UnitListFilterType.MILITARY_INFANTRY || eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE
-                                    || (eFilter == UnitListFilterType.MILITARY_RANGED && ((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED) )
+                                    || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED && eFilter == UnitListFilterType.MILITARY_RANGED) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_MOUNTED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_MOUNTED));

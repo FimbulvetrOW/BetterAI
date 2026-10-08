@@ -1194,6 +1194,9 @@ namespace BetterAI
   ##############################################*/
 
 
+/*####### Better Old World AI - Base DLL #######
+  ### bEnablesGovernor (EffectCity)    START ###
+  ##############################################*/
     public class BetterAIInfoEffectCity : InfoEffectCity
     {
         public bool mbEnablesGovernor = false;
@@ -1203,7 +1206,9 @@ namespace BetterAI
             infos.readBool(ctx, "bEnablesGovernor", ref mbEnablesGovernor);
         }
     }
-
+/*####### Better Old World AI - Base DLL #######
+  ### bEnablesGovernor (EffectCity)      END ###
+  ##############################################*/
     
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses           START ###
