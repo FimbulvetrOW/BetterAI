@@ -130,8 +130,8 @@ namespace BetterAI
                         }
                     }
 
-                    bool bAdjacentHostile1 = pTile1.adjacentToHostileUnit(eTeam, eTribe, TeamType.NONE);
-                    bool bAdjacentHostile2 = pTile2.adjacentToHostileUnit(eTeam, eTribe, TeamType.NONE);
+                    bool bAdjacentHostile1 = pTile1.adjacentToHostileUnit(eTeam, eTribe, eTeam);
+                    bool bAdjacentHostile2 = pTile2.adjacentToHostileUnit(eTeam, eTribe, eTeam);
                     if (bAdjacentHostile1 != bAdjacentHostile2)
                     {
                         return bAdjacentHostile2 ? -1 : 1;
@@ -142,6 +142,13 @@ namespace BetterAI
                     if (bDamageTile1 != bDamageTile2)
                     {
                         return bDamageTile2 ? -1 : 1;
+                    }
+
+                    bool bVacantVisible1 = !pTile1.hasNotHiddenUnit(eTeam);
+                    bool bVacantVisible2 = !pTile2.hasNotHiddenUnit(eTeam);
+                    if (bVacantVisible1 != bVacantVisible2)
+                    {
+                        return bVacantVisible1 ? -1 : 1;
                     }
 
                     bool bVacant1 = !pTile1.hasUnit();

@@ -32,142 +32,139 @@ namespace BetterAI
         {
             //UnityEngine.Debug.Log("ClientUI.start - Start");
             base.start();
-            for (int i = 0; i < mabUnitFilters.Count; i++)
+            if (((BetterAIInfoGlobals)Infos.Globals).BAI_ALT_UNIT_FILTER > 0)
             {
-                mabUnitFilters[i] = false;
-                mUnits.GetSubTag("-Filter", i).SetKey("Icon", GetUnitListFilterIcon((UnitListFilterType)i));
+                for (int i = 0; i < mabUnitFilters.Count; i++)
+                {
+                    mabUnitFilters[i] = false;
+                    mUnits.GetSubTag("-Filter", i).SetKey("Icon", GetUnitListFilterIcon((UnitListFilterType)i));
+                }
             }
-
             //UnityEngine.Debug.Log("ClientUI.start - End");
         }
 
 /*####### Better Old World AI - Base DLL #######
   ### Unit Filters as Filters            END ###
   ##############################################*/
+
         public override void updateUnitList()
         {
-            //UnityEngine.Debug.Log("ClientUI.updateUnitList - Start");
             //using (new UnityProfileScope("ClientUI.updateUnitList"))
+            if (((BetterAIInfoGlobals)Infos.Globals).BAI_ALT_UNIT_FILTER == 0)
+            {
+                base.updateUnitList();
+            }
+            else
             {
                 Player pActivePlayer = ClientMgr.activePlayer();
-                int numUnits = 0;
 
                 if (pActivePlayer?.getNumUnits() > 0)
                 {
-                    for (UnitCycleType eLoopUnitCycle = 0; eLoopUnitCycle < Infos.unitCyclesNum(); eLoopUnitCycle++)
+                    using (var unitListScoped = CollectionCache.GetListScoped<int>())
                     {
-                        for (UnitType eLoopUnit = 0; eLoopUnit < Infos.unitsNum(); eLoopUnit++)
+                        List<int> unitList = unitListScoped.Value;
+
+                        for (int iUnitIndex = 0; iUnitIndex < pActivePlayer.getNumUnits(); ++iUnitIndex)
                         {
-/*####### Better Old World AI - Base DLL #######
-  ### Unit Filters as Filters          START ###
-  ##############################################*/
-                            BetterAIInfoUnit pLoopInfoUnit = (BetterAIInfoUnit)Infos.unit(eLoopUnit);
-                            if (pLoopInfoUnit.meUnitCycle == eLoopUnitCycle)
-                            //if (Infos.unit(eLoopUnit).meUnitCycle == eLoopUnitCycle)
-/*####### Better Old World AI - Base DLL #######
-  ### Unit Filters as Filters            END ###
-  ##############################################*/
+                            Unit unit = pActivePlayer.unitAt(iUnitIndex);
+
+                            if (unit != null)
                             {
-                                for (int iUnitIndex = 0; iUnitIndex < pActivePlayer.getNumUnits(); ++iUnitIndex)
-                                {
-                                    Unit unit = pActivePlayer.unitAt(iUnitIndex);
-
-                                    if (unit != null && unit.getType() == eLoopUnit)
-                                    {
-                                        UIAttributeTag unitListTag = UI.GetUIAttributeTag("UnitList", numUnits);
-                                        unitListTag.SetInt("ID", unit.getID());
-                                        unitListTag.SetInt("Movement-Count", unit.getFatigueLimit());
 
 /*####### Better Old World AI - Base DLL #######
   ### Unit Filters as Filters          START ###
   ##############################################*/
-                                        //bool bActive = false;
+                                //bool bActive = false;
 
-                                        //switch (unit.info().meUnitCycle)
-                                        //{
-                                        //    case UnitCycleType.SCOUT:
-                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.SCOUT];
-                                        //        break;
+                                //for (UnitListFilterType eFilter = 0; eFilter < UnitListFilterType.NUM_TYPES; ++eFilter)
+                                //{
+                                //    if (mabUnitFilters[(int)eFilter])
+                                //    {
+                                //        bool bFilterMatch = true;
+                                //        switch (eFilter)
+                                //        {
+                                //            case UnitListFilterType.CIVILIAN:
+                                //                bFilterMatch = unit.info().meUnitCycle == UnitCycleType.WORKER 
+                                //                    || unit.info().meUnitCycle == UnitCycleType.DISCIPLE 
+                                //                    || unit.info().meUnitCycle == UnitCycleType.FOUND 
+                                //                    || unit.info().meUnitCycle == UnitCycleType.CARAVAN;
+                                //                break;
+                                //            case UnitListFilterType.SCOUT:
+                                //                bFilterMatch = unit.info().meUnitCycle == UnitCycleType.SCOUT;
+                                //                break;
+                                //            case UnitListFilterType.MILITARY_INFANTRY:
+                                //                bFilterMatch = unit.info().meUnitCycle == UnitCycleType.MILITARY_INFANTRY;
+                                //                break;
+                                //            case UnitListFilterType.MILITARY_MOUNTED:
+                                //                bFilterMatch = unit.info().meUnitCycle == UnitCycleType.MILITARY_MOUNTED 
+                                //                    || unit.info().maeUnitTrait.Contains(Infos.Globals.MOUNTED_TRAIT);
+                                //                break;
+                                //            case UnitListFilterType.MILITARY_RANGED:
+                                //                bFilterMatch = unit.info().meUnitCycle == UnitCycleType.MILITARY_RANGED
+                                //                    || unit.info().maeUnitTrait.Contains(Infos.Globals.RANGED_TRAIT);
+                                //                break;
+                                //            case UnitListFilterType.MILITARY_SIEGE:
+                                //                bFilterMatch = unit.info().meUnitCycle == UnitCycleType.MILITARY_SIEGE
+                                //                    || unit.info().maeUnitTrait.Contains(Infos.Globals.SIEGE_TRAIT);
+                                //                break;
+                                //            case UnitListFilterType.MILITARY_WATER:
+                                //                bFilterMatch = unit.info().meUnitCycle == UnitCycleType.MILITARY_WATER
+                                //                    || unit.info().maeUnitTrait.Contains(Infos.Globals.SHIP_TRAIT);
+                                //                break;
+                                //        }
+                                //        if (bFilterMatch)
+                                //        {
+                                //            bActive = true;
+                                //            break;
+                                //        }
+                                //    }
+                                //}
 
-                                        //    case UnitCycleType.MILITARY_INFANTRY:
-                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY];
-                                        //        break;
+                                BetterAIInfoUnit pLoopInfoUnit = (BetterAIInfoUnit)unit.info();
 
-                                        //    case UnitCycleType.MILITARY_MOUNTED:
-                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED];
-                                        //        break;
-
-                                        //    case UnitCycleType.MILITARY_RANGED:
-                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED];
-                                        //        break;
-
-                                        //    case UnitCycleType.MILITARY_SIEGE:
-                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE];
-                                        //        break;
-
-                                        //    case UnitCycleType.MILITARY_WATER:
-                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER];
-                                        //        break;
-
-                                        //    default:
-                                        //        bActive |= mabUnitFilters[(int)UnitListFilterType.CIVILIAN];
-                                        //        break;
-                                        //}
-
-                                        //if (!bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
-                                        //{
-                                        //    bActive |= unit.info().maeUnitTrait.Contains(Infos.Globals.RANGED_TRAIT);
-                                        //}
-
-                                        //if (!bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE])
-                                        //{
-                                        //    bActive |= unit.info().maeUnitTrait.Contains(Infos.Globals.SIEGE_TRAIT);
-                                        //}
-
-                                        //if (!bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER])
-                                        //{
-                                        //    bActive |= unit.info().maeUnitTrait.Contains(Infos.Globals.SHIP_TRAIT);
-                                        //}
-
-                                        //if (!bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED])
-                                        //{
-                                        //    bActive |= unit.info().maeUnitTrait.Contains(Infos.Globals.MOUNTED_TRAIT);
-                                        //}
-
-                                        bool bActive = ( (!mabUnitFilters[(int)UnitListFilterType.SCOUT] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])
-                                            && (!mabUnitFilters[(int)UnitListFilterType.CIVILIAN]
-                                               || (pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.CIVILIAN] && (mabUnitFilters[(int)UnitListFilterType.SCOUT] || !pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])) )
-                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_INFANTRY])
-                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_MOUNTED])
-                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_RANGED])
-                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_SIEGE])
-                                            && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_WATER]) );
-                                        if (bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] && !mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED]
-                                            && !mabUnitFilters[(int)UnitListFilterType.SCOUT] && !mabUnitFilters[(int)UnitListFilterType.CIVILIAN])
-                                        {
-                                            //if not MILITARY_RANGED or any other filter then show only melee infantry
-                                            bActive = pLoopInfoUnit.mbMelee;
-                                        }
+                                bool bActive = ((!mabUnitFilters[(int)UnitListFilterType.SCOUT] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])
+                                    && (!mabUnitFilters[(int)UnitListFilterType.CIVILIAN]
+                                       || (pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.CIVILIAN] && (mabUnitFilters[(int)UnitListFilterType.SCOUT] || !pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])))
+                                    && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_INFANTRY])
+                                    && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_MOUNTED])
+                                    && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_RANGED])
+                                    && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_SIEGE] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_SIEGE])
+                                    && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_WATER]));
+                                if (bActive && mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] && !mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED]
+                                    && !mabUnitFilters[(int)UnitListFilterType.SCOUT] && !mabUnitFilters[(int)UnitListFilterType.CIVILIAN])
+                                {
+                                    //if not MILITARY_RANGED or any other filter then show only melee infantry
+                                    bActive = pLoopInfoUnit.mbMelee;
+                                }
 /*####### Better Old World AI - Base DLL #######
   ### Unit Filters as Filters            END ###
   ##############################################*/
 
-                                        unitListTag.IsActive = bActive;
-
-                                        numUnits++;
-                                    }
+                                if (bActive)
+                                {
+                                    unitList.Add(unit.getID());
                                 }
                             }
                         }
+
+                        unitList.Sort(UnitCompare);
+
+                        for (int i = 0; i < unitList.Count; ++i)
+                        {
+                            Unit unit = Game.unit(unitList[i]);
+                            if (unit != null)
+                            {
+                                UIAttributeTag unitListTag = UI.GetUIAttributeTag("UnitList", i);
+                                unitListTag.SetInt("ID", unit.getID());
+                                unitListTag.SetInt("Movement-Count", unit.getFatigueLimit());
+                                unitListTag.IsActive = true;
+                            }
+                        }
+                        UI.SetUIAttribute("NumUnits", unitList.Count.ToStringCached());
                     }
                 }
-
-                UI.SetUIAttribute("NumUnits", numUnits.ToStringCached());
             }
-
-            //UnityEngine.Debug.Log("ClientUI.updateUnitList - End");
         }
-
 
         protected override bool updateCityWidgetGovernorData(City city)
         {
@@ -221,10 +218,6 @@ namespace BetterAI
             return bAvailable;
         }
 
-
-/*####### Better Old World AI - Base DLL #######
-  ### Unit Filters as Filters            END ###
-  ##############################################*/
 
         private const string YIELD_ARROW = "Sprites/GuitarPickUp";
         private const string YIELD_NORMAL = "Sprites/GuitarPick";
@@ -1812,10 +1805,6 @@ namespace BetterAI
                             //using (new UnityProfileScope("ClientUI.updateCharacters.addCharacterFamily"))
                             {
 
-/*####### Better Old World AI - Base DLL #######
-  ### Alternative Character Sorting    START ###
-  ##############################################*/
-                                //using (var checkedIDSetScoped = CollectionCache.GetHashSetScoped<int>())
                                 using (var charIDListScoped = CollectionCache.GetListScoped<int>())
                                 using (var ordererIDListScoped = CollectionCache.GetListScoped<int>())
                                 {
@@ -1823,52 +1812,72 @@ namespace BetterAI
                                     List<int> charIDList = charIDListScoped.Value;
                                     List<int> orderedIDList = ordererIDListScoped.Value;
 
-                                    pActivePlayer.getActiveCharacters(charIDList);
-                                    //pActivePlayer.getActiveCharacters(orderedIDList);
-
-
-                                    //charIDList.Sort(CompareAges);
-                                    //
-                                    //int CompareAges(int charID, int otherCharID)
-                                    //{
-                                    //    int charAge = Game.character(charID).getAge();
-                                    //    int otherCharAge = Game.character(otherCharID).getAge();
-                                    //
-                                    //    if (charAge != otherCharAge)
-                                    //    {
-                                    //        return otherCharAge - charAge;
-                                    //    }
-                                    //
-                                    //    return charID - otherCharID;
-                                    //}
 
                                     if (currentCharListFilter == CharacterListFilterType.NOTABLE)
                                     {
+                                        foreach (Character pLoopCharacter in Game.getCharacters())
+                                        {
+                                            charIDList.Add(pLoopCharacter.getID());
+                                        }
+
+                                        charIDList.Sort(OrderNotableCharacters);
+
+                                        int OrderNotableCharacters(int charID, int otherCharID)
+                                        {
+                                            Character first = Game.character(charID);
+                                            Character second = Game.character(otherCharID);
+
+                                            if (first.getPinnedTurn(eActivePlayer) != second.getPinnedTurn(eActivePlayer))
+                                            {
+                                                return first.getPinnedTurn(eActivePlayer) - second.getPinnedTurn(eActivePlayer);
+                                            }
+                                            else
+                                            {
+                                                return charID - otherCharID;
+                                            }
+                                        }
+
                                         foreach (int iLoopCharacter in charIDList)
                                         {
                                             Character pLoopCharacter = Game.character(iLoopCharacter);
-                                            if (pLoopCharacter.isLeader())
+                                            if (pLoopCharacter.isNotable(eActivePlayer))
                                             {
-                                                orderedIDList.Insert(0, iLoopCharacter);
+                                                orderedIDList.Add(pLoopCharacter.getID());
                                             }
-                                            else if (pLoopCharacter.isPinned(eActivePlayer))
-                                            {
-                                                int iInsertIndex = orderedIDList.Count;
-                                                for (int i = orderedIDList.Count - 1; i >= 0; i--)
-                                                {
-                                                    if (Game.character(iLoopCharacter).getPinnedTurn(eActivePlayer) <= pLoopCharacter.getPinnedTurn(eActivePlayer))
-                                                    {
-                                                        break;
-                                                    }
+                                        }
 
-                                                    iInsertIndex--;
+                                        int numPinnedCharacters = 0, numNotableCharacters = 0;
+                                        foreach (int iLoopCharacter in orderedIDList)
+                                        {
+                                            using (new UnityProfileScope("ClientUI.updateCharacters.SetUIData"))
+                                            {
+                                                if (Game.character(iLoopCharacter).isPinned(eActivePlayer))
+                                                {
+                                                    UIAttributeTag characterListTag = mCharacters.GetSubTag("-Pinned", numPinnedCharacters);
+                                                    characterListTag.SetInt("ID", iLoopCharacter);
+                                                    numPinnedCharacters++;
                                                 }
-                                                orderedIDList.Insert(iInsertIndex, iLoopCharacter);
+                                                else
+                                                {
+                                                    UIAttributeTag characterListTag = mCharacters.GetSubTag("-Notable", numNotableCharacters);
+                                                    characterListTag.SetInt("ID", iLoopCharacter);
+                                                    numNotableCharacters++;
+                                                }
+
+                                                mCharacters.SetInt("Pinned-Count", numPinnedCharacters);
+                                                mCharacters.SetInt("Notable-Count", numNotableCharacters);
                                             }
                                         }
                                     }
                                     else
                                     {
+                                        //using var checkedIDSetScoped = CollectionCache.GetHashSetScoped<int>();
+                                        //HashSet<int> checkedIDSet = checkedIDSetScoped.Value;
+                                        pActivePlayer.getActiveCharacters(charIDList);
+                                        
+/*####### Better Old World AI - Base DLL #######
+  ### Alternative Character Sorting    START ###
+  ##############################################*/
 
                                         foreach (int iLoopCharacter in charIDList)
                                         {
@@ -2268,8 +2277,67 @@ namespace BetterAI
                                                 }
                                             }
 
+                                            //#9 leader/spouse/heirs
+                                            if (!(currentCharListFilter == CharacterListFilterType.NONE || currentCharListFilter == CharacterListFilterType.COURT || currentCharListFilter == CharacterListFilterType.NOTABLE))
+                                            {
+                                                //#2 Leader Spouse(s)
+                                                if (first.isLeaderSpouse())
+                                                {
+                                                    if (!second.isLeaderSpouse())
+                                                    {
+                                                        return -1;
+                                                    }
+                                                }
+                                                else if (second.isLeaderSpouse())
+                                                {
+                                                    return 1;
+                                                }
 
-                                            //#9 age: old first
+                                                //#3 Heirs 
+                                                if (first.isSuccessor())
+                                                {
+                                                    if (second.isSuccessor())
+                                                    {
+                                                        return pActivePlayer.getSuccession().IndexOf(charID) - pActivePlayer.getSuccession().IndexOf(otherCharID);
+                                                    }
+                                                    else
+                                                    {
+                                                        return -1;
+                                                    }
+                                                }
+                                                else if (second.isSuccessor())
+                                                {
+                                                    return 1;
+                                                }
+                                            }
+
+                                            //#10 pinned
+                                            if (first.isPinned(eActivePlayer))
+                                            {
+                                                if (!second.isPinned(eActivePlayer))
+                                                {
+                                                    return -1;
+                                                }
+                                            }
+                                            else if (second.isPinned(eActivePlayer))
+                                            {
+                                                return 1;
+                                            }
+
+                                            //#11 other notable
+                                            if (first.isNotable(eActivePlayer))
+                                            {
+                                                if (!second.isNotable(eActivePlayer))
+                                                {
+                                                    return -1;
+                                                }
+                                            }
+                                            else if (second.isNotable(eActivePlayer))
+                                            {
+                                                return 1;
+                                            }
+
+                                            //#12 age: old first
                                             int charAge = first.getAge();
                                             int otherCharAge = second.getAge();
 
@@ -2278,7 +2346,7 @@ namespace BetterAI
                                                 return otherCharAge - charAge;
                                             }
 
-                                            //#10 character IDs: lowest number = oldest entry first
+                                            //#13 character IDs: lowest number = oldest entry first
                                             return charID - otherCharID;
                                         }
                                     }
@@ -2378,11 +2446,6 @@ namespace BetterAI
         //lines 17830-17937
         protected override void updateQueuePanel()
         {
-            if (ClientMgr.Selection.getSelectedCity() != null)
-            {
-                //UnityEngine.Debug.Log("ClientUI.updateQueuePanel - Start");
-            }
-
             base.updateQueuePanel();
 
 /*####### Better Old World AI - Base DLL #######
@@ -2454,10 +2517,8 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Alternative Hurry                  END ###
   ##############################################*/
-
-            else if (eType == ItemType.UNIT_LIST_FILTER)
+            else if (((BetterAIInfoGlobals)Infos.Globals).BAI_ALT_UNIT_FILTER > 0 && eType == ItemType.UNIT_LIST_FILTER)
             {
-
                 UnitListFilterType eFilter = (UnitListFilterType)pWidget.GetDataInt(0);
 
                 if (eFilter == UnitListFilterType.NONE)
@@ -2468,14 +2529,22 @@ namespace BetterAI
                         mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
                     }
                 }
+/*####### Better Old World AI - Base DLL #######
+  ### Unit Filters as Filters          START ###
+  ##############################################*/
+                else if (Interfaces.Input.isShiftPressed()) //exclusive mode with shift
+                {
+                    for (UnitListFilterType eLoopFilter = 0; eLoopFilter < UnitListFilterType.NUM_TYPES; eLoopFilter++)
+                    {
+                        mabUnitFilters[(int)eLoopFilter] = (eLoopFilter == eFilter);
+                        mUnits.GetSubTag("-Filter", (int)eLoopFilter).SetKey("Icon", GetUnitListFilterIcon(eLoopFilter));
+                    }
+                }
                 else
                 {
                     mabUnitFilters[(int)eFilter] = !mabUnitFilters[(int)eFilter];
                     mUnits.GetSubTag("-Filter", (int)eFilter).SetKey("Icon", GetUnitListFilterIcon(eFilter));
 
-/*####### Better Old World AI - Base DLL #######
-  ### Unit Filters as Filters          START ###
-  ##############################################*/
                     if (mabUnitFilters[(int)eFilter])
                     {
                         //CIVILIAN,
@@ -2617,10 +2686,45 @@ namespace BetterAI
             }
             else
             {
-
                 //UnityEngine.Debug.Log("ClientUI.doWidgetAction - END start base");
                 return base.doWidgetAction(pWidget);
             }
+        }
+
+        public override void OnWidgetMouseEnter(WidgetData pWidget)
+        {
+            if (IsScrolling())
+                return;
+
+            if (pWidget.GetWidgetType() == ItemType.ADD_ROAD)
+            {
+                Unit pUnit = Game.unit(pWidget.GetDataInt(0));
+
+                if (pUnit != null && pUnit.canAddRoad(pUnit.tile(), ClientMgr.activePlayer(), true, false, false, false))
+                {
+                    if (!clientRoadIDs.Remove(pUnit.getTileID()))
+                    {
+                        clientRoadIDs.Add(pUnit.getTileID());
+
+/*####### Better Old World AI - Base DLL #######
+  ### Road building hover overlay      START ###
+  ##############################################*/
+                        if (((BetterAIInfoGlobals)Infos.Globals).BAI_ALT_ROAD_BUILD_OVERLAY == 0)
+                        {
+                            setTemporaryOverlayToggle(MapOverlayType.NETWORK, true);
+                        }
+                        else
+                        {
+                            setTemporaryOverlayToggle(MapOverlayType.ROADS_RIVERS, true);
+                        }
+/*####### Better Old World AI - Base DLL #######
+  ### Road building hover overlay        END ###
+  ##############################################*/
+                    }
+                }
+            }
+            else base.OnWidgetMouseEnter(pWidget);
+
         }
 
         //lines 17072-17085

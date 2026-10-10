@@ -5411,6 +5411,17 @@ namespace BetterAI
                     }
                 }
 
+                foreach (ProjectType eProject in pInfoEffectCity.maeVoidTechPrereqProject)
+                {
+                    TechType ePrereq = infos.project(eProject).meTechPrereq;
+                    if (ePrereq != TechType.NONE && !player.isTechAcquired(ePrereq))
+                    {
+                        if (pCity.isVoidProjectTechPrereqUnlock(eProject) != pCity.isVoidProjectTechPrereqUnlock(eProject, iExtraCount))
+                        {
+                            iValue += yieldValue(infos.Globals.SCIENCE_YIELD) * infos.tech(ePrereq).miCost;
+                        }
+                    }
+                }
 
                 for (UnitTraitType eLoopUnitTrait = 0; eLoopUnitTrait < infos.unitTraitsNum(); eLoopUnitTrait++)
                 {
@@ -5907,7 +5918,7 @@ namespace BetterAI
                         {
                             if (!project.mbHidden)
                             {
-                                if (project.meTechPrereq != TechType.NONE && player.isTechAcquired(project.meTechPrereq))
+                                if (project.meTechPrereq != TechType.NONE && player.isProjectUnlocked(eLoopProject, pCity))
                                 {
                                     
                                     if (pCity.canBuildProject(eLoopProject, true, false, false))

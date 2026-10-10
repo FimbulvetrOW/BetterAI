@@ -1119,6 +1119,22 @@ namespace BetterAI
   ### Fix ZOC display                    END ###
   ##############################################*/
 
+
+/*####### Better Old World AI - Base DLL #######
+  ### iTriangleOffsetCouncil           START ###
+  ##############################################*/
+        protected List<BetterAIInfoYield> maBetterAIYields;
+
+        //line 2986
+        public override InfoYield yield(YieldType eIndex) => maBetterAIYields.GetOrDefault((int)eIndex);
+        public override YieldType yieldsNum() => (YieldType)maBetterAIYields.Count;
+        public override List<InfoYield> yields() => new List<InfoYield>(maBetterAIYields);
+        public virtual List<BetterAIInfoYield> BetterAIyields() => maBetterAIYields;
+
+/*####### Better Old World AI - Base DLL #######
+  ### iTriangleOffsetCouncil             END ###
+  ##############################################*/
+
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
   ##############################################*/
@@ -1150,6 +1166,7 @@ namespace BetterAI
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/trait"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/tribeLevel"));
             mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/unit"));
+            mInfoList.RemoveAt(mInfoList.FindIndex(x => x.GetFileName() == "Infos/yield"));
 
             mInfoList.Add(new XmlDataListItem<BetterAIInfoCourtier, CourtierType>("Infos/courtier", readInfoTypes<BetterAIInfoCourtier, CourtierType>, ref maBetterAICourtiers));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoEffectCity, EffectCityType>("Infos/effectCity", readInfoTypes<BetterAIInfoEffectCity, EffectCityType>, ref maBetterAIEffectCities));
@@ -1163,6 +1180,7 @@ namespace BetterAI
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTrait, TraitType>("Infos/trait", readInfoTypes<BetterAIInfoTrait, TraitType>, ref maBetterAITraits));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoTribeLevel, TribeLevelType>("Infos/tribeLevel", readInfoTypes<BetterAIInfoTribeLevel, TribeLevelType>, ref maBetterAITribeLevels));
             mInfoList.Add(new XmlDataListItem<BetterAIInfoUnit, UnitType>("Infos/unit", readInfoTypes<BetterAIInfoUnit, UnitType>, ref maBetterAIUnits));
+            mInfoList.Add(new XmlDataListItem<BetterAIInfoYield, YieldType>("Infos/yield", readInfoTypes<BetterAIInfoYield, YieldType>, ref maBetterAIYields));
 
             mInfoList.Add(new XmlDataListItem<InfoCityBiome, CityBiomeType>("Infos/cityBiome", readInfoTypes<InfoCityBiome, CityBiomeType>, ref maCityBiomes));
         }
@@ -1553,6 +1571,22 @@ namespace BetterAI
   ##############################################*/
     }
 
+/*####### Better Old World AI - Base DLL #######
+  ### iTriangleOffsetCouncil           START ###
+  ##############################################*/
+    public class BetterAIInfoYield : InfoYield
+    {
+        public int miTriangleOffsetCouncil = 0;
+
+        public override void Read(Infos infos, Infos.ReadContext ctx)
+        {
+            base.Read(infos, ctx);
+            infos.readInt(ctx, "iTriangleOffsetCouncil", ref miTriangleOffsetCouncil);
+        }
+    }
+/*####### Better Old World AI - Base DLL #######
+  ### iTriangleOffsetCouncil             END ###
+  ##############################################*/
 
 /*####### Better Old World AI - Base DLL #######
   ### City Biome                       START ###
@@ -1602,6 +1636,8 @@ namespace BetterAI
         public int BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT = 100;
         public int BAI_NUM_IMPROVEMENT_FINISHED_UNITS = 1;
         public int BAI_ALT_CHARACTER_SORT = 0;
+        public int BAI_ALT_UNIT_FILTER = 0;
+        public int BAI_ALT_ROAD_BUILD_OVERLAY = 0;
         public int BAI_NO_DELAY = 0;
 
         public int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 0;
@@ -1621,7 +1657,6 @@ namespace BetterAI
 
         public UnitTraitType INFANTRY_TRAIT = UnitTraitType.NONE;
         public ColorType COLOR_RIVER_EDGE = ColorType.NONE;
-
 
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
@@ -1664,6 +1699,8 @@ namespace BetterAI
             BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT = infos.getGlobalInt("BAI_PLAYER_MAX_EXTRA_DEVELOPMENT_CITIES_PERCENT");
             BAI_NUM_IMPROVEMENT_FINISHED_UNITS = infos.getGlobalInt("BAI_NUM_IMPROVEMENT_FINISHED_UNITS");
             BAI_ALT_CHARACTER_SORT = infos.getGlobalInt("BAI_ALT_CHARACTER_SORT");
+            BAI_ALT_UNIT_FILTER = infos.getGlobalInt("BAI_ALT_CHARACTER_SORT");
+            BAI_ALT_ROAD_BUILD_OVERLAY = infos.getGlobalInt("BAI_ALT_ROAD_BUILD_OVERLAY");
             BAI_NO_DELAY = infos.getGlobalInt("BAI_NO_DELAY");
 
             AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");

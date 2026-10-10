@@ -832,6 +832,8 @@ namespace BetterAI
 
                 getImprovementEffectCityList(eImprovement, pManager, effectListScoped.Value);
 
+                BetterAIInfoImprovement pImprovementInfo = ((BetterAIInfoImprovement)(infos().improvement(eImprovement)));
+
                 using (builder.BeginScope(scopeType))
                 {
                     if (bName)
@@ -1214,6 +1216,19 @@ namespace BetterAI
                                 builder.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_IGNORES_ZOC", buildZOCLinkVariable()));
                             }
 
+
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect    START ###
+  ##############################################*/
+                            if (pImprovementInfo.meApplyEffectUnit != EffectUnitType.NONE)
+                            {
+                                builder.Add(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_HELP_EFFECTUNIT_FRIENDLY", buildEffectUnitLinkVariable(pImprovementInfo.meApplyEffectUnit)));
+                            }
+                            
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect      END ###
+  ##############################################*/
+
                             if (!(infos().improvement(eImprovement).mbTribe))
                             {
                                 int iValue = infos().improvement(eImprovement).miUnitTurns;
@@ -1498,7 +1513,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
   ##############################################*/
-                    BetterAIInfoImprovement pImprovementInfo = ((BetterAIInfoImprovement)(infos().improvement(eImprovement)));
+                    //BetterAIInfoImprovement pImprovementInfo = ((BetterAIInfoImprovement)(infos().improvement(eImprovement)));
 
                     if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
                     {

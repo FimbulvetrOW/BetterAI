@@ -135,8 +135,6 @@ namespace BetterAI
         //lines 1063-1085
         protected override int getRatingYieldRateCourt(RatingType eRating, YieldType eYield, int iValue, int iModifier, OpinionCharacterType eOpinionCharacter, Game pGame)
         {
-            //UnityEngine.Debug.Log("InfoHelpers.getRatingYieldRateCourt");
-
             if (iValue == 0)
             {
                 return 0;
@@ -176,13 +174,37 @@ namespace BetterAI
         //lines 1086-1089
         public override int getRatingYieldRateLeader(RatingType eRating, YieldType eYield, int iValue, OpinionCharacterType eOpinionCharacter, Game pGame)
         {
-            //UnityEngine.Debug.Log("InfoHelpers.improvementSpreadsBorders");
-
             return getRatingYieldRateCourt(eRating, eYield, iValue, 0, OpinionCharacterType.NONE, pGame);
         }
 /*####### Better Old World AI - Base DLL #######
  ### Leader yield preview fix           END ###
  ##############################################*/
+
+        protected override int getRatingYieldRateCouncil(int iRatingYield, YieldType eYield, int iValue, OpinionCharacterType eOpinionCharacter, Game pGame)
+        {
+            int iYield = iRatingYield;
+
+            if (iYield != 0)
+            {
+/*####### Better Old World AI - Base DLL #######
+  ### iTriangleOffsetCouncil           START ###
+  ##############################################*/
+                //iYield = modifyRating(iYield, iValue, mInfos.yield(eYield).miTriangleOffset, pGame);
+                iYield = modifyRating(iYield, iValue, ((BetterAIInfoYield)(mInfos.yield(eYield))).miTriangleOffsetCouncil, pGame);
+/*####### Better Old World AI - Base DLL #######
+  ### iTriangleOffsetCouncil             END ###
+  ##############################################*/
+
+                if (eOpinionCharacter != OpinionCharacterType.NONE)
+                {
+
+                    iYield = mInfos.utils().modify(iYield, (mInfos.opinionCharacter(eOpinionCharacter).miRateModifier * ((yieldWarning(eYield, iValue)) ? -1 : 1)), true);
+
+                }
+            }
+
+            return iYield;
+        }
 
 /*####### Better Old World AI - Base DLL #######
   ### Empty Sites Override             START ###

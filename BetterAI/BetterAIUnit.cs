@@ -185,6 +185,60 @@ namespace BetterAI
   ### Land Unit Water Movement           END ###
   ##############################################*/
 
+
+        public override void updateWaterControlTiles(List<Tile> aiWaterControlTiles, Tile pFromTile, TeamType eActiveTeam)
+        {
+            //using var profileScope = new UnityProfileScope("Unit.updateWaterControlTiles");
+
+            if (hasPlayer())
+            {
+                //flood-search adjacent tiles
+                using (var hashSetScope = CollectionCache.GetHashSetScoped<int>())
+                using (var queueScope = CollectionCache.GetArrayDequeScoped<int>())
+                {
+                    HashSet<int> visitedTiles = hashSetScope.Value;
+                    ArrayDeque<int> queuedTiles = queueScope.Value;
+
+                    //fix
+                    queuedTiles.AddBack(pFromTile.getID());
+                    visitedTiles.Add(pFromTile.getID());
+
+                    while (!queuedTiles.IsEmpty())
+                    {
+                        int iTileID = queuedTiles.RemoveFront();
+
+                        Tile pTile = game().tile(iTileID);
+
+                        if (pTile != null && pTile.isWater() && pTile.distanceTile(pFromTile) <= waterControl())
+                        {
+                            if (pTile.isVisible(eActiveTeam))
+                            {
+                                aiWaterControlTiles.Add(pTile);
+                            }
+
+                            //add adjacent tiles to search queue
+                            for (DirectionType eDirection = 0; eDirection < DirectionType.NUM_TYPES; eDirection++)
+                            {
+                                Tile pAdjacentTile = pTile.tileAdjacent(eDirection);
+                                if (pAdjacentTile != null)
+                                {
+                                    int iAdjacentID = pAdjacentTile.getID();
+
+                                    if (!visitedTiles.Contains(iAdjacentID))
+                                    {
+                                        queuedTiles.AddBack(iAdjacentID);
+                                        visitedTiles.Add(iAdjacentID);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+
 /*####### Better Old World AI - Base DLL #######
   ### No Family for Enlisted Units     START ###
   ##############################################*/
@@ -222,7 +276,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Improvement gives Unit Effect    START ###
   ##############################################*/
-                if (pTile.hasActiveImprovement())
+                if (pTile.hasActiveImprovement() && pTile.isFriendly(getTeam(), getTribe()))
                 {
                     BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(pTile.getActiveImprovement()));
                     EffectUnitType eImprovementEffectUnit = pImprovementInfo.meApplyEffectUnit;
@@ -1034,80 +1088,11 @@ namespace BetterAI
         }
 
         //lines 8432-8470
-        public override Tile getPushTile(Unit pUnit, Tile pFromTile, Tile pToTile)
-        {
-            DirectionType eDirection = pFromTile.getDirection(pToTile);
-
-            if (eDirection != DirectionType.NONE)
-            {
-                bool bPositive = (pFromTile.turnSeed() % 2 == 0);
-
-/*####### Better Old World AI - Base DLL #######
-  ### Push Tile: don't use bounce      START ###
-  ##############################################*/
-                //Tile pFirstTile = pToTile.tileAdjacent(eDirection);
-                //Tile pSecondTile = pToTile.tileAdjacent(infos().utils().wrapDirection(eDirection, ((bPositive) ? 1 : -1)));
-                //Tile pThirdTile = pToTile.tileAdjacent(infos().utils().wrapDirection(eDirection, ((bPositive) ? -1 : 1)));
-
-                //if ((pFirstTile != null) && pFirstTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
-                //{
-                //    return pFirstTile;
-                //}
-                //else if ((pSecondTile != null) && pSecondTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
-                //{
-                //    return pSecondTile;
-                //}
-                //else if ((pThirdTile != null) && pThirdTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
-                //{
-                //    return pThirdTile;
-                //}
-                //else
-                //{
-                //    Tile pBounceTile = pUnit.bounceTile(pAvoidTile: pFromTile, pIgnoreUnit: this);
-
-                //    if (pBounceTile != null)
-                //    {
-                //        if (pBounceTile.isTileAdjacent(pToTile))
-                //        {
-                //            return pBounceTile;
-                //        }
-                //    }
-                //}
-
-
-                Tile pPushTile = pToTile.tileAdjacent(eDirection);
-                if ((pPushTile != null && pPushTile != pFromTile) && pPushTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
-                {
-                    return pPushTile;
-                }
-                for (int i = 1; i < (int)DirectionType.NUM_TYPES / 2; i++)
-                {
-                    pPushTile = pToTile.tileAdjacent(infos().utils().wrapDirection(eDirection, ((bPositive) ? i : -i)));
-                    if ((pPushTile != null && pPushTile != pFromTile) && pPushTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
-                    {
-                        return pPushTile;
-                    }
-
-                    pPushTile = pToTile.tileAdjacent(infos().utils().wrapDirection(eDirection, ((bPositive) ? -i : i)));
-                    if ((pPushTile != null && pPushTile != pFromTile) && pPushTile.canUnitOccupy(pUnit, TeamType.NONE, true, true, true, false))
-                    {
-                        return pPushTile;
-                    }
-
-                    bPositive = !bPositive;
-                }
-/*####### Better Old World AI - Base DLL #######
-  ### Push Tile: don't use bounce        END ###
-  ##############################################*/
-
-            }
-            return null;
-        }
+        //getPushTile no longer uses bounce
 
 
         //lines 8904-9037
         //attackTile: Cities immune to critial no longer needed
-
 
 
 /*####### Better Old World AI - Base DLL #######
