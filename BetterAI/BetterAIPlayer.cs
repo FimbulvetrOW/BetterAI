@@ -90,7 +90,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Law: remaining Techs to research START ###
   ##############################################*/
-        public virtual void getUnlockTechCount(TechType eTech, ref int iCount, ref bool bInvalid)
+        public virtual void getUnlockTechCount(TechType eTech, ref HashSet<TechType> seRequiredTechs, ref bool bInvalid)
         {
             //UnityEngine.Debug.Log("Player.getUnlockTechCount");
 
@@ -99,12 +99,7 @@ namespace BetterAI
                 bInvalid = true;
                 return;
             }
-            if (isTechAcquired(eTech))
-            {
-                return;
-            }
 
-            iCount++;
             //in-hand || discard pile || draw pile
             if (isTechAvailable(eTech) || isTechPassed(eTech) || canMakeTechAvailable(eTech))
             {
@@ -114,9 +109,12 @@ namespace BetterAI
 
             for (TechType eLoopTech = 0; eLoopTech < infos().techsNum(); eLoopTech++)
             {
-                if (game().isTechPrereq(eTech, eLoopTech))
+                if (!isTechAcquired(eLoopTech) && game().isTechPrereq(eTech, eLoopTech))
                 {
-                    getUnlockTechCount(eTech, ref iCount, ref bInvalid);
+                    if (seRequiredTechs.Add(eLoopTech))
+                    {
+                        getUnlockTechCount(eLoopTech, ref seRequiredTechs, ref bInvalid);
+                    }
                 }
             }
 

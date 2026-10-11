@@ -1,22 +1,23 @@
-﻿using System;
-using System.Reflection;
+﻿using Mohawk.SystemCore;
+using Mohawk.UIInterfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using TenCrowns.AppCore;
+using TenCrowns.ClientCore;
 using TenCrowns.GameCore;
 using TenCrowns.GameCore.Text;
-using static TenCrowns.GameCore.Text.TextExtensions;
-using Constants = TenCrowns.GameCore.Constants;
-using TenCrowns.ClientCore;
-using Mohawk.SystemCore;
-using Mohawk.UIInterfaces;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Xml;
-using System.Text.RegularExpressions;
 using static BetterAI.BetterAIHelpText.CommaListVariableGenerator;
+using static TenCrowns.GameCore.Player;
+using static TenCrowns.GameCore.Text.TextExtensions;
+using Constants = TenCrowns.GameCore.Constants;
 
 namespace BetterAI
 {
@@ -7038,6 +7039,7 @@ namespace BetterAI
                                     
                                     bool bUnavailable = false;
                                     int iRemainingTechsToUnlockCount = 0;
+                                    int iRemainingScience = 0;
 
                                     if (pPlayer.isTechTrashed(eTechPrereq) || pPlayer.isTechLocked(eTechPrereq))
                                     {
@@ -7048,8 +7050,24 @@ namespace BetterAI
                                         if (!pPlayer.isTechAnyDeck(eTechPrereq))
                                         {
                                             //look for other techs
-                                            ((BetterAIPlayer)pPlayer).getUnlockTechCount(eTechPrereq, ref iRemainingTechsToUnlockCount, ref bUnavailable);
-                                            iRemainingTechsToUnlockCount--;
+                                            using (var hashSetScope = CollectionCache.GetHashSetScoped<TechType>())
+                                            {
+                                                HashSet<TechType> seRequiredTechs = hashSetScope.Value;
+
+                                                seRequiredTechs.Add(eTechPrereq);
+                                                ((BetterAIPlayer)pPlayer).getUnlockTechCount(eTechPrereq, ref seRequiredTechs, ref bUnavailable);
+
+                                                iRemainingTechsToUnlockCount = seRequiredTechs.Count - 1;
+
+                                                foreach (TechType eLoopTech in seRequiredTechs)
+                                                {
+                                                    iRemainingScience += pPlayer.getTechCostWhole(eLoopTech) - pPlayer.getTechProgress(eLoopTech);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            iRemainingScience = pPlayer.getTechCostWhole(eTechPrereq) - pPlayer.getTechProgress(eTechPrereq);
                                         }
                                     }
 
@@ -7062,24 +7080,24 @@ namespace BetterAI
                                     {
                                         if (pPlayer.getTechResearching() == eTechPrereq)
                                         {
-                                            extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_RESEARCHING");
+                                            extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_RESEARCHING", iRemainingScience);
                                         }
                                         else if (pPlayer.isTechAvailable(eTechPrereq))
                                         {
-                                            extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_IN_HAND");
+                                            extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_IN_HAND", iRemainingScience);
                                         }
                                         else if (pPlayer.canMakeTechAvailable(eTechPrereq))
                                         {
-                                            extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_DRAW_PILE");
+                                            extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_DRAW_PILE", iRemainingScience);
                                         }
                                         else // if (pPlayer.isTechPassed(eTechPrereq))
                                         {
-                                            extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_DISCARD_PILE");
+                                            extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_DISCARD_PILE", iRemainingScience);
                                         }
                                     }
                                     else // if(iRemainingTechsToUnlockCount > 0)
                                     {
-                                        extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_MORE_TECHS_REQUIRED", iRemainingTechsToUnlockCount);
+                                        extraText = TEXTVAR_TYPE("TEXT_HELPTEXT_TECH_MORE_TECHS_REQUIRED", iRemainingTechsToUnlockCount, iRemainingScience);
                                     }
 
                                     using (buildWarningTextScope(builder))
