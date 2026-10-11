@@ -127,6 +127,25 @@ namespace BetterAI
   ##############################################*/
 
 
+/*####### Better Old World AI - Base DLL #######
+  ### Border Reveal                    START ###
+  ##############################################*/
+        //public virtual int getBorderVisibility()
+        public virtual int getBorderReveal()
+        {
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_BORDER_REVEAL < 0)
+            {
+                return base.getBorderVisibility();
+            }
+            else
+            {
+                return ((BetterAIInfoGlobals)infos().Globals).BAI_BORDER_REVEAL;
+            }
+        }
+/*####### Better Old World AI - Base DLL #######
+  ### Border Reveal                      END ###
+  ##############################################*/
+
         //lines 8855-9323
         public override void changeEffectPlayerCount(EffectPlayerType eIndex, int iChange)
         {

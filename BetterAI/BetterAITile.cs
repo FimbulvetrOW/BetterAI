@@ -1281,6 +1281,228 @@ namespace BetterAI
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
 
+
+        public override bool setOwner(PlayerType eNewOwner, TribeType eNewTribe, int iNewCityTerritory, HashSet<NetworkRebuild> networkTiles = null, bool bUpdateOpinion = true)
+        {
+            //using var profileScope = new UnityProfileScope("Tile.setOwner");
+
+            if ((getOwner() == eNewOwner) && (getOwnerTribe() == eNewTribe) && (getCityTerritory() == iNewCityTerritory))
+            {
+                return false;
+            }
+
+            using var hiddenUnitsScoped = CollectionCache.GetHashSetScoped<int>();
+            using var tileUnits = CollectionCache.GetListScoped<int>();
+
+            foreach (int iUnitID in getUnits())
+            {
+                Unit pUnit = game().unit(iUnitID);
+                if (pUnit != null)
+                {
+                    tileUnits.Value.Add(iUnitID);
+                    if (pUnit.isHiddenNotTemp())
+                    {
+                        hiddenUnitsScoped.Value.Add(iUnitID);
+                    }
+                }
+            }
+
+            int iOldCityTerritory = getCityTerritory();
+            PlayerType eOldOwner = getOwner();
+
+            using var teamConnectionScoped = CollectionCache.GetHashSetScoped<TeamType>();
+            HashSet<TeamType> seOldTeamConnections = teamConnectionScoped.Value;
+            for (TeamType eLoopTeam = 0; eLoopTeam < game().getNumTeams(); ++eLoopTeam)
+            {
+                if (isTradeConnectionPossible(eLoopTeam))
+                {
+                    seOldTeamConnections.Add(eLoopTeam);
+                }
+            }
+
+            game().updateOccurrencesTileOwner(eNewOwner, this);
+
+            loadOwner(eNewOwner, eNewTribe, iNewCityTerritory);
+
+            if (hasCityTerritory())
+            {
+                for (PlayerType ePlayer = 0; ePlayer < game().getNumPlayers(); ++ePlayer)
+                {
+                    if (cityTerritory().hasAgentCharacter(ePlayer))
+                    {
+                        doTileReveal(game().player(ePlayer).getTeam(), ePlayer);
+                    }
+                }
+            }
+
+            if (isUrban() && (getOrigUrbanOwner() == PlayerType.NONE))
+            {
+                setOrigUrbanOwner(getOwner());
+            }
+
+            for (PlayerType ePlayer = 0; ePlayer < game().getNumPlayers(); ++ePlayer)
+            {
+                game().player(ePlayer).updatePings();
+            }
+
+            updateRevealedOwners();
+            updateRevealedCityTerritories();
+            updateRevealedOwnerTribes();
+
+            if (hasOwner())
+            {
+                clearHarvestTurn();
+
+                if (hasImprovement())
+                {
+                    if (improvement().mbRemoveBorder)
+                    {
+                        if (improvement().mbRemoveBonus)
+                        {
+                            using var tileTextScoped = CollectionCache.GetListScoped<TileText>();
+                            List<TileText> azTileTexts = tileTextScoped.Value;
+                            game().doTileTexts(mapBuilders => doImprovementBonus(mapBuilders, null, owner(), true), getID(), azTileTexts, ePlayer => game().player(ePlayer).getTeam() == getTeam());
+
+                            foreach (TileText zTileText in azTileTexts)
+                            {
+                                game().sendTileText(zTileText);
+                            }
+                        }
+
+                        clearImprovement();
+                    }
+                }
+            }
+
+            if (hasImprovement() && getImprovementBuildTurnsLeft() > 0)
+            {
+                bool bClearImprovement = true;
+                foreach (int iUnitID in getUnits())
+                {
+                    Unit pUnit = game().unit(iUnitID);
+                    if (pUnit != null && pUnit.isImprovingTile())
+                    {
+                        if (improvement().mbTerritoryOnly ? isFriendly(pUnit.getTeam(), pUnit.getTribe()) : isNeutralOrFriendly(pUnit.getTeam(), pUnit.getTribe()))
+                        {
+                            bClearImprovement = false;
+                            break;
+                        }
+                    }
+                }
+                if (bClearImprovement)
+                {
+                    clearImprovement();
+                }
+            }
+
+            if (hasCityTerritory())
+            {
+                for (ReligionType eLoopReligion = 0; eLoopReligion < infos().religionsNum(); eLoopReligion++)
+                {
+                    if (isReligion(eLoopReligion))
+                    {
+                        cityTerritory().spreadReligion(eLoopReligion);
+                    }
+                }
+            }
+
+            if (hasResource())
+            {
+                if (eOldOwner != PlayerType.NONE)
+                {
+                    game().player(eOldOwner).testLuxuryCount(getResource());
+                }
+
+                if (hasOwner())
+                {
+                    owner().testLuxuryCount(getResource());
+                }
+            }
+
+            using (var viewTileListScoped = CollectionCache.GetHashSetScoped<NetworkRebuild>())
+            {
+                HashSet<NetworkRebuild> viewTiles = viewTileListScoped.Value;
+
+                for (TeamType eLoopTeam = 0; eLoopTeam < game().getNumTeams(); ++eLoopTeam)
+                {
+                    bool bOldConnection = seOldTeamConnections.Contains(eLoopTeam);
+                    if (isRevealed(eLoopTeam) && bOldConnection != isTradeConnectionPossible(eLoopTeam))
+                    {
+                        viewTiles.Add(new NetworkRebuild(getID(), eLoopTeam, !bOldConnection));
+                    }
+                }
+
+                if (hasOwner())
+                {
+                    using (var tileListScoped = CollectionCache.GetListScoped<int>())
+                    {
+/*####### Better Old World AI - Base DLL #######
+  ### Border Reveal                    START ###
+  ##############################################*/
+                        //getViewTiles(owner().getBorderVisibility(), true, tileListScoped.Value);
+                        getViewTiles(((BetterAIPlayer)owner()).getBorderReveal(), bForReveal: true, tileListScoped.Value);
+/*####### Better Old World AI - Base DLL #######
+  ### Border Reveal                      END ###
+  ##############################################*/
+
+                        foreach (int iRangeTile in tileListScoped.Value)
+                        {
+                            game().tileBoundary(iRangeTile).makeRevealed(getTeam(), getOwner(), networkTiles: viewTiles);
+                        }
+                    }
+                }
+
+                if (networkTiles == null)
+                {
+                    game().tradeNetworkSolver().buildTradeNetwork(viewTiles);
+                }
+                else
+                {
+                    networkTiles.AddRange(viewTiles);
+                }
+            }
+
+            foreach (int iUnitID in tileUnits.Value)
+            {
+                Unit pUnit = game().unit(iUnitID);
+                if (pUnit != null)
+                {
+                    pUnit.updateTempHidden(hiddenUnitsScoped.Value.Contains(iUnitID));
+                }
+            }
+
+            for (TeamType eLoopTeam = 0; eLoopTeam < game().getNumTeams(); eLoopTeam++)
+            {
+                if (isVisible(eLoopTeam))
+                {
+                    if (hasOwner() && eLoopTeam != getTeam())
+                    {
+                        game().doTeamContactBoth(eLoopTeam, getTeam(), this, eFromPlayer: getOwner());
+                    }
+                }
+            }
+
+            if (bUpdateOpinion && iOldCityTerritory != iNewCityTerritory)
+            {
+                City pOldCityTerritory = game().city(iOldCityTerritory);
+                if (pOldCityTerritory != null)
+                {
+                    pOldCityTerritory.updateReligionOpinionAll();
+                    pOldCityTerritory.updateFamilyOpinion();
+                }
+
+                City pNewCityTerritory = game().city(iNewCityTerritory);
+                if (pNewCityTerritory != null)
+                {
+                    pNewCityTerritory.updateReligionOpinionAll();
+                    pNewCityTerritory.updateFamilyOpinion();
+                }
+            }
+            return true;
+        }
+
+
+
 /*####### Better Old World AI - Base DLL #######
   ### No immediate unit from improvement START #
   ##############################################*/

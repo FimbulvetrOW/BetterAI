@@ -918,15 +918,16 @@ namespace BetterAI
 
                                 if (eTileResource != ResourceType.NONE)
                                 {
-                                    if (eTileImprovement == ImprovementType.NONE || Infos.Helpers.isImprovementResourceValid(eTileImprovement, eTileResource))
+                                    if (eTileImprovement != ImprovementType.NONE && Infos.Helpers.isImprovementResourceValid(eTileImprovement, eTileResource))
                                     {
+                                        //skip resource tiles with fitting improvement
                                         continue;
                                     }
 
                                     cityResourcesScope.Value.Add(eTileResource);
                                 }
 
-                                if (eTileImprovement == ImprovementType.NONE || eTileResource != ResourceType.NONE)
+                                if (eTileImprovement == ImprovementType.NONE) //unimproved tiles only?
                                 {
                                     for (int i = remainingTerrainTargetScope.Value.Count - 1; i >= 0; i--)
                                     {
