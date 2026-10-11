@@ -1640,6 +1640,7 @@ namespace BetterAI
         public int BAI_ALT_ROAD_BUILD_OVERLAY = 0;
         public int BAI_NO_DELAY = 0;
         public int BAI_BORDER_REVEAL = -1;
+        public int BAI_FLANKING_DISABLES_COUNTERATTACK = 1;
 
         public int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 0;
         public int AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = 0;
@@ -1704,6 +1705,7 @@ namespace BetterAI
             BAI_ALT_ROAD_BUILD_OVERLAY = infos.getGlobalInt("BAI_ALT_ROAD_BUILD_OVERLAY");
             BAI_NO_DELAY = infos.getGlobalInt("BAI_NO_DELAY");
             BAI_BORDER_REVEAL = infos.getGlobalInt("BAI_BORDER_REVEAL");
+            BAI_FLANKING_DISABLES_COUNTERATTACK = infos.getGlobalInt("BAI_FLANKING_DISABLES_COUNTERATTACK");
 
             AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");
             AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_CIVICS_CITY_SPECIALIZATION_MODIFIER");

@@ -1179,6 +1179,47 @@ namespace BetterAI
             return Math.Min(iValue, (getHP() - 1));
         }
 
+
+        protected override bool canCounterattack(Tile pFromTile, Unit pToUnit, Tile pToTile, TeamType eVisibilityTeam)
+        {
+            if (!canDamage())
+            {
+                return false;
+            }
+            if (info().mbUnlimber)
+            {
+                if (!isUnlimbered())
+                {
+                    return false;
+                }
+                if (!at(pFromTile))
+                {
+                    return false;
+                }
+            }
+            if (getCooldown() == infos().Globals.STUNNED_COOLDOWN)
+            {
+                return false;
+            }
+            if (!canTargetTile(pFromTile, pToTile))
+            {
+                return false;
+            }
+
+/*####### Better Old World AI - Base DLL #######
+  ### Flanking/Counterattack           START ###
+  ##############################################*/
+            //if (pToTile.flankingAttack(pToUnit, pFromTile, eVisibilityTeam))
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_FLANKING_DISABLES_COUNTERATTACK > 0 && pToTile.flankingAttack(pToUnit, pFromTile, eVisibilityTeam))
+/*####### Better Old World AI - Base DLL #######
+  ### Flanking/Counterattack           START ###
+  ##############################################*/
+            {
+                return false;
+            }
+            return true;
+        }
+
         //lines 9063-9089
         public override bool canPillage(Tile pTile, Player pActingPlayer, bool bTestEnabled = true)
         {
