@@ -155,6 +155,7 @@ namespace BetterAI
   ### Land Unit Water Movement         START ###
   ##############################################*/
         //this whole DirtyType and NetworkData part is still opague to me, so I'm hoping this works without
+        //ToDo: do this with DirtyType and NetworkData
 
         public bool mbAmphibiousEmbark = false;
         public int miAmphibiousEmbarkCount = 0;
@@ -264,6 +265,118 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### No Family for Enlisted Units       END ###
   ##############################################*/
+
+
+        //copied for stacktrace log, no changes
+        public override void changeEffectUnit(EffectUnitType eKey, SourceEffectUnitType eSource, int iChange, bool bForce = false)
+        {
+            if (iChange != 0 && eKey != EffectUnitType.NONE)
+            {
+                if (bForce || isEffectUnitValid(eKey))
+                {
+                    int iAnchoredTurns = getAnchoredTurns();
+
+                    if (getTileID() != -1) // gets called from init method
+                    {
+                        if (infos().effectUnit(eKey).miVisionExtra != 0)
+                        {
+                            resetVisibility(-1);
+                        }
+
+                        if (infos().effectUnit(eKey).miWaterControlExtra != 0)
+                        {
+                            setAnchoredTurns(0);
+                        }
+                    }
+
+                    updateLastData(DirtyType.mdEffectUnits, mpCurrentData.mdEffectUnits, ref mpLastUpdateData.mdEffectUnits);
+                    changeEffectUnitDictionary(eKey, iChange);
+                    MohawkAssert.Assert(getEffectUnitCount(eKey) >= 0, "negative effectUnit");
+
+                    //stacktrace
+                    if (getEffectUnitCount(eKey) < 0)
+                    {
+                        string effectUnitDescr = infos().effectUnit(eKey).mzType;
+                        if (eSource != SourceEffectUnitType.NONE)
+                        {
+                            effectUnitDescr += " [Source: "+((int)eSource).ToStringCached()+"]";
+                        }
+                        UnityEngine.Debug.Log(effectUnitDescr);
+                        UnityEngine.Debug.Log(System.Environment.StackTrace);
+                    }
+
+                    updateLastData(DirtyType.mdEffectUnitSources, mpCurrentData.mdEffectUnitSources, ref mpLastUpdateData.mdEffectUnitSources);
+                    (EffectUnitType, SourceEffectUnitType) kKey = (eKey, eSource);
+                    if (!mpCurrentData.mdEffectUnitSources.TryGetValue(kKey, out int iNumSources))
+                    {
+                        iNumSources = 0;
+                    }
+                    mpCurrentData.mdEffectUnitSources[kKey] = iNumSources + iChange;
+                    MohawkAssert.Assert(iNumSources + iChange >= 0, "negative effectUnit source count");
+
+                    changeRoadMovementModifier(infos().effectUnit(eKey).miRoadMovementModifier * iChange);
+
+                    if (infos().effectUnit(eKey).mbZOC)
+                    {
+                        setZocCount(getZocCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbIgnoreZOC)
+                    {
+                        setIgnoreZocCount(getIgnoreZocCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbFamilyTerritoryOnly)
+                    {
+                        setFamilyTerritoryOnlyCount(getFamilyTerritoryOnlyCount() + iChange);
+                    }
+                    foreach (UnitTraitType eUnitTrait in infos().effectUnit(eKey).maeUnitTraitZOC)
+                    {
+                        changeUnitTraitZoc(eUnitTrait, iChange);
+                    }
+                    foreach (HeightType eHeight in infos().effectUnit(eKey).maeIgnoreHeightCost)
+                    {
+                        changeHeightIgnoreCount(eHeight, iChange);
+                    }
+                    foreach (VegetationType eVegetation in infos().effectUnit(eKey).maeIgnoreVegetationCost)
+                    {
+                        changeVegetationIgnoreCount(eVegetation, iChange);
+                    }
+
+                    if (!hasMoved())
+                    {
+                        changeEffectUnit(infos().effectUnit(eKey).meNoMoveEffectUnit, SourceEffectUnitType.MOVES, iChange, bForce);
+                    }
+
+                    if (getTileID() != -1) // gets called from init method
+                    {
+                        if (infos().effectUnit(eKey).miVisionExtra != 0)
+                        {
+                            resetVisibility(1);
+                        }
+
+                        if (infos().effectUnit(eKey).miRevealExtra != 0)
+                        {
+                            doTileReveal(tile(), player());
+                        }
+
+                        if (infos().effectUnit(eKey).miWaterControlExtra != 0)
+                        {
+                            setAnchoredTurns(iAnchoredTurns);
+                        }
+                    }
+
+                    if (!game().IsInitializing) // we take care of adjacent effects after initialization
+                    {
+                        changeAdjacentEffectUnitOthers(infos().effectUnit(eKey).meAdjacentEffectUnit, iChange);
+                    }
+
+                    foreach (EffectUnitType eEffectUnitUnlock in infos().effectUnit(eKey).maeEffectUnitUnlock)
+                    {
+                        changeEffectUnit(eEffectUnitUnlock, eSource, iChange, bForce);
+                    }
+                    changeEffectUnit(infos().effectUnit(eKey).meAdjacentEffectUnit, eSource, iChange, bForce); // adjacent effect affects us too
+                }
+            }
+        }
 
         public override void changeAdjacentEffectUnitUs(Tile pTile, int iChange, bool bPreview = false)
         {
@@ -1098,7 +1211,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Attack Heal                      START ###
   ##############################################*/
-        public virtual int getAttackHeal(Tile pFromTile, Tile pToTile)
+        public virtual int getAttackHeal(Tile pFromTile, Tile pToTile, Unit pToUnit)
         {
             int iValue = 0;
             if (pFromTile != null && pToTile != null)
@@ -1107,7 +1220,10 @@ namespace BetterAI
                 {
                     foreach (EffectUnitType eLoopEffectUnit in getEffectUnits())
                     {
-                        iValue += ((BetterAIInfoEffectUnit)infos().effectUnit(eLoopEffectUnit)).miHealAttack;
+                        if (((BetterAIInfoEffectUnit)infos().effectUnit(eLoopEffectUnit)).miHealAttack != 0 && !(pToUnit.isImmuneEffectUnit(eLoopEffectUnit)))
+                        {
+                            iValue += ((BetterAIInfoEffectUnit)infos().effectUnit(eLoopEffectUnit)).miHealAttack;
+                        }
                     }
                 }
             }
@@ -1163,7 +1279,7 @@ namespace BetterAI
                     //not while routing, only for melee
                     else
                     {
-                        int iAttackHeal = getAttackHeal(pFromTile, pToTile);
+                        int iAttackHeal = getAttackHeal(pFromTile, pToTile, pToUnit);
                         if (iAttackHeal != 0)
                         {
                             iValue -= iAttackHeal;

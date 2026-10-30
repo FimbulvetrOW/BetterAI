@@ -13,12 +13,6 @@ using TenCrowns.GameCore;
 using TenCrowns.GameCore.Text;
 using UnityEngine;
 using UnityEngine.UI;
-using static BetterAI.BetterAIInfos;
-using static BetterAI.BetterAIUnit;
-using static TenCrowns.ClientCore.ClientUI;
-using static TenCrowns.GameCore.NoiseGenerator;
-using static TenCrowns.GameCore.Text.TextExtensions;
-using static TenCrowns.GameCore.Unit;
 using Constants = TenCrowns.GameCore.Constants;
 using Enum = System.Enum;
 
@@ -37,6 +31,7 @@ namespace BetterAI
 
             protected virtual int AI_CITY_GOVERNOR_VALUE => ((BetterAIInfoGlobals)infos.Globals).AI_CITY_GOVERNOR_VALUE;
             protected virtual int AI_DEATHTRAIT_PROB_EVAL_DEPTH => ((BetterAIInfoGlobals)infos.Globals).AI_DEATHTRAIT_PROB_EVAL_DEPTH;
+            protected virtual int AI_MAX_NUM_DISCIPLES_PER_HUNDRED_WORKERS => ((BetterAIInfoGlobals)infos.Globals).AI_MAX_NUM_DISCIPLES_PER_HUNDRED_WORKERS;
 
             [SkipCheckSaveConsistency] protected BetterAIPlayerCache BAI_mpAICache = new BetterAIPlayerCache();
 
@@ -212,14 +207,19 @@ namespace BetterAI
                 return infos.utils().modify(iValue, iValueModifier);
             }
 
-            //lines 4294-4322
             public virtual bool cityNeedsGrowth(City pCity)
             {
                 if (getNeedSettlers(pCity) > 0)
-
                 {
                     return true;
                 }
+
+                return cityNeedsPopulation(pCity);
+            }
+
+            //lines 4294-4322
+            public virtual bool cityNeedsPopulation(City pCity)
+            {
 
                 foreach (GoalData pGoalData in ((BetterAIPlayer)player).getGoalDataList())
                 {
@@ -702,6 +702,8 @@ namespace BetterAI
 
                         //if (isExpandPriority())
                         // isExpandPriority is global, we should look at how many Settlers we need right here
+
+                        //some code duplication here, see cityNeedsGrowth
                         bool bNeedsGrowth = false;
                         if (getNeedSettlers(pCity) > 0 || pCity.isYieldBuildCurrent(eYield))
 
@@ -1330,7 +1332,7 @@ namespace BetterAI
                                         }
                                         else
                                         {
-                                            if (((BetterAIUnitAI)pUnit.AI).isClosestCity(pCity))
+                                            if (((BetterAIUnit.BetterAIUnitAI)(pUnit.AI)).isClosestCity(pCity))
                                             {
                                                 iOrders += 2;
                                             }
@@ -1494,6 +1496,133 @@ namespace BetterAI
 
                 return true;
             }
+
+
+/*####### Better Old World AI - Base DLL #######
+  ### reducing Disciples               START ###
+  ##############################################*/
+            protected override long calculateUnitValue(UnitType eUnit)
+            {
+                long iValue = base.calculateUnitValue(eUnit);
+
+                if (infos.Helpers.isWorker(eUnit) != infos.unit(eUnit).mbBuild) //only true for disciples with no mbBuild but meBuildReligion != ReligionType.NONE
+                {
+                    iValue -= AI_UNIT_WORKER_VALUE;
+
+                    long iDiscipleValue = AI_UNIT_WORKER_VALUE / (2 + (infos.unit(eUnit).meBuildReligion != player.getStateReligion() ? 2 : 0) );
+
+                    iValue += iDiscipleValue;
+                }
+
+                return iValue;
+            }
+
+            protected virtual int getNumWorkerUnits(FamilyType eFamily)
+            {
+                int iUnitNum = 0;
+
+                foreach (UnitType eWorkerUnit in ((BetterAIInfoGlobals)infos.Globals).WORKER_UNITS)
+                {
+                    iUnitNum += getCurrentNumUnits(eWorkerUnit, eFamily);
+                }
+
+                return iUnitNum;
+            }
+            protected virtual int getNumThisReligionDiscipleUnits(FamilyType eFamily, ReligionType eReligion)
+            {
+                int iUnitNum = 0;
+
+                foreach (UnitType eDiscipleUnit in ((BetterAIInfoGlobals)infos.Globals).DISCIPLE_UNITS)
+                {
+                    if (infos.unit(eDiscipleUnit).meBuildReligion == eReligion)
+                    {
+                        iUnitNum += getCurrentNumUnits(eDiscipleUnit, eFamily);
+                    }
+                }
+
+                return iUnitNum;
+            }
+            protected virtual int getNumOtherReligionsDiscipleUnits(FamilyType eFamily, ReligionType eExcludeReligion)
+            {
+                int iUnitNum = 0;
+
+                foreach (UnitType eDiscipleUnit in ((BetterAIInfoGlobals)infos.Globals).DISCIPLE_UNITS)
+                {
+                    if (infos.unit(eDiscipleUnit).meBuildReligion != eExcludeReligion)
+                    {
+                        iUnitNum += getCurrentNumUnits(eDiscipleUnit, eFamily);
+                    }
+                }
+
+                return iUnitNum;
+            }
+
+
+            protected override int calculateTargetUnitNumber(UnitType eUnit, FamilyType eFamily)
+            {
+                //using var profileScope = new UnityProfileScope("PlayerAI.calculateTargetUnitNumber");
+
+                int iWorkerTarget = 0;
+                int iSpreadMax = 0;
+                ReligionType eUnitReligion = ReligionType.NONE;
+
+                if (player != null)
+                {
+                    int iNumFamilyCities = player.countFamilyCities(eFamily);
+
+                    if (infos.unit(eUnit).mbBuild)
+                    {
+                        if (iNumFamilyCities > 0)
+                        {
+                            iWorkerTarget += Math.Max(1, Math.Min(AI_MAX_NUM_WORKERS_PER_HUNDRED_CITIES * iNumFamilyCities / 100,
+                                AI_MAX_NUM_WORKERS_PER_HUNDRED_ORDERS * player.calculateYield(infos.Globals.ORDERS_YIELD) * iNumFamilyCities / 100 / getCities().Count));
+                        }
+                    }
+                    //if (infos.unit(eUnit).meRequiresReligion != ReligionType.NONE)
+                    if (infos.unit(eUnit).meBuildReligion != ReligionType.NONE)
+                    {
+                        eUnitReligion = infos.unit(eUnit).meBuildReligion;
+                        int iNumFamilyReligionCities = player.countReligionCities(infos.unit(eUnit).meBuildReligion, eFamily);
+
+                        if (iNumFamilyReligionCities > 0)
+                        {
+                            //return Math.Max(1, Math.Min(AI_MAX_NUM_DISCIPLES_PER_HUNDRED_CITIES * iNumFamilyCities / 100,
+                            //    AI_MAX_NUM_DISCIPLES_PER_HUNDRED_ORDERS * player.calculateYield(infos.Globals.ORDERS_YIELD) * iNumFamilyCities / 100 / player.countReligionCities(infos.unit(eUnit).meRequiresReligion)));
+
+                            iWorkerTarget += Math.Max(1, Math.Min(AI_MAX_NUM_DISCIPLES_PER_HUNDRED_CITIES * iNumFamilyReligionCities / 100,
+                                Math.Min(AI_MAX_NUM_DISCIPLES_PER_HUNDRED_ORDERS * player.calculateYield(infos.Globals.ORDERS_YIELD) * iNumFamilyReligionCities / 100 / player.getNumCities(),
+                                getNumWorkerUnits(eFamily) * AI_MAX_NUM_DISCIPLES_PER_HUNDRED_WORKERS / 100)));
+                        }
+
+                    }
+
+                    ReligionType eSpreadReligion = infos.Helpers.getUnitReligion(eUnit);
+                    if (eSpreadReligion != ReligionType.NONE)
+                    {
+                        eUnitReligion = eSpreadReligion;
+                        iSpreadMax = player.getNumCities() - player.countReligionCities(eSpreadReligion);
+                    }
+
+                    if (eUnitReligion == ReligionType.NONE)
+                    {
+                        return iWorkerTarget;
+                    }
+                    else if (eUnitReligion == player.getStateReligion())
+                    {
+                        return Math.Max(Math.Max(iWorkerTarget, iSpreadMax), iWorkerTarget + iSpreadMax - getNumOtherReligionsDiscipleUnits(eFamily, eExcludeReligion: eUnitReligion));
+                    }
+                    else
+                    {
+                        //less than half for non-state religions
+                        return Math.Max(1, (Math.Max(iWorkerTarget, iSpreadMax + 1 / 2) - (getNumOtherReligionsDiscipleUnits(eFamily, eExcludeReligion: eUnitReligion) / 2)) / 2);
+                    }
+
+                }
+                return 0;
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### reducing Disciples                 END ###
+  ##############################################*/
 
             public virtual void getCityWaterUnitAreas(UnitType eUnit, City pCity, HashSet<int> siCityAreas)
             {
@@ -1870,6 +1999,13 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal   START ###
   ##############################################*/
+                EffectUnitType eApplyEffectUnit = pEffectUnitInfo.mzAttackApplyEffectUnitTurns.Item1;
+                if (eApplyEffectUnit != EffectUnitType.NONE && pEffectUnitInfo.bAIIgnoreApplyValue)
+                {
+                    //iValue -= calculateEffectUnitValue(eApplyEffectUnit, UnitType.NONE, false) * pEffectUnitInfo.mzAttackApplyEffectUnitTurns.Item2 / AI_TURNS_BETWEEN_KILLS;
+                    iValue += calculateEffectUnitValue(eApplyEffectUnit, UnitType.NONE, false) * pEffectUnitInfo.mzAttackApplyEffectUnitTurns.Item2 / AI_TURNS_BETWEEN_KILLS;
+                }
+                
                 iValue += (pEffectUnitInfo.miHealAttack * AI_UNIT_HEAL_VALUE * 5 / 300); //less than healAlways, more than Heal
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal     END ###
@@ -1884,50 +2020,348 @@ namespace BetterAI
             {
                 //UnityEngine.Debug.Log("PlayerAI.productionCostValue");
 
+                //this was just wrong, there is no true value is cityyield, when comparing production item only looking at what doesn't go into stockpile is fine
+                //but doing something with production instead of the yield going to stockpile is good, so no need to reduce value by this number
+                //unless I want to build growth things in cities that already have a lot of citizens
+
+                //production costs are whole
                 long iValue = 0;
-                iCost *= Constants.YIELDS_MULTIPLIER; //production costs are whole
-                bool bNeedsGrowth = cityNeedsGrowth(pCity);
-
-                int iCurrentCivicsYield = pCity.calculateCurrentYield(infos.Globals.CIVICS_YIELD, bTestBuild: false, bAccountForCurrentBuild: false); 
-                int iCurrentTrainingYield = pCity.calculateCurrentYield(infos.Globals.TRAINING_YIELD, bTestBuild: false, bAccountForCurrentBuild: false);
-                int iCurrentGrowthYield = pCity.calculateCurrentYield(infos.Globals.GROWTH_YIELD, bTestBuild: false, bAccountForCurrentBuild: false);
-
-                int iEquivalentCivicsYield;
-                int iEquivalentTrainingYield;
-                int iEquivalentGrowthYield;
-
+                bool bNeedsPop = cityNeedsPopulation(pCity);
                 if (eYield == infos.Globals.GROWTH_YIELD)
                 {
-                    iEquivalentCivicsYield = (iCost * iCurrentCivicsYield) / iCurrentGrowthYield;
-                    iEquivalentTrainingYield = (iCost * iCurrentTrainingYield) / iCurrentGrowthYield;
-                    iEquivalentGrowthYield = iCost;
-                    iValue += iEquivalentGrowthYield * Math.Max(0, cityYieldValue(infos.Globals.GROWTH_YIELD, pCity));
+                    iValue += iCost * cityYieldValue(infos.Globals.GROWTH_YIELD, pCity);
+                    if (bNeedsPop)
+                    {
+                        iValue += iCost * cityYieldValue(infos.Globals.GROWTH_YIELD, pCity);
+                    }
+                    else
+                    {
+                        iValue += iCost * (citizenValue(pCity, false) / pCity.getYieldThresholdWhole(infos.Globals.GROWTH_YIELD));
+                    }
                 }
                 else
                 {
-                    if (eYield == infos.Globals.CIVICS_YIELD)
-                    {
-                        iEquivalentTrainingYield = (iCost * iCurrentTrainingYield) / iCurrentCivicsYield;
-                        iEquivalentGrowthYield = (iCost * iCurrentGrowthYield) / iCurrentCivicsYield;
-                        iEquivalentCivicsYield = iCost;
-                        iValue -= yieldValue(infos.Globals.TRAINING_YIELD);
-                    }
-                    else if (eYield == infos.Globals.TRAINING_YIELD)
-                    {
-                        iEquivalentCivicsYield = (iCost * iCurrentCivicsYield) / iCurrentTrainingYield;
-                        iEquivalentGrowthYield = (iCost * iCurrentGrowthYield) / iCurrentTrainingYield;
-                        iEquivalentTrainingYield = iCost;
-                        iValue -= yieldValue(infos.Globals.CIVICS_YIELD);
-                    }
-                    else return (long)0;
-
-                    iValue += iEquivalentGrowthYield * Math.Max(cityYieldValue(infos.Globals.GROWTH_YIELD, pCity), (bNeedsGrowth ? 0 : -1 * (citizenValue(pCity, false) / pCity.getYieldThresholdWhole(infos.Globals.GROWTH_YIELD))));
+                    iValue += iCost * yieldValue(eYield);
                 }
 
-                iValue += iEquivalentCivicsYield * cityYieldValue(infos.Globals.CIVICS_YIELD, pCity);
-                iValue += iEquivalentTrainingYield * cityYieldValue(infos.Globals.TRAINING_YIELD, pCity);
+                return iValue; //for values we actually need whole numbers, so no change necessary
+            }
 
-                return (iValue / Constants.YIELDS_MULTIPLIER);  //.. and for values we actually need whole numbers
+            protected virtual long getUnitUnlockValue(UnitType eUnit, City pCity, long iUnitValue, long iExistingUnitValue)
+            {
+                if (eUnit == UnitType.NONE)
+                {
+                    //UnityEngine.Debug.Log("getUnitUnlockValue: No unit");
+                    return (long)0;
+                }
+                if (iUnitValue > iExistingUnitValue)
+                {
+                    int iMod = cityYieldSpecializationModifier(pCity, infos.unit(eUnit).meProductionType);
+                    long iDiffValue = (100 * iExistingUnitValue) / iUnitValue;   // < 100 (existing value in % of unlocked value)
+                    iDiffValue *= iDiffValue;                                    // < 10000 (^2)
+                    iDiffValue *= iDiffValue;                                    // < 100000000 (^4)
+                    iDiffValue /= 1000000;                                       // < 100 (%^4: example existing is 67% of new, then iDiffValue = 67%^4 = 20%)
+                    iDiffValue = (100 - iDiffValue) * iUnitValue * (100 + iMod); // < 100 * iBestUnitValue * >=100
+                    iDiffValue /= 100;                                           // ~ 100 * iBestUnitValue
+                    return (iDiffValue * AI_YIELD_TURNS * pCity.calculateModifiedYield(infos.unit(eUnit).meProductionType)) / (player.getUnitBuildCost(eUnit, pCity) * Constants.YIELDS_MULTIPLIER * 100);
+                }
+                else return (long)0;
+            }
+
+            protected virtual long ImprovementUnitValue(Tile pTile, City pCity, ImprovementType eImprovement, bool bRemove, bool bPrereq = true, bool bReligious = true, bool bSpawn = true)
+            {
+                BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos.improvement(eImprovement);
+                long iValue = 0;
+
+                if (bPrereq)
+                {
+                    if (pCity != null && pCity.getImprovementCount(eImprovement) <= (3 + (bRemove ? 1 : 0)))
+                    {
+                        long iBestWaterUnitValue = 0;
+                        long iBestExistingWaterUnitValue = 1;
+
+                        long iBestSettlerUnitValue = 0;
+                        long iBestExistingSettlerUnitValue = 1;
+
+                        long iBestWorkerUnitValue = 0;
+                        long iBestExistingWorkerUnitValue = 1;
+
+                        long iBestDiscipleUnitValue = 0;
+                        long iBestExistingDiscipleUnitValue = 1;
+
+                        long iBestScoutUnitValue = 0;
+                        long iBestExistingScoutUnitValue = 1;
+
+                        long iBestMilitaryUnitValue = 0;
+                        long iBestExistingMilitaryUnitValue = 1;
+
+                        long iBestRangedUnitValue = 0;
+                        long iBestExistingRangedUnitValue = 1;
+
+                        long iBestMeleeUnitValue = 0;
+                        long iBestExistingMeleeUnitValue = 1;
+
+                        UnitType eBestWaterUnit = UnitType.NONE;
+                        UnitType eBestSettlerUnit = UnitType.NONE;
+                        UnitType eBestWorkerUnit = UnitType.NONE;
+                        UnitType eBestDiscipleUnit = UnitType.NONE;
+                        UnitType eBestScoutUnit = UnitType.NONE;
+                        UnitType eBestMilitaryUnit = UnitType.NONE;
+                        UnitType eBestRangedUnit = UnitType.NONE;
+                        UnitType eBestMeleeUnit = UnitType.NONE;
+                        for (UnitType eLoopUnit = 0; eLoopUnit < infos.unitsNum(); ++eLoopUnit)
+                        {
+                            BetterAIInfoUnit pUnitInfo = (BetterAIInfoUnit)infos.unit(eLoopUnit);
+
+                            if ((bReligious || pUnitInfo.meRequiresReligion == ReligionType.NONE) && ((BetterAIPlayer)player).canEventuallyBuildUnit(eLoopUnit))
+                            {
+                                if (pCity.canBuildUnit(eLoopUnit, bBuyGoods: true, bTestEnabled: true, bTestGoods: false))
+                                {
+                                    using (var areasScoped = CollectionCache.GetHashSetScoped<int>())
+                                    {
+                                        if (pUnitInfo.mbWater)
+                                        {
+                                            pCity.getSaltWaterAreas(areasScoped.Value);
+                                        }
+                                        else
+                                        {
+                                            areasScoped.Value.Add(-1);
+                                        }
+                                        foreach (int iAreaID in areasScoped.Value)
+                                        {
+                                            long iUnitValue = getUnitBuildValue(eLoopUnit, pCity, iAreaID);
+                                            if (iAreaID == -1) //land
+                                            {
+                                                if (pUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.CIVILIAN])
+                                                {
+                                                    if (pUnitInfo.mbFound) //Settler
+                                                    {
+                                                        if (iUnitValue > iBestExistingSettlerUnitValue)
+                                                        {
+                                                            iBestExistingSettlerUnitValue = iUnitValue;
+                                                        }
+                                                    }
+                                                    else if (pUnitInfo.mbBuild) //Worker
+                                                    {
+                                                        if (iUnitValue > iBestExistingWorkerUnitValue)
+                                                        {
+                                                            iBestExistingWorkerUnitValue = iUnitValue;
+                                                        }
+                                                    }
+                                                    else if (pUnitInfo.meBuildReligion != ReligionType.NONE) //Disciple
+                                                    {
+                                                        if (iUnitValue > iBestExistingDiscipleUnitValue)
+                                                        {
+                                                            iBestExistingDiscipleUnitValue = iUnitValue;
+                                                        }
+                                                    }
+                                                    else if (pUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.SCOUT]) //Scout
+                                                    {
+                                                        if (iUnitValue > iBestExistingScoutUnitValue)
+                                                        {
+                                                            iBestExistingScoutUnitValue = iUnitValue;
+                                                        }
+                                                    }
+                                                }
+                                                else //Military
+                                                {
+                                                    if (iUnitValue > iBestExistingMilitaryUnitValue)
+                                                    {
+                                                        iBestExistingMilitaryUnitValue = iUnitValue;
+                                                    }
+
+                                                    if (pUnitInfo.mbMelee) //Melee
+                                                    {
+                                                        if (iUnitValue > iBestExistingMeleeUnitValue)
+                                                        {
+                                                            iBestExistingMeleeUnitValue = iUnitValue;
+                                                        }
+                                                    }
+                                                    else //all Ranged
+                                                    {
+                                                        if (iUnitValue > iBestExistingRangedUnitValue)
+                                                        {
+                                                            iBestExistingRangedUnitValue = iUnitValue;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            else //water
+                                            {
+                                                if (iUnitValue > iBestExistingWaterUnitValue)
+                                                {
+                                                    iBestExistingWaterUnitValue = iUnitValue;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                else if (pUnitInfo.meImprovementPrereq == eImprovement && ((BetterAICity)pCity).willUnitPrereqsBeAvailableSoon(eLoopUnit, bIgnoreImprovementPrereq: true))
+                                {
+                                    using (var areasScoped = CollectionCache.GetHashSetScoped<int>())
+                                    {
+                                        if (pUnitInfo.mbWater)
+                                        {
+                                            pCity.getSaltWaterAreas(areasScoped.Value);
+                                        }
+                                        else
+                                        {
+                                            areasScoped.Value.Add(-1);
+                                        }
+                                        foreach (int iAreaID in areasScoped.Value)
+                                        {
+                                            long iUnitValue = getUnitBuildValue(eLoopUnit, pCity, iAreaID);
+                                            if (iAreaID == -1) //land
+                                            {
+                                                if (pUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.CIVILIAN])
+                                                {
+                                                    if (pUnitInfo.mbFound) //Settler
+                                                    {
+                                                        if (iUnitValue > iBestSettlerUnitValue)
+                                                        {
+                                                            iBestSettlerUnitValue = iUnitValue;
+                                                            eBestSettlerUnit = eLoopUnit;
+                                                        }
+                                                    }
+                                                    else if (pUnitInfo.mbBuild) //Worker
+                                                    {
+                                                        if (iUnitValue > iBestWorkerUnitValue)
+                                                        {
+                                                            iBestWorkerUnitValue = iUnitValue;
+                                                            eBestWorkerUnit = eLoopUnit;
+                                                        }
+                                                    }
+                                                    else if (pUnitInfo.meBuildReligion != ReligionType.NONE) //Disciple
+                                                    {
+                                                        if (iUnitValue > iBestDiscipleUnitValue)
+                                                        {
+                                                            iBestDiscipleUnitValue = iUnitValue;
+                                                            eBestDiscipleUnit = eLoopUnit;
+                                                        }
+                                                    }
+                                                    else if (pUnitInfo.maeUnitCategories[(int)ClientUI.UnitListFilterType.SCOUT]) //Scout
+                                                    {
+                                                        if (iUnitValue > iBestScoutUnitValue)
+                                                        {
+                                                            iBestScoutUnitValue = iUnitValue;
+                                                            eBestScoutUnit = eLoopUnit;
+                                                        }
+                                                    }
+                                                }
+                                                else //Military
+                                                {
+                                                    if (iUnitValue > iBestMilitaryUnitValue)
+                                                    {
+                                                        iBestMilitaryUnitValue = iUnitValue;
+                                                        eBestMilitaryUnit = eLoopUnit;
+                                                    }
+
+                                                    if (pUnitInfo.mbMelee) //Melee
+                                                    {
+                                                        if (iUnitValue > iBestMeleeUnitValue)
+                                                        {
+                                                            iBestMeleeUnitValue = iUnitValue;
+                                                            eBestMeleeUnit = eLoopUnit;
+                                                        }
+                                                    }
+                                                    else //all Ranged
+                                                    {
+                                                        if (iUnitValue > iBestRangedUnitValue)
+                                                        {
+                                                            iBestRangedUnitValue = iUnitValue;
+                                                            eBestRangedUnit = eLoopUnit;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            else //water
+                                            {
+                                                if (iUnitValue > iBestWaterUnitValue)
+                                                {
+                                                    iBestWaterUnitValue = iUnitValue;
+                                                    eBestWaterUnit = eLoopUnit;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        {
+                            long iUnlockValue = 0;
+                            if (getNeedSettlers(pCity) > 0) iUnlockValue += getUnitUnlockValue(eBestSettlerUnit, pCity, iBestSettlerUnitValue, iBestExistingSettlerUnitValue);
+                            iUnlockValue += getUnitUnlockValue(eBestWorkerUnit, pCity, iBestWorkerUnitValue, iBestExistingWorkerUnitValue);
+                            iUnlockValue += getUnitUnlockValue(eBestDiscipleUnit, pCity, iBestDiscipleUnitValue, iBestExistingDiscipleUnitValue);
+                            iUnlockValue += getUnitUnlockValue(eBestScoutUnit, pCity, iBestScoutUnitValue, iBestExistingScoutUnitValue) / (isExplorePriority() ? 1 : 2);
+                            iUnlockValue += getUnitUnlockValue(eBestMilitaryUnit, pCity, iBestMilitaryUnitValue, iBestExistingMilitaryUnitValue);
+                            iUnlockValue += getUnitUnlockValue(eBestRangedUnit, pCity, iBestRangedUnitValue, iBestExistingRangedUnitValue);
+                            iUnlockValue += getUnitUnlockValue(eBestMeleeUnit, pCity, iBestMeleeUnitValue, iBestExistingMeleeUnitValue);
+                            iUnlockValue += getUnitUnlockValue(eBestWaterUnit, pCity, iBestWaterUnitValue, iBestExistingWaterUnitValue) / 2;
+
+                            long iDivisor = Math.Max(1, pCity.getImprovementCount(eImprovement) + (bRemove ? 0 : 1));
+                            iDivisor *= iDivisor;
+
+                            iValue += iUnlockValue / iDivisor;
+                        }
+
+                    }
+                }
+
+                if (bSpawn)
+                {
+                    if (pCity != null && pImprovementInfo.miUnitTurns > 0)
+                    {
+                        long iUnitValue = 0;
+                        long iWaterUnitValue = 0;
+                        int iWaterDice = 0;
+                        int iDiceTotal = 0;
+                        for (UnitType eFreeUnit = 0; eFreeUnit < infos.unitsNum(); ++eFreeUnit)
+                        {
+                            int iDie = pImprovementInfo.maiUnitDie[eFreeUnit];
+                            if (iDie > 0)
+                            {
+                                iDiceTotal += iDie;
+                                if (isBuildUnitValid(pCity, pTile.getArea(), eFreeUnit, false, false, false))
+                                {
+                                    //if (isWarship(eFreeUnit))
+                                    if (pTile.isWater() && infos.unit(eFreeUnit).mbWater)
+                                    {
+                                        iWaterDice += iDie;
+                                        iWaterUnitValue += unitValue(eFreeUnit, pCity, pTile.getArea(), false) * iDie;
+                                    }
+                                    else
+                                    {
+                                        iUnitValue += unitValue(eFreeUnit, pCity, -1, false) * iDie;
+                                    }
+                                }
+
+
+                            }
+                        }
+                        if (iDiceTotal > 0)
+                        {
+                            if (iWaterDice > 0)
+                            {
+                                if (!mpAICache.isTargetShipCached(pTile.getArea()))
+                                {
+                                    MohawkAssert.Assert(AreCacheWarningsMuted, "AI unexpcted water area for city");
+                                    doShipTargetNumbers();
+                                }
+                                int iAdditionalShips = (AI_YIELD_TURNS * iWaterDice) / (pImprovementInfo.miUnitTurns * iDiceTotal);
+                                int iAdditionalShipsWanted = Math.Max(0, getWaterUnitTargetNumber(pTile.getArea()) - getWaterUnitCurrentNumber(pTile.getArea()));
+                                if (iAdditionalShips > 0 && iWaterUnitValue > 0 && iAdditionalShipsWanted < iAdditionalShips)
+                                {
+                                    iWaterUnitValue *= iAdditionalShipsWanted;
+                                    iWaterUnitValue /= iAdditionalShips;
+                                }
+                            }
+                            iValue += ((iUnitValue + iWaterUnitValue) * AI_YIELD_TURNS) / (iDiceTotal * pImprovementInfo.miUnitTurns);
+                        }
+                    }
+                }
+
+                return iValue;
             }
 
             //lines 9609-10024
@@ -2063,7 +2497,25 @@ namespace BetterAI
                         }
                     }
 
-                    if (pCity != null && pCity.getImprovementCount(eImprovement) <= (3 + (bRemove ? 1 : 0)))
+                    if (pCity != null)
+                    {
+                        bool bUnitPrereq = false;
+                        bool bUnitSpawn = false;
+
+                        if (pImprovementInfo.mbIsPrereqForAnyUnit && !pImprovementInfo.mbIsPrereqForReligiousUnit)
+                        {
+                            bUnitPrereq = true;
+                        }
+
+                        if (pImprovementInfo.miUnitTurns > 0 && !pImprovementInfo.mbSpawnsReligiousUnit)
+                        {
+                            bUnitSpawn = true;
+                        }
+
+                        iValue += ImprovementUnitValue(pTile, pCity, eImprovement, bRemove: bRemove, bPrereq: bUnitPrereq, bReligious: false, bSpawn: bUnitSpawn);
+                    }
+/*
+                    if (pCity != null && pCity.getImprovementCount(eImprovement) <= (3 + (bRemove ? 1 : 0)) && !pImprovementInfo.mbIsPrereqForReligiousUnit)
                     {
                         long iBestLandUnitValue = 0;
                         long iBestWaterUnitValue = 0;
@@ -2182,7 +2634,7 @@ namespace BetterAI
 
                     }
 
-                    if (pCity != null && pImprovementInfo.miUnitTurns > 0)
+                    if (pCity != null && pImprovementInfo.miUnitTurns > 0 && !pImprovementInfo.mbSpawnsReligiousUnit)
                     {
                         long iUnitValue = 0;
                         long iWaterUnitValue = 0;
@@ -2219,9 +2671,10 @@ namespace BetterAI
                                 iWaterUnitValue *= getWaterUnitTargetNumber(pTile.getArea());
                                 iWaterUnitValue /= iAdditionalShips;
                             }
-                            iValue = ((iUnitValue + iWaterUnitValue) * AI_YIELD_TURNS) / (iDiceTotal * pImprovementInfo.miUnitTurns);
+                            iValue += ((iUnitValue + iWaterUnitValue) * AI_YIELD_TURNS) / (iDiceTotal * pImprovementInfo.miUnitTurns);
                         }
                     }
+*/
 
                     if (pCity != null && eImprovementClass != ImprovementClassType.NONE)
                     {
@@ -2683,7 +3136,7 @@ namespace BetterAI
                             {
                                 if (pAdjacentTile.getImprovement() == ImprovementType.NONE
                                     && (!pAdjacentTile.hasResource() || infos.Helpers.isImprovementResourceValid(eBonusImprovement, pAdjacentTile.getResource()))
-                                    && pAdjacentTile.cityTerritory() == pTile.cityTerritory() || (bImprovementSpreadsBorders && pAdjacentTile.cityTerritory() == null)
+                                    && (pAdjacentTile.cityTerritory() == pTile.cityTerritory() || (bImprovementSpreadsBorders && pAdjacentTile.cityTerritory() == null))
                                     && pAdjacentTile.canGeneralTileHaveImprovement(eBonusImprovement, bForceImprovement: true)
                                     && pAdjacentTile.canCityTileHaveImprovement(BAI_pCity, eBonusImprovement, bForceImprovement: true))
                                 {
@@ -2943,7 +3396,7 @@ namespace BetterAI
                     {
                         Tile pExpansionTile = game.tile(p.iTileID);
                         City pExpansionCity = game.city(p.zCityTerritory.iCityID);
-                        if (pExpansionCity.getTeam() == pCity.getTeam())
+                        if (pExpansionCity.getPlayer() == pCity.getPlayer())
                         {
                             long iExpansionValue = 0;
                             ImprovementType eImprovement = getBestImprovementCached(pExpansionTile, pExpansionCity);
@@ -3263,17 +3716,17 @@ namespace BetterAI
 
 
 
-            //old version
+            //old version, becoming more like the new version because I realized that it was actually necessary to move some stuff here
             protected override long calculateImprovementDependentValueForTile(Tile pTile, City pCity, ImprovementType eImprovement)
             {
                 long iImprovementValue = Math.Max(0, improvementBonusValue(eImprovement, pCity, pTile));
 
-                InfoImprovement improvement = infos.improvement(eImprovement);
+                BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)infos.improvement(eImprovement);
                 //long iUrbanValue = Math.Max(0, getUrbanValue(pTile, improvement.mbUrban, pTile.isImprovementBorderSpread(eImprovement), false, pCity));
                 bool bSpreadBorders = ((BetterAIInfoHelpers)(infos.Helpers)).improvementSpreadsBorders(eImprovement, game, player, pTile);
                 bool bAlreadyCityTerritory = pTile.getCityTerritory() == pCity.getID();
-                long iUrbanValue = Math.Max(0, getUrbanValue(pTile, bUrban: improvement.mbUrban && bAlreadyCityTerritory, bSpreadBorders: bSpreadBorders && bAlreadyCityTerritory, bReplaceCost: false, pCity));
-                if (improvement.mbUrban && !improvement.mbRequiresUrban)
+                long iUrbanValue = Math.Max(0, getUrbanValue(pTile, bUrban: pImprovementInfo.mbUrban && bAlreadyCityTerritory, bSpreadBorders: bSpreadBorders && bAlreadyCityTerritory, bReplaceCost: false, pCity));
+                if (pImprovementInfo.mbUrban && !pImprovementInfo.mbRequiresUrban)
                 {
                     //iUrbanValue *= 2;
                     //this case to too strange, reduce effect
@@ -3281,9 +3734,15 @@ namespace BetterAI
                 }
                 iImprovementValue += iUrbanValue;
 
-                if (improvement.meReligionSpread != ReligionType.NONE && !game.isReligionFounded(improvement.meReligionSpread))
+                if (pImprovementInfo.meReligionSpread != ReligionType.NONE && !game.isReligionFounded(pImprovementInfo.meReligionSpread))
                 {
-                    iImprovementValue += Math.Max(0, religionValue(improvement.meReligionSpread, false, pCity, true, true, false));
+                    iImprovementValue += Math.Max(0, religionValue(pImprovementInfo.meReligionSpread, false, pCity, true, true, false));
+                }
+
+                if (pImprovementInfo.mbIsPrereqForReligiousUnit || pImprovementInfo.mbSpawnsReligiousUnit)
+                {
+                    iImprovementValue += ImprovementUnitValue(pTile, pCity, eImprovement, bRemove: (pTile.getImprovement() == eImprovement), 
+                        bPrereq: pImprovementInfo.mbIsPrereqForReligiousUnit, bReligious: true, bSpawn: pImprovementInfo.mbSpawnsReligiousUnit);
                 }
 
                 MohawkAssert.Assert(iImprovementValue >= 0, "negative improvement value");
@@ -3541,6 +4000,24 @@ namespace BetterAI
                 return Math.Max(1, iValue);
             }
 
+            //fix from Test branch
+            protected virtual bool isLowPriorityUnit(UnitType eLoopUnit)
+            {
+                if (infos.Helpers.isEmergencyUnit(eLoopUnit))
+                {
+                    return true;
+                }
+                if (isLatestMilitaryLandUnit(eLoopUnit) && getCurrentMilitaryUnitNumber() > getTargetMilitaryUnitNumber())
+                {
+                    return true;
+                }
+                if (isMilitaryLandUnit(eLoopUnit) && getCurrentAllLandMilitaryUnitNumber() > getTargetMilitaryUnitNumber())
+                {
+                    return true;
+                }
+                return false;
+            }
+
 
 /*####### Better Old World AI - Base DLL #######
   ### AI: less value for specialist    START ###
@@ -3551,7 +4028,129 @@ namespace BetterAI
             {
                 if (bIncludeBorderExpansion || eBuildType != infos.Globals.SPECIALIST_BUILD)
                 {
-                    base.getBestBuild(pCity, eBuildType, bBuyGoods, bTestEnabled, bTestGoods, iNumBuilds, azBestBuilds, bIgnoreDanger);
+                    //base.getBestBuild(pCity, eBuildType, bBuyGoods, bTestEnabled, bTestGoods, iNumBuilds, azBestBuilds, bIgnoreDanger);
+
+                    //fix from test branch
+                    //public virtual void getBestBuild(City pCity, BuildType eBuildType, bool bBuyGoods, bool bTestEnabled, bool bTestGoods, int iNumBuilds, List<BuildValue> azBestBuilds, bool bIgnoreDanger = true)
+                    {
+                        //using var profileScope = new UnityProfileScope("PlayerAI.getValidBuildSpecialist");
+
+                        if (player == null)
+                        {
+                            return;
+                        }
+
+                        bool bCityInDanger = !bIgnoreDanger && isCityInDanger(pCity);
+                        bool bDefensiveProjectPossible = canBuildDefensiveProject(pCity, bBuyGoods, bTestGoods);
+
+                        if (eBuildType == BuildType.NONE || eBuildType == infos.Globals.PROJECT_BUILD)
+                        {
+                            for (ProjectType eLoopProject = 0; eLoopProject < infos.projectsNum(); eLoopProject++)
+                            {
+                                if (isBuildProjectValid(eLoopProject, pCity, bCityInDanger, bDefensiveProjectPossible))
+                                {
+                                    if (pCity.canBuildProject(eLoopProject, bBuyGoods, bTestGoods: bTestGoods))
+                                    {
+                                        long iValue = getProjectBuildValue(eLoopProject, pCity);
+                                        if (iValue > 0)
+                                        {
+                                            azBestBuilds.Add(new BuildValue
+                                            {
+                                                eBuild = infos.Globals.PROJECT_BUILD,
+                                                iType = (int)eLoopProject,
+                                                iTile = -1,
+                                                iValue = iValue,
+                                                bLowPriority = false
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (eBuildType == BuildType.NONE || eBuildType == infos.Globals.SPECIALIST_BUILD)
+                        {
+                            if (!bCityInDanger)
+                            {
+                                foreach (int iTileID in pCity.getTerritoryTiles())
+                                {
+                                    Tile pLoopTile = game.tile(iTileID);
+
+                                    SpecialistType eSpecialist = getValidBuildSpecialist(pCity, pLoopTile, bBuyGoods, bTestEnabled, bTestGoods);
+
+                                    if (eSpecialist != SpecialistType.NONE)
+                                    {
+                                        long iValue = getSpecialistBuildValue(eSpecialist, pLoopTile);
+                                        if (iValue > 0)
+                                        {
+                                            azBestBuilds.Add(new BuildValue
+                                            {
+                                                eBuild = infos.Globals.SPECIALIST_BUILD,
+                                                iType = (int)eSpecialist,
+                                                iTile = pLoopTile.getID(),
+                                                iValue = iValue,
+                                                bLowPriority = false
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (eBuildType == BuildType.NONE || eBuildType == infos.Globals.UNIT_BUILD)
+                        {
+                            for (UnitType eLoopUnit = 0; eLoopUnit < infos.unitsNum(); eLoopUnit++)
+                            {
+                                using (var areasScoped = CollectionCache.GetHashSetScoped<int>())
+                                {
+                                    if (infos.unit(eLoopUnit).mbWater)
+                                    {
+                                        pCity.getSaltWaterAreas(areasScoped.Value);
+                                    }
+                                    else
+                                    {
+                                        areasScoped.Value.Add(-1);
+                                    }
+                                    foreach (int iAreaID in areasScoped.Value)
+                                    {
+                                        if (isBuildUnitValid(pCity, iAreaID, eLoopUnit, bBuyGoods, bTestGoods))
+                                        {
+                                            long iValue = getUnitBuildValue(eLoopUnit, pCity, iAreaID);
+                                            if (iValue > 0)
+                                            {
+                                                Tile pTile = (iAreaID != -1) ? pCity.getUnitBuildTile(eLoopUnit, iAreaID, false) : null;
+
+                                                azBestBuilds.Add(new BuildValue
+                                                {
+                                                    eBuild = infos.Globals.UNIT_BUILD,
+                                                    iType = (int)eLoopUnit,
+                                                    iTile = pTile?.getID() ?? -1,
+                                                    iValue = iValue,
+                                                    bLowPriority = isLowPriorityUnit(eLoopUnit)
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (azBestBuilds.Count == 0 && !bIgnoreDanger)
+                        {
+                            getBestBuild(pCity, eBuildType, bBuyGoods, bTestEnabled, bTestGoods, iNumBuilds, azBestBuilds, bIgnoreDanger: true);
+                        }
+                        else
+                        {
+                            azBestBuilds.Sort();
+
+                            if (azBestBuilds.Count > iNumBuilds)
+                            {
+                                azBestBuilds.RemoveRange(iNumBuilds, azBestBuilds.Count - iNumBuilds);
+                            }
+                        }
+                    }
+
+
                 }
                 else
                 {
@@ -4009,17 +4608,18 @@ namespace BetterAI
 
                     if (!pCharacter.isTrait(eLoopTrait) && pLoopInfoTrait.maiDecadeProb.Count > 0 && pCharacter.getTraitValid(eLoopTrait))
                     {
-                        iChance -= iChance * pLoopInfoTrait.maiDecadeProb[Math.Min((pCharacter.getAge() + iExtraAge) / 10, pLoopInfoTrait.maiDecadeProb.Count - 1)];
+                        iChance -= (iChance * pLoopInfoTrait.maiDecadeProb[Math.Min((pCharacter.getAge() + iExtraAge) / 10, pLoopInfoTrait.maiDecadeProb.Count - 1)]) / 100;
                     }
                 }
 
                 return (10000 - iChance) / 10;
             }
 
+
+
             public virtual void modifySecondaryTraitChanceForPoolSize(TraitType eSecondardDieTrait, TraitType eOriginTrait, ref int iSecondaryTraitAddChance, ref Dictionary<(TraitType, TraitType), int> dTraitProbs)
             {
-                int iValue = 0;
-                int iGranularity = 1000; //iSecondaryTraitAddChance is multiplied with 1000 already
+                //iSecondaryTraitAddChance is multiplied with 100 already
                 using (var traitProbTraitsScoped = CollectionCache.GetListScoped<(TraitType, TraitType)>())
                 using (var traitPoolsizeProbsScoped = CollectionCache.GetDictionaryScoped<int, int>())
                 {
@@ -4033,47 +4633,32 @@ namespace BetterAI
                         }
                     }
 
-                    getTraitPoolsizeChances(iIndex: 0, iPoolsize: 0, iChances: iGranularity, ref otherTraitPairs, ref dTraitProbs, ref dPoolsizeProbs);
-                    foreach (int iLoopPoolsize in dPoolsizeProbs.Keys)
+                    const int iGranularity = 100000;
+                    dPoolsizeProbs[0] = iGranularity; //divide by 10000 at the end. Poolsize[x] is chance for pool size x+1
+
+                    for (int i = 0; i < otherTraitPairs.Count; i++)
                     {
-                        iValue += iSecondaryTraitAddChance * dPoolsizeProbs[iLoopPoolsize] / (1 + iLoopPoolsize);
+                        (TraitType, TraitType) eLoopTraitPair = otherTraitPairs[i];
+                        int iChance = dTraitProbs[eLoopTraitPair];
+
+                        dPoolsizeProbs[i + 1] = ((dPoolsizeProbs[i] * iChance) + 50) / 100;
+                        for (int ii = i; ii >= 1; ii--)
+                        {
+                            dPoolsizeProbs[ii] = (((dPoolsizeProbs[ii] * (100 - iChance)) + (dPoolsizeProbs[ii-1] * iChance)) + 50) / 100;
+                        }
+                        dPoolsizeProbs[0] = ((dPoolsizeProbs[0] * (100 - iChance)) + 50) / 100;
                     }
 
+                    int iValue = 0;
+                    for (int i = 0; i <= otherTraitPairs.Count; i++)   // <=, there are Count+1 entries
+                    {
+                        iValue += iSecondaryTraitAddChance * dPoolsizeProbs[i] / (i + 1);
+                    }
                     iSecondaryTraitAddChance = (iValue + (iGranularity/2)) / iGranularity;
+
                     return;
                 }
             }
-
-            public virtual void getTraitPoolsizeChances(int iIndex, int iPoolsize, int iChances, ref List<(TraitType, TraitType)> otherTraitPairs, ref Dictionary<(TraitType, TraitType), int> dTraitProbs, ref Dictionary<int, int> dPoolsizeProbs)
-            {
-                (TraitType, TraitType) eCurrentTrait = otherTraitPairs[iIndex];
-                if (iIndex <= otherTraitPairs.Count - 2)
-                {
-                    getTraitPoolsizeChances(iIndex + 1, iPoolsize + 0, iChances * (100 - dTraitProbs[eCurrentTrait]), ref otherTraitPairs, ref dTraitProbs, ref dPoolsizeProbs);
-                    getTraitPoolsizeChances(iIndex + 1, iPoolsize + 1, iChances * dTraitProbs[eCurrentTrait], ref otherTraitPairs, ref dTraitProbs, ref dPoolsizeProbs);
-                }
-                else // last item: iIndex == otherTraits.Count - 1
-                {
-                    if (dPoolsizeProbs.ContainsKey(iPoolsize))
-                    {
-                        dPoolsizeProbs[iPoolsize] += iChances * (100 - dTraitProbs[eCurrentTrait]);
-                    }
-                    else
-                    {
-                        dPoolsizeProbs.Add(iPoolsize, iChances * (100 - dTraitProbs[eCurrentTrait]));
-                    }
-
-                    if (dPoolsizeProbs.ContainsKey(iPoolsize + 1))
-                    {
-                        dPoolsizeProbs[iPoolsize + 1] += iChances * dTraitProbs[eCurrentTrait];
-                    }
-                    else
-                    {
-                        dPoolsizeProbs.Add(iPoolsize + 1, iChances * dTraitProbs[eCurrentTrait]);
-                    }
-                }
-            }
-
 
             public virtual void getTurnsWeightProductFromDeathTraitX10(TraitType eDieTrait, Character pCharacter, 
                 ref int iValue, ref int iWeight, ref int iRemainingWeight, ref Dictionary<(TraitType, TraitType), int> dTraitProbs, int iEvalStartTurn = 1, int iEvalEndTurn = 10, bool bJob = true)
@@ -4131,23 +4716,26 @@ namespace BetterAI
                             //iWeight /= 100;
                             iWeight -= iDieProbWeight / 100;
 
+                            //Debug.Log($"{pDieInfoTrait.mzType}: Eval Turn {i.ToStringCached()}, iDieProb: {iDieProb.ToStringCached()}, iDieProbWeight: {iDieProbWeight.ToStringCached()}, remaining iWeight: {iWeight.ToStringCached()}");
+
+
                             //second: adding traits: doTurnYear -> checkLifeEvent -> doAddTrait
                             //this does now account for other present traits with their own aiTraitProps that could be chosen instead, thus reducing the chances of a death trait to be added
                             int iDecadePropTraitGetsAddedChanceX1000 = getPerMilleChanceForDecadePropTrait((BetterAICharacter)pCharacter, iYear);
                             foreach (TraitType eSecondardDieTrait in pDieInfoTrait.maeDieTraitProbs)
                             {
                                 BetterAIInfoTrait pSecondaryDieInfoTrait = (BetterAIInfoTrait)(infos.trait(eSecondardDieTrait));
-                                int iSecondaryTraitAddChance = 1000 * pDieInfoTrait.maiTraitProb[eSecondardDieTrait]; //* 1000 #1
+                                int iSecondaryTraitAddChance = 100 * pDieInfoTrait.maiTraitProb[eSecondardDieTrait]; //* 100
                                 if (dTraitProbs.Count > 1)
                                 {
-                                    modifySecondaryTraitChanceForPoolSize(eSecondardDieTrait, eDieTrait,ref iSecondaryTraitAddChance, ref dTraitProbs);
-
+                                    modifySecondaryTraitChanceForPoolSize(eSecondardDieTrait, eDieTrait, ref iSecondaryTraitAddChance, ref dTraitProbs);
+                                    //Debug.Log($"{pDieInfoTrait.mzType}: Original Trait Prob: {pDieInfoTrait.maiTraitProb[eSecondardDieTrait].ToStringCached()}, modified trait Prob X100: {iSecondaryTraitAddChance.ToStringCached()}");
                                 }
-                                iSecondaryTraitAddChance *= (1000 - iDecadePropTraitGetsAddedChanceX1000); //*1000 #2
+                                iSecondaryTraitAddChance *= (1000 - iDecadePropTraitGetsAddedChanceX1000); //*1000
                                 iSecondaryTraitAddChance += 500;  // rounding
-                                iSecondaryTraitAddChance /= 1000; // /1000 #1
+                                iSecondaryTraitAddChance /= 1000; // /1000
 
-                                int iSecondaryWeight = ((iWeight * iSecondaryTraitAddChance) + 500) / 1000; // rounding, /1000 #2
+                                int iSecondaryWeight = ((iWeight * iSecondaryTraitAddChance) + 50) / 100; // rounding, /100
                                 iSecondaryWeight = (iSecondaryWeight + 50) / 100;
                                 int iOriginalSecondaryWeight = iSecondaryWeight;
                                 int iSecondaryRemainingWeight = 0;
@@ -4167,8 +4755,12 @@ namespace BetterAI
                                     dTraitProbs.Add((eSecondardDieTrait, eOtherTrait), pSecondaryDieInfoTrait.maiTraitProb[eOtherTrait]);
                                 }
 
+                                //Debug.Log($"secondary start: Eval Turn Start {(iEvalStartTurn + i).ToStringCached()}, iSecondaryWeight: {iSecondaryWeight.ToStringCached()}, iDecadePropTraitGetsAddedChanceX1000: {iDecadePropTraitGetsAddedChanceX1000.ToStringCached()}");
+
                                 getTurnsWeightProductFromDeathTraitX10(eSecondardDieTrait, pCharacter, ref iSecondaryValue, ref iSecondaryWeight, ref iSecondaryRemainingWeight, ref dTraitProbs,
                                     iEvalStartTurn: iEvalStartTurn + i, iEvalEndTurn: iEvalEndTurn + (i/2), bJob: bJob); //start at current turn, but extend range a bit too, to properly grasp TRAIT_SICKLY effect
+
+                                //Debug.Log($"secondary end: Eval Turn End {(iEvalEndTurn + (i / 2)).ToStringCached()}, iSecondaryWeight: {iSecondaryWeight.ToStringCached()}, iSecondaryRemainingWeight: {iSecondaryWeight.ToStringCached()}");
 
                                 {
                                     int iWeightDiff = iOriginalSecondaryWeight - iSecondaryWeight;
@@ -4219,6 +4811,30 @@ namespace BetterAI
 
                                     //remove weight from dying: like above but also remove cure chance, because Character still has original trait
                                     iWeight -= (iOriginalSecondaryWeight - iSecondaryWeight - iSecondaryRemainingWeight);
+                                }
+                            }
+
+                            //trait can also be lost if a non-lethal traitProb gets selected.
+                            if (!pDieInfoTrait.mbNoRemoveOnTraitProb)
+                            {
+                                foreach (TraitType eSecondardDieTrait in pDieInfoTrait.maeDieTraitProbs)
+                                {
+                                    if (!pDieInfoTrait.maeDieTraitProbs.Contains(eSecondardDieTrait))
+                                    {
+                                        BetterAIInfoTrait pSecondaryDieInfoTrait = (BetterAIInfoTrait)(infos.trait(eSecondardDieTrait));
+                                        int iSecondaryTraitAddChance = 100 * pDieInfoTrait.maiTraitProb[eSecondardDieTrait]; //* 100
+                                        if (dTraitProbs.Count > 1)
+                                        {
+                                            modifySecondaryTraitChanceForPoolSize(eSecondardDieTrait, eDieTrait, ref iSecondaryTraitAddChance, ref dTraitProbs);
+
+                                        }
+                                        iSecondaryTraitAddChance *= (1000 - iDecadePropTraitGetsAddedChanceX1000); //*1000
+                                        iSecondaryTraitAddChance += 500;  // rounding
+                                        iSecondaryTraitAddChance /= 1000; // /1000
+                                        int iSecondaryWeight = ((iWeight * iSecondaryTraitAddChance) + 50) / 100; // rounding, /100
+                                        iRemainingWeight += iSecondaryWeight;
+                                        iWeight -= iSecondaryWeight / 100;
+                                    }
                                 }
                             }
 
@@ -4383,7 +4999,9 @@ namespace BetterAI
                 const int iTotalWeight = 10000; //10000 equals 100% chance
                 int iWeight = iTotalWeight;
                 int iRemainingWeight = 0; //normal max age calculation will still run, but only be weighted with iRemainingWeight. Full weight only is character is healthy and has no death traits, or traits that give dead traits
-                int iValue = 0; //Years * iWeight * 10
+                int iValue = 0; //Turns * iWeight * 10
+                int iDeathTraitValue = 0;
+                //int iPreviouslyUsedWeight = 0;
                 using (var traitProbsScoped = CollectionCache.GetDictionaryScoped<(TraitType, TraitType), int>())
                 {
                     Dictionary<(TraitType, TraitType), int> dTraitProbs = traitProbsScoped.Value;
@@ -4394,7 +5012,7 @@ namespace BetterAI
                         {
                             if (dTraitProbs.ContainsKey((eLoopTrait, eOtherTrait)))
                             {
-                                dTraitProbs[(eLoopTrait, eOtherTrait)] += pLoopInfoTrait.maiTraitProb[eOtherTrait]; //not perfect but w/e
+                                dTraitProbs[(eLoopTrait, eOtherTrait)] += pLoopInfoTrait.maiTraitProb[eOtherTrait]; //not perfect but no trait should contain multiple traitProbs of the same trait anyway
                             }
                             else
                             {
@@ -4407,30 +5025,44 @@ namespace BetterAI
                         BetterAIInfoTrait pLoopInfoTrait = ((BetterAIInfoTrait)(infos.trait(eLoopTrait)));
                         if (infos.Helpers.getTraitDieProb(eLoopTrait, game) > 0 || pLoopInfoTrait.maeDieTraitProbs.Count > 0 || (bJob && pLoopInfoTrait.maeNoJobTraitProbs.Count > 0))
                         {
-                            getTurnsWeightProductFromDeathTraitX10(eLoopTrait, pCharacter, ref iValue, ref iWeight, ref iRemainingWeight, ref dTraitProbs, iEvalStartTurn: (1 + ((bJob && pLoopInfoTrait.maeNoJobTraitProbs.Count > 0) ? 0 : iSafeTurns)), iEvalEndTurn: AI_DEATHTRAIT_PROB_EVAL_DEPTH, bJob: bJob);
+                            getTurnsWeightProductFromDeathTraitX10(eLoopTrait, pCharacter, ref iDeathTraitValue, ref iWeight, ref iRemainingWeight, ref dTraitProbs, iEvalStartTurn: (1 + ((bJob && pLoopInfoTrait.maeNoJobTraitProbs.Count > 0) ? 0 : iSafeTurns)), iEvalEndTurn: AI_DEATHTRAIT_PROB_EVAL_DEPTH, bJob: bJob);
+
+                            iWeight += iRemainingWeight;
+                            iRemainingWeight = 0;
+
+                            //{
+                            //    int iUsedWeight = iTotalWeight - iWeight - iPreviouslyUsedWeight;
+                            //    iPreviouslyUsedWeight += iUsedWeight;
+                            //    Debug.Log($"Remaining turns x10 from Trait {pLoopInfoTrait.mzType}: {(iDeathTraitValue / iUsedWeight).ToStringCached()} at weight {iUsedWeight.ToStringCached()}.");
+                            //}
                         }
                     }
                 }
 
                 iRemainingWeight += iWeight;
+                //iWeight = 0;
 
-                int iMaxAgeX10 = getExpectedMaxAgeHealthyX10(pCharacter, bGeneral && !(pCharacter.isLeader() || pCharacter.isHeir())); //age * 10
-                int iValueForHealthyMaxAge = iMaxAgeX10 - (10*(pCharacter.getAge() - 1)); //-1 because a character is no longer useful on their dying year
-                iValueForHealthyMaxAge = game.yearsToTurns(iValueForHealthyMaxAge) * iRemainingWeight;
+                int iMaxAgeHealthyX10 = getExpectedMaxAgeHealthyX10(pCharacter, bGeneral && !(pCharacter.isLeader() || pCharacter.isHeir())); //age * 10
+                int iYearsRemainingHealthyX10 = iMaxAgeHealthyX10 - (10*(pCharacter.getAge() - 1)); //-1 because a character is no longer useful on their dying year
+                int iHealthyValue = game.yearsToTurns(iYearsRemainingHealthyX10) * iRemainingWeight;
 
-                //if (iWeight != iTotalWeight)
-                //{
-                //    int iTraitWeight = iTotalWeight - iRemainingWeight;
-                //    int iMaxAgeFromTraits = iValue / iTraitWeight;
-                //    Debug.Log($"TraitMax {iMaxAgeFromTraits} at weight {iTraitWeight}, NormalMax {iMaxAgeX10} at weight {iRemainingWeight}");
-                //}
-
-                iValue += iValueForHealthyMaxAge;
+                iValue += iDeathTraitValue;
+                iValue += iHealthyValue;
                 iValue += (iTotalWeight / 2); //rounding
                 iValue /= iTotalWeight;
 
                 int iExtraTurnsFromTurnYearOffset = 10 * ((pCharacter.getID() - game.getTurn() - 1) % game.getYearDivisions());
-                return game.yearsToTurns(Math.Max(0, iValue + iExtraTurnsFromTurnYearOffset));
+                int iTurnsLeftX10 = Math.Max(0, iValue + iExtraTurnsFromTurnYearOffset);
+
+                //if (iRemainingWeight != iTotalWeight)
+                //{
+                //    int iDeathTraitWeight = iTotalWeight - iRemainingWeight;
+                //    int iYearsLeftFromTraits = game.turnsToYears(iDeathTraitValue / iDeathTraitWeight);
+                //    Debug.Log($"Character {pCharacter.getID().ToStringCached()}: Remaining years x10 from traits: {iYearsLeftFromTraits.ToStringCached()} at weight {iDeathTraitWeight.ToStringCached()}, " +
+                //        $"if healthy: years remaining x10 {iYearsRemainingHealthyX10.ToStringCached()} at weight {iRemainingWeight.ToStringCached()}. Combined average years left x10 {game.turnsToYears(iTurnsLeftX10).ToStringCached()}");
+                //}
+
+                return iTurnsLeftX10;
 
                 //this was the original.
                 ////int iMaxAge = infos.Globals.GENERAL_RETIRE_AGE;
@@ -6132,8 +6764,8 @@ namespace BetterAI
 
                     if (!bBaseFound)
                     {
-                        MohawkAssert.Assert(AreCacheWarningsMuted, "AI improvement value not cached:" + infos.improvement(eImprovement).mzType + " Tile:" + pTile.getID());
-                        //UnityEngine.Debug.Log(Environment.StackTrace);
+                        MohawkAssert.Assert(AreCacheWarningsMuted, "AI improvement value not cached:" + infos.improvement(eImprovement).mzType + " Tile:" + pTile.getID().ToStringCached() + ", player: " + player.getPlayerInt().ToStringCached());
+                        if (!AreCacheWarningsMuted) UnityEngine.Debug.Log(Environment.StackTrace);
                         //UnityEngine.Debug.Log("PlayerAI.calculateImprovementValueForTile unexpected");
 
                         iValue = calculateImprovementValueForTile(pTile, pImprovementCity, eImprovement);

@@ -390,6 +390,18 @@ namespace BetterAI
                 {
                     ((BetterAIInfoImprovement)improvement(pLoopImprovementInfo.meBonusAdjacentImprovement)).meBonusAdjacentImprovement = ImprovementType.NONE;
                 }
+
+                if (pLoopImprovementInfo.miUnitTurns > 0)
+                {
+                    for (UnitType eFreeUnit = 0; eFreeUnit < unitsNum(); ++eFreeUnit)
+                    {
+                        int iDie = pLoopImprovementInfo.maiUnitDie[eFreeUnit];
+                        if (iDie > 0 && unit(eFreeUnit).meRequiresReligion != ReligionType.NONE)
+                        {
+                            pLoopImprovementInfo.mbSpawnsReligiousUnit = true;
+                        }
+                    }
+                }
             }
 
             for (EffectCityType eLoopEffectCity = 0; eLoopEffectCity < effectCitiesNum(); eLoopEffectCity++)
@@ -440,6 +452,34 @@ namespace BetterAI
                             ((BetterAIInfoGlobals)Globals).dUnitsWithResourceRequirement.Add(ePrereqResource, new List<UnitType>() { eLoopUnit });
                         }
                     }
+                }
+
+
+                if (pLoopUnitInfo.meImprovementPrereq != ImprovementType.NONE)
+                {
+                    ((BetterAIInfoImprovement)(improvement(pLoopUnitInfo.meImprovementPrereq))).mbIsPrereqForAnyUnit = true;
+                    if (pLoopUnitInfo.meRequiresReligion != ReligionType.NONE)
+                    {
+                        ((BetterAIInfoImprovement)(improvement(pLoopUnitInfo.meImprovementPrereq))).mbIsPrereqForReligiousUnit = true;
+                    }
+                }
+
+                if (pLoopUnitInfo.meRequiresReligion != ReligionType.NONE)
+                {
+                    if (pLoopUnitInfo.meBuildReligion != pLoopUnitInfo.meRequiresReligion || pLoopUnitInfo.mbBuild || pLoopUnitInfo.mbMelee || pLoopUnitInfo.miRangeMax > 0)
+                    {
+                        ((BetterAIInfoGlobals)Globals).BAI_ALL_RELIGIOUS_UNITS_ARE_SIMPLE_DISCIPLES = false;
+                    }
+                }
+
+                if (pLoopUnitInfo.meBuildReligion != ReligionType.NONE)
+                {
+                    ((BetterAIInfoGlobals)Globals).DISCIPLE_UNITS.Add(eLoopUnit);
+                }
+
+                if (pLoopUnitInfo.mbBuild)
+                {
+                    ((BetterAIInfoGlobals)Globals).WORKER_UNITS.Add(eLoopUnit);
                 }
             }
 
@@ -1267,8 +1307,8 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal   START ###
   ##############################################*/
+        public bool bAIIgnoreApplyValue = false;
         public int miHealAttack = 0;
-        //public int miHealKill = 0;
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal     END ###
   ##############################################*/
@@ -1346,7 +1386,10 @@ namespace BetterAI
     {
         //new stuff here
         public int miRangeChange = 0;
-        public EffectUnitType meApplyEffectUnit = EffectUnitType.NONE; //not implemented.
+        public EffectUnitType meApplyEffectUnit = EffectUnitType.NONE;
+        public bool mbIsPrereqForAnyUnit = false;
+        public bool mbIsPrereqForReligiousUnit = false;
+        public bool mbSpawnsReligiousUnit = false;
         public CityBiomeType meCityBiomePrereq = CityBiomeType.NONE;
         public TechType meSecondaryUnlockTechPrereq = TechType.NONE;
         public CultureType meSecondaryUnlockCulturePrereq = CultureType.NONE;
@@ -1641,6 +1684,11 @@ namespace BetterAI
         public int BAI_NO_DELAY = 0;
         public int BAI_BORDER_REVEAL = -1;
         public int BAI_FLANKING_DISABLES_COUNTERATTACK = 1;
+        public int BAI_BUY_TILE_COST_DISTANCE_OFFSET = 0;
+        public int BAI_BUY_TILE_COST_DISTANCE_SQARED = 0;
+        public int BAI_BUY_TILE_COST_ONE_ADJACENT_MODIFIER = 0;
+        public int BAI_BUY_TILE_COST_TWO_ADJACENT_MODIFIER = 0;
+        public int BAI_BUY_TILE_COST_THREE_ADJACENT_MODIFIER = 0;
 
         public int AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = 0;
         public int AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = 0;
@@ -1649,6 +1697,7 @@ namespace BetterAI
         public int AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE = 0;
         public int AI_CITY_GOVERNOR_VALUE = 0;
         public int AI_DEATHTRAIT_PROB_EVAL_DEPTH = 0;
+        public int AI_MAX_NUM_DISCIPLES_PER_HUNDRED_WORKERS = 0;
 
         public bool BAI_NO_MOUNTED_IS_RANGED = true; //to be set to false
         public bool BAI_NO_WATER_IS_RANGED = true;
@@ -1656,9 +1705,12 @@ namespace BetterAI
         public bool BAI_NO_WATER_IS_CIVILIAN = true;
         public bool BAI_NO_SCOUT_IS_INFANTRY = true;
         public bool BAI_NO_SCOUT_IS_MOUNTED = true;
+        public bool BAI_ALL_RELIGIOUS_UNITS_ARE_SIMPLE_DISCIPLES = true;
 
         public UnitTraitType INFANTRY_TRAIT = UnitTraitType.NONE;
         public ColorType COLOR_RIVER_EDGE = ColorType.NONE;
+        public List<UnitType> WORKER_UNITS = new List<UnitType>();
+        public List<UnitType> DISCIPLE_UNITS = new List<UnitType>();
 
         public Dictionary<ResourceType, List<UnitType>> dUnitsWithResourceRequirement = new Dictionary<ResourceType, List<UnitType>>();
         //public List<UnitType> WorkerUnits = new List<UnitType>();
@@ -1706,6 +1758,11 @@ namespace BetterAI
             BAI_NO_DELAY = infos.getGlobalInt("BAI_NO_DELAY");
             BAI_BORDER_REVEAL = infos.getGlobalInt("BAI_BORDER_REVEAL");
             BAI_FLANKING_DISABLES_COUNTERATTACK = infos.getGlobalInt("BAI_FLANKING_DISABLES_COUNTERATTACK");
+            BAI_BUY_TILE_COST_DISTANCE_OFFSET = infos.getGlobalInt("BAI_BUY_TILE_COST_DISTANCE_OFFSET");
+            BAI_BUY_TILE_COST_DISTANCE_SQARED = infos.getGlobalInt("BAI_BUY_TILE_COST_DISTANCE_SQARED");
+            BAI_BUY_TILE_COST_ONE_ADJACENT_MODIFIER = infos.getGlobalInt("BAI_BUY_TILE_COST_ONE_ADJACENT_MODIFIER");
+            BAI_BUY_TILE_COST_TWO_ADJACENT_MODIFIER = infos.getGlobalInt("BAI_BUY_TILE_COST_TWO_ADJACENT_MODIFIER");
+            BAI_BUY_TILE_COST_THREE_ADJACENT_MODIFIER = infos.getGlobalInt("BAI_BUY_TILE_COST_THREE_ADJACENT_MODIFIER");
 
             AI_GROWTH_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_GROWTH_CITY_SPECIALIZATION_MODIFIER");
             AI_CIVICS_CITY_SPECIALIZATION_MODIFIER = infos.getGlobalAI("AI_CIVICS_CITY_SPECIALIZATION_MODIFIER");
@@ -1714,6 +1771,7 @@ namespace BetterAI
             AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE = infos.getGlobalAI("AI_EXPANSION_OVERRIDES_ZERO_WAR_CHANCE");
             AI_CITY_GOVERNOR_VALUE = infos.getGlobalAI("AI_CITY_GOVERNOR_VALUE");
             AI_DEATHTRAIT_PROB_EVAL_DEPTH = infos.getGlobalAI("AI_DEATHTRAIT_PROB_EVAL_DEPTH");
+            AI_MAX_NUM_DISCIPLES_PER_HUNDRED_WORKERS = infos.getGlobalAI("AI_MAX_NUM_DISCIPLES_PER_HUNDRED_WORKERS");
 
             INFANTRY_TRAIT = infos.getGlobalType<UnitTraitType>("INFANTRY_TRAIT");
 

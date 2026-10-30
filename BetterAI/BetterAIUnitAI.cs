@@ -115,11 +115,14 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### No Governor Courtiers as Generals START###
   ##############################################*/
-                        InfoTrait pInfoArcheType = infos.trait(pCharacter.getArchetype());
-
-                        if ((pInfoArcheType.mbGovernorPrereq || pInfoArcheType.mbGovernorAll) && !(pInfoArcheType.mbGeneralPrereq || pInfoArcheType.mbGeneralAll))
+                        if (pCharacter.getArchetype() != TraitType.NONE)
                         {
-                            continue;
+                            InfoTrait pInfoArcheType = infos.trait(pCharacter.getArchetype());
+
+                            if ((pInfoArcheType.mbGovernorPrereq || pInfoArcheType.mbGovernorAll) && !(pInfoArcheType.mbGeneralPrereq || pInfoArcheType.mbGeneralAll))
+                            {
+                                continue;
+                            }
                         }
 /*####### Better Old World AI - Base DLL #######
   ### No Governor Courtiers as Generals  END ###
@@ -155,6 +158,31 @@ namespace BetterAI
                     }
                 }
                 return null;
+            }
+
+
+            public override bool hasAttackEffect(Tile pFromTile, Tile pToTile, Unit pToUnit)
+            {
+                foreach (EffectUnitType eLoopEffectUnit in unit.getEffectUnits())
+                {
+
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal   START ###
+  ##############################################*/
+                    if (((BetterAIInfoEffectUnit)infos.effectUnit(eLoopEffectUnit)).bAIIgnoreApplyValue) continue;
+/*####### Better Old World AI - Base DLL #######
+  ### Enlist Replacement Attack Heal     END ###
+  ##############################################*/
+                    if (pFromTile.isTileAdjacent(pToTile) || !infos.effectUnit(eLoopEffectUnit).mbApplyEffectUnitAdjacentOnly)
+                    {
+                        EffectUnitType eAttackEffectUnit = infos.effectUnit(eLoopEffectUnit).mzAttackApplyEffectUnitTurns.Item1;
+                        if (((BetterAIUnit)unit).canApplyAttackEffectUnit(pToUnit, eAttackEffectUnit))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
             }
 
         }

@@ -270,6 +270,69 @@ namespace BetterAI
   ### Disconent Level 0                  END ###
   ##############################################*/
 
+
+        public virtual bool willUnitPrereqsBeAvailableSoon(UnitType eUnit, bool bIgnoreImprovementPrereq = false)
+        {
+            InfoUnit pUnitInfo = infos().unit(eUnit);
+            if (pUnitInfo.meCulturePrereq != CultureType.NONE && (infos().Helpers.isCultureHigher(pUnitInfo.meCulturePrereq, infos().Helpers.getNextCulture(getCulture()))
+                || (infos().Helpers.isCultureHigher(pUnitInfo.meCulturePrereq, getCulture()) && getYieldTurnsLeft(infos().Globals.CULTURE_YIELD) > 15)))
+            {
+                return false;
+            }
+
+            if (!bIgnoreImprovementPrereq && pUnitInfo.meImprovementPrereq != ImprovementType.NONE && getImprovementCount(pUnitInfo.meImprovementPrereq) == 0) //includes in-construction improvements
+            {
+                return false;
+            }
+
+            if (pUnitInfo.meTechPrereq != TechType.NONE && (!player().isTechAcquired(pUnitInfo.meTechPrereq) && player().getTechResearching() != pUnitInfo.meTechPrereq))
+            {
+                return false;
+            }
+
+            if (pUnitInfo.meEffectCityPrereq != EffectCityType.NONE && getEffectCityCount(pUnitInfo.meEffectCityPrereq) == 0)
+            {
+                //looks for improvemets under construction or pillaged
+                bool bFound = false;
+                if (infos().effectCity(pUnitInfo.meEffectCityPrereq).maeSourceImprovements.Count > 0)
+                {
+                    foreach (ImprovementType eSourceImprovement in infos().effectCity(pUnitInfo.meEffectCityPrereq).maeSourceImprovements)
+                    {
+                        if (getImprovementCount(eSourceImprovement) > 0)
+                        {
+                            bFound = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!bFound && infos().effectCity(pUnitInfo.meEffectCityPrereq).maeSourceResources.Count > 0)
+                {
+                    foreach (int iTileID in getTerritoryTiles())
+                    {
+                        Tile pTile = game().tile(iTileID);
+                        if (pTile.getImprovement() != ImprovementType.NONE && pTile.getActiveImprovement() != ImprovementType.NONE)
+                        {
+                            if (game().tile(iTileID).getResource() != ResourceType.NONE && infos().effectCity(infos().unit(eUnit).meEffectCityPrereq).maeSourceResources.Contains(game().tile(iTileID).getResource()))
+                            {
+                                bFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!bFound)
+                {
+                    return false;
+                }
+            }
+
+
+            return true;
+        }
+
+
         //lines 1056-1418
         //copy-paste START
         public override void writeGameXML(XmlWriter pWriter)
@@ -1144,9 +1207,6 @@ namespace BetterAI
 
         //Continue specialist on pillaged: functionality is in base game now.
 
-/*####### Better Old World AI - Base DLL #######
-  ### Limit Settler Numbers again      START ###
-  ##############################################*/
         //copy & paste START
         //lines 6613-6628
         protected override bool verifyBuildUnit(CityQueueData pBuild, bool bHurry = false)
@@ -1568,18 +1628,20 @@ namespace BetterAI
                 return false;
             }
 
+            if (pTile.hasResource() && !infos().Helpers.isImprovementResourceValid(eImprovement, pTile.getResource()))
+            {
+                return false;
+            }
+
+            if (pTile.hasImprovement())
+            {
+                return false;
+            }
+
             ImprovementType ePing = player().getTileImprovementPing(pTile.getID(), false);
             if (ePing != eImprovement)
             {
-                if (pTile.hasResource() && !infos().Helpers.isImprovementResourceValid(eImprovement, pTile.getResource()))
-                {
-                    return false;
-                }
-
-                if (pTile.hasImprovement())
-                {
-                    return false;
-                }
+                return false;
             }
 
             return player().canStartImprovementOnTile(pTile, eImprovement, bTestEnabled: true, bTestTerritory: false, bTestAdjacent: true, bTestReligion: true, bForceImprovement: true);
@@ -1681,6 +1743,70 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
+
+
+        public override int getBuyTileCost(Tile pTile, YieldType eYield)
+        {
+            if (!hasPlayer())
+            {
+                return 0;
+            }
+
+            int iBuyTileCount = (getBuyTileCount() + (player().getBuyTileCount() / 2));
+
+            int iCost = infos().yield(eYield).miBuyTileBase + (infos().yield(eYield).miBuyTilePer * iBuyTileCount);
+
+/*####### Better Old World AI - Base DLL #######
+  ### Buying far tiles more expensive  START ###
+  ##############################################*/
+            //iCost *= (tile().distanceTile(pTile) + 1);
+            //iCost /= (3 + 1);
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_BUY_TILE_COST_DISTANCE_SQARED == 1)
+            {
+                iCost *= (tile().distanceTile(pTile) * tile().distanceTile(pTile) + 1);
+                iCost /= (9 + 1);
+            }
+            else
+            {
+                iCost *= (tile().distanceTile(pTile) + 1);
+                iCost /= (3 + 1);
+            }
+
+            if (((BetterAIInfoGlobals)infos().Globals).BAI_BUY_TILE_COST_ONE_ADJACENT_MODIFIER != 0 
+                || ((BetterAIInfoGlobals)infos().Globals).BAI_BUY_TILE_COST_TWO_ADJACENT_MODIFIER != 0
+                || ((BetterAIInfoGlobals)infos().Globals).BAI_BUY_TILE_COST_THREE_ADJACENT_MODIFIER != 0)
+            {
+                int iAdjancentTeam = 0;
+                for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+                {
+                    Tile pAdjacentTile = pTile.tileAdjacent(eLoopDirection, bIncludeBoundary: false);
+                    if (pAdjacentTile != null)
+                    {
+                        if (getTeam() == pAdjacentTile.getTeam())
+                        {
+                            iAdjancentTeam++;
+                        }
+                    }
+                }
+                if (iAdjancentTeam < 2)
+                {
+                    iCost = infos().utils().modify(iCost, ((BetterAIInfoGlobals)infos().Globals).BAI_BUY_TILE_COST_ONE_ADJACENT_MODIFIER, bAllowNegative: true);
+                }
+                else if (iAdjancentTeam >= 3)
+                {
+                    iCost = infos().utils().modify(iCost, ((BetterAIInfoGlobals)infos().Globals).BAI_BUY_TILE_COST_THREE_ADJACENT_MODIFIER, bAllowNegative: true);
+                }
+                else
+                {
+                    iCost = infos().utils().modify(iCost, ((BetterAIInfoGlobals)infos().Globals).BAI_BUY_TILE_COST_TWO_ADJACENT_MODIFIER, bAllowNegative: true);
+                }
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### Buying far tiles more expensive    END ###
+  ##############################################*/
+
+            return Math.Max(iCost, 1);
+        }
 
 /*####### Better Old World AI - Base DLL #######
   ### self-aaiEffectCityYieldRate      START ###

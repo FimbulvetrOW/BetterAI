@@ -1086,6 +1086,51 @@ namespace BetterAI
         }
         //copy-paste END
 
+
+        //public virtual bool canBuildUnit(UnitType eUnit)
+        public virtual bool canEventuallyBuildUnit(UnitType eUnit)
+        {
+            if (!canEverBuildUnit(eUnit))
+            {
+                return false;
+            }
+
+            //if (!isUnitUnlocked(eUnit))
+            //{
+            //    return false;
+            //}
+
+            if (isUnitObsolete(eUnit))
+            {
+                return false;
+            }
+
+            if (infos().unit(eUnit).mbFound)
+            {
+                if (game().getCitySiteLeftCount() == 0)
+                {
+                    return false;
+                }
+
+                if (isCityMaxReached())
+                {
+                    return false;
+                }
+            }
+
+            if (infos().unit(eUnit).mbCaravan)
+            {
+                if (game().getNumPlayersInt() == 1)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+
+
         //lines 17320-17338
         public override bool isImprovementUnlocked(ImprovementType eImprovement, City pCity)
         {

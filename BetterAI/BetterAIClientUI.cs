@@ -122,7 +122,7 @@ namespace BetterAI
 
                                 BetterAIInfoUnit pLoopInfoUnit = (BetterAIInfoUnit)unit.info();
 
-                                bool bActive = ((!mabUnitFilters[(int)UnitListFilterType.SCOUT] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])
+                                bool bActive = ((!mabUnitFilters[(int)UnitListFilterType.SCOUT] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT] || unit.reveal() > 0)
                                     && (!mabUnitFilters[(int)UnitListFilterType.CIVILIAN]
                                        || (pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.CIVILIAN] && (mabUnitFilters[(int)UnitListFilterType.SCOUT] || !pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.SCOUT])))
                                     && (!mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] || pLoopInfoUnit.maeUnitCategories[(int)UnitListFilterType.MILITARY_INFANTRY])
@@ -948,7 +948,8 @@ namespace BetterAI
                             InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
                             if (pImprovementInfo == null) continue;
                             if (!(pUnit.canBuildImprovementType(eLoopImprovement))) continue;
-                            else if (pUnit.canBuildImprovement(pTile, eLoopImprovement, pActivePlayer, isBuyGoods(), 
+
+                            if (pUnit.canBuildImprovement(pTile, eLoopImprovement, pActivePlayer, isBuyGoods(), 
                                 bTestEnabled: pTile.canHaveImprovementAdjacentTest(eLoopImprovement, bTestReligion: true, bUpgradeImprovement: false), 
                                 bTestOrders: false, bTestGoods: false))
                             {
@@ -1018,22 +1019,24 @@ namespace BetterAI
                                             }
 
                                             //for (int i = 0; i < pImprovementInfo.maeTerrainValid.Count; i++)
+                                            bool bShowButton = false;
                                             foreach (TerrainTargetType eLoopTerrainTarget in pImprovementInfo.maeTerrainValid)
                                             {
                                                 if (cityTerrainTargetSetScoped.Value.Contains(eLoopTerrainTarget))
                                                 {
                                                     //bShowButton = true;
                                                     aeImprovements.Add(eLoopImprovement);
-                                                    continue;
+                                                    break;
                                                 }
                                             }
+                                            if (bShowButton) continue;
 
                                             //vegetation and river
 
                                             ImprovementClassType eImprovementClass = pImprovementInfo.meClass;
                                             if (eImprovementClass != ImprovementClassType.NONE)
                                             {
-                                                bool bShowButton = false;
+                                                bShowButton = false;
                                                 InfoImprovementClass pImprovementClassInfo = Infos.improvementClass(eImprovementClass);
 
                                                 foreach (ResourceType cityResource in cityResourcesScope.Value)
@@ -1086,6 +1089,8 @@ namespace BetterAI
                         //meImprovementPrereq
                         foreach (ImprovementType eLoopImprovement in secondaryImprovementListImprovementReq.Value)
                         {
+                            if (aeImprovements.Contains(eLoopImprovement)) continue;
+
                             InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
                             ImprovementType eImprovementPrereq = pImprovementInfo.meImprovementPrereq;
                             if (aeImprovements.Contains(eImprovementPrereq))
@@ -1097,6 +1102,8 @@ namespace BetterAI
                         //mbAdjacentValid: not used in base game. This part makes improvements show up if you can build an improvement of the same class, which makes the improvement with mbAdjacentValid valid
                         foreach (ImprovementType eLoopImprovement in secondaryImprovementListImprovementAdjacentValid.Value)
                         {
+                            if (aeImprovements.Contains(eLoopImprovement)) continue;
+
                             InfoImprovement pImprovementInfo = Infos.improvement(eLoopImprovement);
                             InfoImprovementClass pImprovementClassInfo = Infos.improvementClass(pImprovementInfo.meClass);
                             foreach (ImprovementType eLoopAdjacentImprovement in aeImprovements)

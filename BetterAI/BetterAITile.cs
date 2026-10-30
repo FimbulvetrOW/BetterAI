@@ -559,7 +559,7 @@ namespace BetterAI
                 ImprovementType eTestImprovement = ImprovementType.NONE;
                 if (pImprovementInfo.meBonusAdjacentImprovement != ImprovementType.NONE)
                 {
-                    if (pCity.player() == null || pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true) || !pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory, bTestTerritory: bTestTerritory, bTestReligion: bTestReligion, bForceImprovement: true))
+                    if (pCity.player() == null || pCity.player().canStartImprovement(pImprovementInfo.meBonusAdjacentImprovement, pCity, bTestTech: false, bForceImprovement: true, bTestTerritory: false) || !pCity.canCityHaveImprovement(pImprovementInfo.meBonusAdjacentImprovement, eTeamTerritory, bTestReligion: bTestReligion, bForceImprovement: true))
                     {
                         ////UnityEngine.Debug.Log("BonusAdjacentImprovement: canCityTileHaveImprovement end 3");
                         return false;
@@ -574,7 +574,7 @@ namespace BetterAI
                     {
                         if (infos().improvement(eLoopImprovement).meClass == pImprovementInfo.meBonusAdjacentImprovementClass)
                         {
-                            if (pCity.player() != null && pCity.player().canStartImprovement(eLoopImprovement, pCity, bTestTech: false, bForceImprovement: true) && pCity.canCityHaveImprovement(eImprovement, eTeamTerritory, bTestTerritory: bTestTerritory, bTestReligion: bTestReligion, bForceImprovement: true))
+                            if (pCity.player() != null && pCity.player().canStartImprovement(eLoopImprovement, pCity, bTestTech: false, bForceImprovement: true, bTestTerritory: false) && pCity.canCityHaveImprovement(eImprovement, eTeamTerritory, bTestReligion: bTestReligion, bForceImprovement: true))
                             {
                                 bFound = true;
                                 eTestImprovement = eLoopImprovement;
@@ -1522,8 +1522,32 @@ namespace BetterAI
   ### No immediate unit from improvement END ###
   ##############################################*/
 
+
+
+        public override bool isInUnitZOC(DirectionType eDirection, Unit pUnit, TeamType eVisibilityTeam)
+        {
+            if (impassable())
+            {
+                return false;
+            }
+            if (hasCity())
+            {
+                return false;
+            }
+            if (hasActiveImprovement() && improvement().mbIgnoreZOC)
+            {
+                return false;
+            }
+            return isDirectionHostileZOC(infos().utils().directionOpposite(eDirection), pUnit, eVisibilityTeam, bIgnoreRiver: true);
+        }
+
+        public override bool isDirectionHostileZOC(DirectionType eDirection, Unit pUnit, TeamType eTeamVisibility)
+        {
+            return isDirectionHostileZOC(eDirection, pUnit, eTeamVisibility, bIgnoreRiver: true);
+        }
+
         //lines 9991-10060
-        public virtual bool isDirectionHostileZOC(DirectionType eDirection, Unit pUnit, TeamType eTeamVisibility, bool bIgnoreRiver = false)
+        public virtual bool isDirectionHostileZOC(DirectionType eDirection, Unit pUnit, TeamType eTeamVisibility, bool bIgnoreRiver = true)
         {
             Tile pAdjacentTile = tileAdjacent(eDirection);
             if (pAdjacentTile == null)
@@ -1535,11 +1559,20 @@ namespace BetterAI
                 return false;
             }
 
-            if (pAdjacentTile.isRevealedCity(eTeamVisibility) && isLand() && !pAdjacentTile.isNeutralOrFriendly(pUnit?.getTeam() ?? eTeamVisibility, pUnit?.getTribe() ?? TribeType.NONE, eTeamVisibility))
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement         START ###
+  ##############################################*/
+            if (bIgnoreRiver || !isRiver(eDirection))
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement           END ###
+  ##############################################*/
             {
-                if ((pUnit == null) || pUnit.info().mbWater != isWater() || !(pUnit.hasIgnoreZOC()))
+                if (pAdjacentTile.isRevealedCity(eTeamVisibility) && isLand() && !pAdjacentTile.isNeutralOrFriendly(pUnit?.getTeam() ?? eTeamVisibility, pUnit?.getTribe() ?? TribeType.NONE, eTeamVisibility))
                 {
-                    return true;
+                    if ((pUnit == null) || pUnit.info().mbWater != isWater() || !(pUnit.hasIgnoreZOC()))
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -1551,7 +1584,6 @@ namespace BetterAI
 
                     foreach (int iUnitID in unitListScoped.Value)
                     {
-
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
@@ -1559,7 +1591,7 @@ namespace BetterAI
                         BetterAIUnit pAdjacentUnit = (BetterAIUnit)game().unit(iUnitID);
                         if (bIgnoreRiver || !isRiver(eDirection) || (pAdjacentUnit.mbAmphibiousEmbark && ((BetterAIInfoGlobals)infos().Globals).BAI_AMPHIBIOUS_ZOC_CROSSES_RIVER == 1)) //BAI: without river or with mbAmphibiousEmbark
 /*####### Better Old World AI - Base DLL #######
-  ### Land Unit Water Movement         START ###
+  ### Land Unit Water Movement           END ###
   ##############################################*/
                         {
                             if (pAdjacentUnit.hasZOC(pUnit?.getType() ?? UnitType.NONE) && pAdjacentUnit.info().mbWater == isWater() && !(pAdjacentUnit.isHiddenFrom(eTeamVisibility)))
@@ -1598,9 +1630,6 @@ namespace BetterAI
                                 }
                             }
                         }
-
-
-
                     }
                 }
             }
@@ -1637,10 +1666,13 @@ namespace BetterAI
                     if (zocMap == null || !zocMap.TryGetValue((getID(), eLoopDirection), out bool bZoc))
                     {
                         bZoc = isDirectionHostileZOC(eLoopDirection, pUnit, eTeamVisibility, bIgnoreRiver);
+                        if (bZoc || bIgnoreRiver || !isRiver(eLoopDirection))
+                        {
+                            zocMap?.Add((getID(), eLoopDirection), bZoc);
+                        }
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
   ##############################################*/
-                        zocMap?.Add((getID(), eLoopDirection), bZoc);
                     }
                     if (bZoc)
                     {
