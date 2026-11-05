@@ -162,7 +162,7 @@ namespace BetterAI
                         if (eTactics == AttackTactics.Kill)
                         {
                             Unit pTargetUnit = pTargetTile.defendingUnit();
-                            if (pTargetUnit != null && pTargetUnit.getCooldown() == Infos.Globals.STUNNED_COOLDOWN)
+                            if (pTargetUnit != null && pTargetUnit.isStunned())
                             {
                                 continue;
                             }

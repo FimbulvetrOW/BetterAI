@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: AssemblyTitle("BetterAI")]
 [assembly: AssemblyDescription("Base DLL mod for Old World")]
-[assembly: AssemblyConfiguration("for Old World v1.0.84977")]
+[assembly: AssemblyConfiguration("for Old World v1.0.85345")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("BetterAI")]
 [assembly: AssemblyCopyright("Copyright © 2026")]
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.1.9.9")]
-[assembly: AssemblyFileVersion("0.1.9.9")]
+[assembly: AssemblyVersion("0.1.9.10")]
+[assembly: AssemblyFileVersion("0.1.9.10")]

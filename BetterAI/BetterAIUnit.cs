@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Xml;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ using UnityEngine.UI;
 using static BetterAI.BetterAIInfos;
 using System.Text.RegularExpressions;
 using System.IO;
+using Random = Mohawk.SystemCore.Random;
 
 namespace BetterAI
 {
@@ -191,60 +193,6 @@ namespace BetterAI
   ### Land Unit Water Movement           END ###
   ##############################################*/
 
-
-        public override void updateWaterControlTiles(List<Tile> aiWaterControlTiles, Tile pFromTile, TeamType eActiveTeam)
-        {
-            //using var profileScope = new UnityProfileScope("Unit.updateWaterControlTiles");
-
-            if (hasPlayer())
-            {
-                //flood-search adjacent tiles
-                using (var hashSetScope = CollectionCache.GetHashSetScoped<int>())
-                using (var queueScope = CollectionCache.GetArrayDequeScoped<int>())
-                {
-                    HashSet<int> visitedTiles = hashSetScope.Value;
-                    ArrayDeque<int> queuedTiles = queueScope.Value;
-
-                    //fix
-                    queuedTiles.AddBack(pFromTile.getID());
-                    visitedTiles.Add(pFromTile.getID());
-
-                    while (!queuedTiles.IsEmpty())
-                    {
-                        int iTileID = queuedTiles.RemoveFront();
-
-                        Tile pTile = game().tile(iTileID);
-
-                        if (pTile != null && pTile.isWater() && pTile.distanceTile(pFromTile) <= waterControl())
-                        {
-                            if (pTile.isVisible(eActiveTeam))
-                            {
-                                aiWaterControlTiles.Add(pTile);
-                            }
-
-                            //add adjacent tiles to search queue
-                            for (DirectionType eDirection = 0; eDirection < DirectionType.NUM_TYPES; eDirection++)
-                            {
-                                Tile pAdjacentTile = pTile.tileAdjacent(eDirection);
-                                if (pAdjacentTile != null)
-                                {
-                                    int iAdjacentID = pAdjacentTile.getID();
-
-                                    if (!visitedTiles.Contains(iAdjacentID))
-                                    {
-                                        queuedTiles.AddBack(iAdjacentID);
-                                        visitedTiles.Add(iAdjacentID);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-
-
 /*####### Better Old World AI - Base DLL #######
   ### No Family for Enlisted Units     START ###
   ##############################################*/
@@ -329,6 +277,38 @@ namespace BetterAI
                     {
                         setIgnoreZocCount(getIgnoreZocCount() + iChange);
                     }
+                    if (infos().effectUnit(eKey).mbIgnoresDistance)
+                    {
+                        setIgnoreDistanceCount(getIgnoreDistanceCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbImmobile)
+                    {
+                        setImmobileCount(getImmobileCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbLastStand)
+                    {
+                        setLastStandCount(getLastStandCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbStunned)
+                    {
+                        setStunnedCount(getStunnedCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbCriticalImmune)
+                    {
+                        setCriticalImmuneCount(getCriticalImmuneCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbSpreadReligion)
+                    {
+                        setSpreadReligionCount(getSpreadReligionCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbTheology)
+                    {
+                        setEstablishTheologyCount(getEstablishTheologyCount() + iChange);
+                    }
+                    if (infos().effectUnit(eKey).mbPromote)
+                    {
+                        setPromotableCount(getPromotableCount() + iChange);
+                    }
                     if (infos().effectUnit(eKey).mbFamilyTerritoryOnly)
                     {
                         setFamilyTerritoryOnlyCount(getFamilyTerritoryOnlyCount() + iChange);
@@ -345,6 +325,106 @@ namespace BetterAI
                     {
                         changeVegetationIgnoreCount(eVegetation, iChange);
                     }
+                    foreach (VegetationType eVegetation in infos().effectUnit(eKey).maeIgnoreVegetationDefense)
+                    {
+                        changeIgnoreVegetationDefenseCount(eVegetation, iChange);
+                    }
+                    foreach (EffectUnitType eLoopEffectUnit in infos().effectUnit(eKey).maeEffectUnitImmune)
+                    {
+                        changeEffectUnitImmuneCount(eLoopEffectUnit, iChange);
+                    }
+                    foreach (EffectUnitType eLoopEffectUnit in infos().effectUnit(eKey).maeEffectUnitInvalid)
+                    {
+                        changeEffectUnitInvalidCount(eLoopEffectUnit, iChange);
+                    }
+                    foreach ((AttackType eAttack, int iValue) in infos().effectUnit(eKey).maiAttackValue)
+                    {
+                        changeAttackValue(eAttack, iChange * iValue);
+                    }
+                    foreach ((AttackType eAttack, int iPercent) in infos().effectUnit(eKey).maiAttackPercent)
+                    {
+                        changeAttackPercent(eAttack, iChange * iPercent);
+                    }
+                    foreach ((TerrainType eTerrain, int iModifier) in infos().effectUnit(eKey).maiTerrainFromModifier)
+                    {
+                        changeTerrainFromModifier(eTerrain, iChange * iModifier);
+                    }
+                    foreach ((HeightType eHeight, int iModifier) in infos().effectUnit(eKey).maiHeightFromModifier)
+                    {
+                        changeHeightFromModifier(eHeight, iChange * iModifier);
+                    }
+                    foreach ((VegetationType eVegetation, int iModifier) in infos().effectUnit(eKey).maiVegetationFromModifier)
+                    {
+                        changeVegetationFromModifier(eVegetation, iChange * iModifier);
+                    }
+                    foreach ((ImprovementType eVegetation, int iModifier) in infos().effectUnit(eKey).maiImprovementToModifier)
+                    {
+                        changeImprovementToModifier(eVegetation, iChange * iModifier);
+                    }
+                    foreach ((OccurrenceType eOccurrence, int iModifier) in infos().effectUnit(eKey).maiOccurrenceFromModifier)
+                    {
+                        changeOccurrenceFromModifier(eOccurrence, iChange * iModifier);
+                    }
+                    foreach ((UnitTraitType eUnitTrait, int iModifier) in infos().effectUnit(eKey).maiUnitTraitModifier)
+                    {
+                        changeUnitTraitModifier(eUnitTrait, iChange * iModifier);
+                    }
+                    foreach ((UnitTraitType eUnitTrait, int iModifier) in infos().effectUnit(eKey).maiUnitTraitModifierAttack)
+                    {
+                        changeUnitTraitAttackModifier(eUnitTrait, iChange * iModifier);
+                    }
+                    foreach ((UnitTraitType eUnitTrait, int iModifier) in infos().effectUnit(eKey).maiUnitTraitModifierDefense)
+                    {
+                        changeUnitTraitDefenseModifier(eUnitTrait, iChange * iModifier);
+                    }
+                    foreach ((UnitTraitType eUnitTrait, int iModifier) in infos().effectUnit(eKey).maiUnitTraitModifierMelee)
+                    {
+                        changeMeleeUnitTraitModifier(eUnitTrait, iChange * iModifier);
+                    }
+                    foreach ((TerrainTargetType eTerrainTarget, bool bHide) in infos().effectUnit(eKey).mabHideTerrainTarget)
+                    {
+                        if (bHide)
+                        {
+                            changeHideTerrainTargetCount(eTerrainTarget, iChange);
+                        }
+                    }
+                    foreach ((TerrainTargetType eTerrainTarget, int iModifier) in infos().effectUnit(eKey).maiMeleeToClearTerrainTargetModifier)
+                    {
+                        changeMeleeToClearTerrainTargetModifier(eTerrainTarget, iChange * iModifier);
+                    }
+
+                    setFatigueExtra(getFatigueExtra() + infos().effectUnit(eKey).miFatigueExtra * iChange);
+                    setMovementExtra(getMovementExtra() + infos().effectUnit(eKey).miMovementExtra * iChange);
+                    setRangeExtra(getRangeExtra() + infos().effectUnit(eKey).miRangeExtra * iChange);
+                    setWaterControlExtra(getWaterControlExtra() + infos().effectUnit(eKey).miWaterControlExtra * iChange);
+                    setEffectStrengthModifier(getEffectStrengthModifier() + infos().effectUnit(eKey).miStrengthModifier * iChange);
+                    setEffectAttackModifier(getEffectAttackModifier() + infos().effectUnit(eKey).miAttackModifier * iChange);
+                    setEffectDefenseModifier(getEffectDefenseModifier() + infos().effectUnit(eKey).miDefenseModifier * iChange);
+                    setAttackPerLevelModifier(getAttackPerLevelModifier() + infos().effectUnit(eKey).miPerLevelAttackModifier * iChange);
+                    setEffectCriticalChance(getEffectCriticalChance() + infos().effectUnit(eKey).miCriticalChance * iChange);
+                    setMeleeCounter(getMeleeCounter() + infos().effectUnit(eKey).miMeleeCounter * iChange);
+                    setMeleeCounterAttackPercent(getMeleeCounterAttackPercent() + infos().effectUnit(eKey).miMeleeCounterPercent * iChange);
+                    setAdjacentSameModifier(getAdjacentSameModifier() + infos().effectUnit(eKey).miAdjacentSameModifier * iChange);
+                    setAdjacentSameAttackModifier(getAdjacentSameAttackModifier() + infos().effectUnit(eKey).miAdjacentSameAttackModifier * iChange);
+                    setAdjacentSameDefenseModifier(getAdjacentSameDefenseModifier() + infos().effectUnit(eKey).miAdjacentSameDefenseModifier * iChange);
+                    setAdjacentDifferentModifier(getAdjacentDifferentModifier() + infos().effectUnit(eKey).miAdjacentDifferentModifier * iChange);
+                    setMarchCostModifier(getMarchCostModifier() + infos().effectUnit(eKey).miMarchCostModifier * iChange);
+                    setRiverAttackModifier(getRiverAttackModifier() + infos().effectUnit(eKey).miRiverAttackModifier * iChange);
+                    setWaterLandAttackModifier(getWaterLandAttackModifier() + infos().effectUnit(eKey).miWaterLandAttackModifier * iChange);
+                    setHomeModifier(getHomeModifier() + infos().effectUnit(eKey).miHomeModifier * iChange);
+                    setSettlementAttackModifier(getSettlementAttackModifier() + infos().effectUnit(eKey).miSettlementAttackModifier * iChange);
+                    setConnectedAttackModifier(getConnectedAttackModifier() + infos().effectUnit(eKey).miConnectedAttackModifier * iChange);
+                    setConnectedDefenseModifier(getConnectedDefenseModifier() + infos().effectUnit(eKey).miConnectedDefenseModifier * iChange);
+                    setUrbanAttackModifier(getUrbanAttackModifier() + infos().effectUnit(eKey).miUrbanAttackModifier * iChange);
+                    setUrbanDefenseModifier(getUrbanDefenseModifier() + infos().effectUnit(eKey).miUrbanDefenseModifier * iChange);
+                    setDamagedUsModifier(getDamagedUsModifier() + infos().effectUnit(eKey).miDamagedUsModifier * iChange);
+                    setDamagedUsDefenseModifier(getDamagedUsDefenseModifier() + infos().effectUnit(eKey).miDamagedUsDefenseModifier * iChange);
+                    setDamagedThemModifier(getDamagedThemModifier() + infos().effectUnit(eKey).miDamagedThemModifier * iChange);
+                    setVsGeneralModifier(getVsGeneralModifier() + infos().effectUnit(eKey).miVsGeneralModifier * iChange);
+                    setVsGeneralDefenseModifier(getVsGeneralDefenseModifier() + infos().effectUnit(eKey).miVsGeneralDefenseModifier * iChange);
+                    setHasGeneralModifier(getHasGeneralModifier() + infos().effectUnit(eKey).miHasGeneralModifier * iChange);
+                    setFlankingAttackModifier(getFlankingAttackModifier() + infos().effectUnit(eKey).miFlankingAttackModifier * iChange);
+
 
                     if (!hasMoved())
                     {
@@ -429,7 +509,7 @@ namespace BetterAI
         public override int range(Tile pFromTile = null)
         {
             int iValue = base.range(pFromTile);
-            if (pFromTile != null && iValue > 0 && pFromTile.hasActiveImprovement())
+            if (pFromTile != null && iValue > 0 && !info().mbRangeFlat && pFromTile.hasActiveImprovement())
             {
                 BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(pFromTile.getActiveImprovement()));
                 iValue += pImprovementInfo.miRangeChange;
@@ -481,8 +561,8 @@ namespace BetterAI
                     {
                         if (pToTile.getMovementCostExtra() == 0)
                         {
-                            //return movement();
-                            return Math.Max(iCost, movement());
+                            //return getWaterMovementCost();
+                            return Math.Max(iCost, getWaterMovementCost());
                         }
                     }
 /*####### Better Old World AI - Base DLL #######
@@ -881,7 +961,7 @@ namespace BetterAI
 
             for (AttackType eLoopAttack = 0; eLoopAttack < infos().attacksNum(); eLoopAttack++)
             {
-                int iValue = attackValue(eLoopAttack);
+                int iValue = getAttackValue(eLoopAttack);
                 if (iValue > 0)
                 {
                     using (var tilesScoped = CollectionCache.GetListScoped<int>())
@@ -924,18 +1004,6 @@ namespace BetterAI
 
             if (!bCityAttack && pDefendingUnit != null && pDefendingUnit.isAlive())
             {
-                if (hasStun(pDefendingUnit, pToTile))
-                {
-                    pDefendingUnit.doCooldown(infos().Globals.STUNNED_COOLDOWN, bTestTurn: true, bForce: true, bOwnAction: false);
-                    game().addTileTextAllPlayers(azTileTexts, pToTile.getID(), () => TextManager.TEXT("TEXT_GAME_UNIT_STUNNED"));
-                }
-
-                if (hasImmobilize(pDefendingUnit))
-                {
-                    pDefendingUnit.doCooldown(infos().Globals.IMMOBILE_COOLDOWN, bTestTurn: true, bForce: true, bOwnAction: false);
-                    game().addTileTextAllPlayers(azTileTexts, pToTile.getID(), () => TextManager.TEXT("TEXT_GAME_IMMOBILE"));
-                }
-
                 if (hasPush(pDefendingUnit))
                 {
                     using (var unitListScoped = CollectionCache.GetListScoped<int>())
@@ -1270,7 +1338,7 @@ namespace BetterAI
                     }
                     else
                     {
-                        iValue += pToUnit.counterAttackMelee();
+                        iValue += ((BetterAIUnit)pToUnit).getMeleeCounter();
                     }
                     
                     if (getCooldown() == infos().Globals.ROUT_COOLDOWN)
@@ -1317,7 +1385,7 @@ namespace BetterAI
                     return false;
                 }
             }
-            if (getCooldown() == infos().Globals.STUNNED_COOLDOWN)
+            if (isStunned())
             {
                 return false;
             }

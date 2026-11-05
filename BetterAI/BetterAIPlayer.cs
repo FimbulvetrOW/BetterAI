@@ -145,9 +145,10 @@ namespace BetterAI
   ##############################################*/
 
         //lines 8855-9323
-        public override void changeEffectPlayerCount(EffectPlayerType eIndex, int iChange)
+        public override bool changeEffectPlayerCount(EffectPlayerType eIndex, int iChange, bool bCheckVictory)
         {
             //UnityEngine.Debug.Log("Player.changeEffectPlayerCount");
+            bool bDoVictoryCheck = false;
 
             if (iChange != 0 && eIndex != EffectPlayerType.NONE)
             {
@@ -730,12 +731,21 @@ namespace BetterAI
 
                         if (infos().effectPlayer(eIndex).miVP > 0)
                         {
-                            game().doVictory();
+                            if (bCheckVictory)
+                            {
+                                game().doVictory();
+                            }
+                            else
+                            {
+                                bDoVictoryCheck = true;
+                            }
                         }
                     }
 
                 }
             }
+
+            return bDoVictoryCheck;
         }
 
         public virtual void getDependentEffectPlayerCountChanges(EffectPlayerType eIndex, int iChange, ref List<EffectPlayerType> aeEffectPlayerIgnore, ref Dictionary<EffectPlayerType, int> effectPlayerCountChange, int iMaxDepth = 100)

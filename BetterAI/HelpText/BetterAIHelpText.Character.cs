@@ -493,7 +493,7 @@ namespace BetterAI
                     {
                         if (infos().trait(eTrait).meReligionAgent != ReligionType.NONE)
                         {
-                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_RELIGION_AGENT", buildAgentLinkVariable(), buildReligionLinkVariable(infos().trait(eTrait).meReligionAgent, pGame, pActivePlayer));
+                            builder.AddTEXT("TEXT_HELPTEXT_TRAIT_RELIGION_AGENT", buildAgentLinkVariable(pCharacter != null ? pCharacter.getGender() : GenderType.NONE), buildReligionLinkVariable(infos().trait(eTrait).meReligionAgent, pGame, pActivePlayer));
                         }
                     }
 

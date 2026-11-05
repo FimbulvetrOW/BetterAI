@@ -18,8 +18,6 @@ namespace BetterAI
                 return pCity == ClosestCity;
             }
 
-
-
             //re-enabling pillaging on water by tribal land units if delay turns are set
             //lines 1019-1064
             public override bool shouldTribePillage(Tile pTile)

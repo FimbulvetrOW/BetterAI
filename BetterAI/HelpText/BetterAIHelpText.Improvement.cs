@@ -478,7 +478,7 @@ namespace BetterAI
                             {
                                 if (isTerrainCandidate(eLoopTerrain, bInvalid: true) && (pTile == null || pTile.getTerrain() == eLoopTerrain))
                                 {
-                                    lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_TERRAIN", buildTerrainLinkVariable(eLoopTerrain))));
+                                    lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_TERRAIN", buildTerrainLinkVariable(eLoopTerrain)), pTile != null && pTile.getTerrain() == eLoopTerrain)); ;
                                 }
                             }
                         }
@@ -488,7 +488,7 @@ namespace BetterAI
                     {
                         if (infos().Helpers.isImprovementHeightInvalid(eImprovement, eLoopHeight) && (pTile == null || pTile.getHeight() == eLoopHeight))
                         {
-                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_TERRAIN", buildHeightLinkVariable(eLoopHeight))));
+                            lRequirements.Add(buildWarningTextVariable(TEXTVAR_TYPE("TEXT_HELPTEXT_IMPROVEMENT_REQUIRES_NO_TERRAIN", buildHeightLinkVariable(eLoopHeight)), pTile != null && pTile.getHeight() == eLoopHeight));
                         }
                     }
 
@@ -702,11 +702,21 @@ namespace BetterAI
 
                     if (pUnit != null)
                     {
-                        if (infos().improvement(eImprovement).mbBuild && pUnit.canBuildImprovements() && pUnit.hasCooldown())
+                        if (infos().improvement(eImprovement).mbBuild && pUnit.canBuildImprovements())
                         {
-                            using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                            if (pUnit.hasCooldown())
                             {
-                                lRequirements.Add(buildCooldownWarning(subText, pUnit).ToTextVariable());
+                                using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                                {
+                                    lRequirements.Add(buildCooldownWarning(subText, pUnit).ToTextVariable());
+                                }
+                            }
+                            if (pUnit.isStunned())
+                            {
+                                using (TextBuilder subText = TextBuilder.GetTextBuilder(TextManager))
+                                {
+                                    lRequirements.Add(buildStunnedWarning(subText, pUnit).ToTextVariable());
+                                }
                             }
                         }
                     }

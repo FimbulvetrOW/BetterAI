@@ -1547,7 +1547,7 @@ namespace BetterAI
 
                                 foreach (EffectCityType eEffectCity in effectListScoped.Value)
                                 {
-                                    buildEffectCityHelpYieldsPotential(subText, eEffectCity, pGame, cityListScoped.Value, pActivePlayer, bSkipImpossible: !bEncyclopedia, bShowTotal: false, bSkipZero: !bEncyclopedia);
+                                    buildEffectCityHelpYieldsPotential(subText, eEffectCity, pGame, cityListScoped.Value, pActivePlayer, bSkipImpossible: !bEncyclopedia, bShowTotal: false, bSkipZero: !bEncyclopedia, bSkipNonZero: false);
                                 }
                             }
 

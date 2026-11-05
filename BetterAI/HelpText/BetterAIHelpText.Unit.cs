@@ -902,7 +902,7 @@ namespace BetterAI
 
                     for (AttackType eLoopAttack = 0; eLoopAttack < infos().attacksNum(); eLoopAttack++)
                     {
-                        int iValue = pUnit.attackValue(eLoopAttack);
+                        int iValue = pUnit.getAttackValue(eLoopAttack);
                         if (iValue > 0)
                         {
                             TextVariable valueOrFalse = iValue > 1 ? TEXTVAR(iValue) : TEXTVAR(false);

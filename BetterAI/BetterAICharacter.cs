@@ -98,17 +98,17 @@ namespace BetterAI
   ##############################################*/
 
         //lines 5982-5993
-        public override void resetTraitEffectPlayer(TraitType eTrait, int iChange)
+        public override bool resetTraitEffectPlayer(TraitType eTrait, int iChange, bool bCheckVictory)
         {
             //UnityEngine.Debug.Log("Character.resetTraitEffectPlayer");
-            base.resetTraitEffectPlayer(eTrait, iChange);
+            bool bDoVictoryCheck = base.resetTraitEffectPlayer(eTrait, iChange, bCheckVictory: bCheckVictory);
             if (isJob())
             {
                 EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eTrait))).maeJobEffectPlayer[getJob()];
 
                 if (eEffectPlayer != EffectPlayerType.NONE)
                 {
-                    player().changeEffectPlayerCount(eEffectPlayer, iChange);
+                    bDoVictoryCheck |= player().changeEffectPlayerCount(eEffectPlayer, iChange, bCheckVictory);
                 }
             }
 
@@ -121,30 +121,40 @@ namespace BetterAI
                         EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eTrait))).maeTraitEffectPlayer[eLoopTrait];
                         if (eEffectPlayer != EffectPlayerType.NONE)
                         {
-                            player().changeEffectPlayerCount(eEffectPlayer, iChange);
+                            bDoVictoryCheck |= player().changeEffectPlayerCount(eEffectPlayer, iChange, bCheckVictory);
                         }
 
                         eEffectPlayer = ((BetterAIInfoTrait)(infos().trait(eLoopTrait))).maeTraitEffectPlayer[eTrait];
                         if (eEffectPlayer != EffectPlayerType.NONE)
                         {
-                            player().changeEffectPlayerCount(eEffectPlayer, iChange);
+                            bDoVictoryCheck |= player().changeEffectPlayerCount(eEffectPlayer, iChange, bCheckVictory);
                         }
                     }
                 }
             }
+
+            return bDoVictoryCheck;
         }
 
         public virtual void resetJobTraitEffectPlayer(JobType eJob, int iChange)
         {
             //UnityEngine.Debug.Log("Character.resetJobTraitEffectPlayer");
+            bool bCheckVictory = false;
+
             foreach (TraitType eLoopTrait in getTraits())
             {
                 EffectPlayerType eEffectPlayer = ((BetterAIInfoTrait)infos().trait(eLoopTrait)).maeJobEffectPlayer[eJob];
                 if (eEffectPlayer != EffectPlayerType.NONE)
                 {
-                    player().changeEffectPlayerCount(eEffectPlayer, iChange);
+                    bCheckVictory |= player().changeEffectPlayerCount(eEffectPlayer, iChange, bCheckVictory: false);
                 }
             }
+
+            if (bCheckVictory)
+            {
+                game().doVictory();
+            }
+
         }
 /*####### Better Old World AI - Base DLL #######
   ### Alternative GV bonuses             END ###
@@ -279,7 +289,7 @@ namespace BetterAI
         public virtual bool getTraitValid(TraitType eTrait)
         {
             //UnityEngine.Debug.Log("Character.getTraitValid");
-            return base.isTraitValid(eTrait);
+            return base.isTraitValid(eTrait, TraitType.NONE);
         }
 
     }

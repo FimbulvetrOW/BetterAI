@@ -4000,24 +4000,6 @@ namespace BetterAI
                 return Math.Max(1, iValue);
             }
 
-            //fix from Test branch
-            protected virtual bool isLowPriorityUnit(UnitType eLoopUnit)
-            {
-                if (infos.Helpers.isEmergencyUnit(eLoopUnit))
-                {
-                    return true;
-                }
-                if (isLatestMilitaryLandUnit(eLoopUnit) && getCurrentMilitaryUnitNumber() > getTargetMilitaryUnitNumber())
-                {
-                    return true;
-                }
-                if (isMilitaryLandUnit(eLoopUnit) && getCurrentAllLandMilitaryUnitNumber() > getTargetMilitaryUnitNumber())
-                {
-                    return true;
-                }
-                return false;
-            }
-
 
 /*####### Better Old World AI - Base DLL #######
   ### AI: less value for specialist    START ###
@@ -6939,11 +6921,10 @@ namespace BetterAI
 
             //lines 17008-17183
             // Chance that we will declare war on them
-            //I should do Peace and Truce too
+
+
             public override int getWarOfferPercent(PlayerType eOtherPlayer, bool bDeclare = true, bool bPreparedOnly = false, bool bCurrentPlayer = true)
             {
-                //UnityEngine.Debug.Log("PlayerAI.getWarOfferPercent Player");
-
                 //using var profileScope = new UnityProfileScope("PlayerAI.getWarOfferPercent");
 
                 if (player == null)
@@ -6951,7 +6932,7 @@ namespace BetterAI
                     return 0;
                 }
 
-                BetterAIPlayer pOtherPlayer = (BetterAIPlayer)game.player(eOtherPlayer);
+                Player pOtherPlayer = game.player(eOtherPlayer);
                 PlayerType eThisPlayer = getPlayer();
 
                 if (!(player.canDeclareWar(pOtherPlayer)))
@@ -6959,44 +6940,47 @@ namespace BetterAI
                     return 0;
                 }
 
-                if (pOtherPlayer.isGivingTributeToPlayer(eThisPlayer, AI_TRIBUTE_NO_WAR_TURNS))
+                if (bCurrentPlayer)
                 {
-                    return 0;
-                }
-
-                for (DiplomacyType eDiplomacy = 0; eDiplomacy < infos.diplomaciesNum(); ++eDiplomacy)
-                {
-                    if (infos.diplomacy(eDiplomacy).mbHostile)
+                    if (((BetterAIPlayer)pOtherPlayer).isGivingTributeToPlayer(eThisPlayer, AI_TRIBUTE_NO_WAR_TURNS))
                     {
-                        MemoryType eMemory = infos.diplomacy(eDiplomacy).mePlayerMemory;
-                        if (eMemory != MemoryType.NONE)
+                        return 0;
+                    }
+
+                    for (DiplomacyType eDiplomacy = 0; eDiplomacy < infos.diplomaciesNum(); ++eDiplomacy)
+                    {
+                        if (infos.diplomacy(eDiplomacy).mbHostile)
                         {
-                            if (player.countPlayerMemories(eMemory, PlayerType.NONE) > 0)
+                            MemoryType eMemory = infos.diplomacy(eDiplomacy).mePlayerMemory;
+                            if (eMemory != MemoryType.NONE)
                             {
-                                return 0;
+                                if (player.countPlayerMemories(eMemory, PlayerType.NONE) > 0)
+                                {
+                                    return 0;
+                                }
                             }
                         }
                     }
                 }
 
                 ProximityType eProximity = pOtherPlayer.calculateProximityPlayer(eThisPlayer);
-                PowerType eStrength = pOtherPlayer.calculateWarStrengthOf(eThisPlayer);
+                PowerType eStrength = ((BetterAIPlayer)pOtherPlayer).calculateWarStrengthOf(eThisPlayer);
 
                 bool bPlayToWin = game.isPlayToWinVs(eOtherPlayer);
 
                 if (!bPlayToWin)
                 {
-                    if (game.isPlayToWinAny())
-                    {
-                        return 0;
-                    }
-
                     if (bCurrentPlayer)
                     {
-                        if (!isPlayerCityReachable(eOtherPlayer))
+                        if (game.isPlayToWinAny())
                         {
                             return 0;
                         }
+                    }
+
+                    if (!isPlayerCityReachable(eOtherPlayer))
+                    {
+                        return 0;
                     }
 
                     if (bDeclare)
@@ -7006,7 +6990,7 @@ namespace BetterAI
                             return 0;
                         }
 
-                        if (!(pOtherPlayer.playerOpinionOfUs(eThisPlayer).mbDeclareWar))
+                        if (!(((BetterAIPlayer)pOtherPlayer).playerOpinionOfUs(eThisPlayer).mbDeclareWar))
                         {
                             return 0;
                         }
@@ -7032,20 +7016,6 @@ namespace BetterAI
                             {
                                 return 0;
                             }
-
-                            //what is this?
-                            //foreach (int iLoopUnit in pOtherPlayer.getUnits())
-                            //{
-                            //    Unit pLoopUnit = game.unit(iLoopUnit);
-                            //    if (pLoopUnit != null && pLoopUnit.isVisibleTo(player.getTeam()))
-                            //    {
-                            //        Tile pLoopTile = pLoopUnit.tile();
-                            //        if (getTileProtection(pLoopTile) > 0 && getTileDanger(pLoopTile) > getTileProtection(pLoopTile))
-                            //        {
-                            //            return 0;
-                            //        }
-                            //    }
-                            //}
                         }
                     }
                 }
@@ -7071,65 +7041,72 @@ namespace BetterAI
                         }
                     }
                 }
-
-                int iPercent = pOtherPlayer.playerOpinionOfUs(eThisPlayer).miWarPercent;
-
 /*####### Better Old World AI - Base DLL #######
   ### more precision for WarOffer      START ###
   ##############################################*/
-                int iMulti = 640;
-                int iMultiHalf = 320;
-                iPercent *= iMulti;
+                //int iPercentMultiplier = 100;
+                int iPercentMultiplier = 10000;
 /*####### Better Old World AI - Base DLL #######
   ### more precision for WarOffer        END ###
   ##############################################*/
-
-                if (bPlayToWin && bCurrentPlayer)
-                {
-                    if (pOtherPlayer.isCloseToWinning(5))
-                    {
-                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_5);
-                    }
-                    else if (pOtherPlayer.isCloseToWinning(10))
-                    {
-                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_10);
-                    }
-                    else if (pOtherPlayer.isCloseToWinning(15))
-                    {
-                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_15);
-                    }
-                    else if (pOtherPlayer.isCloseToWinning(20))
-                    {
-                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_20);
-                    }
-                    else
-                    {
-                        iPercent = infos.utils().modify(iPercent, infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_OTHER);
-                    }
-                }
-
-                iPercent = infos.utils().modify(iPercent, infos.proximity(eProximity).miWarModifier);
-                iPercent = infos.utils().modify(iPercent, infos.power(eStrength).miWarModifier);
-
-                iPercent = infos.utils().modify(iPercent, game.teamDiplomacy(eThisPlayer, eOtherPlayer).miWarModifier);
+                iPercentMultiplier = infos.utils().modify(iPercentMultiplier, infos.proximity(eProximity).miWarModifier);
+                iPercentMultiplier = infos.utils().modify(iPercentMultiplier, infos.power(eStrength).miWarModifier);
+                iPercentMultiplier = infos.utils().modify(iPercentMultiplier, game.teamDiplomacy(eThisPlayer, eOtherPlayer).miWarModifier);
 
                 {
                     Character pLeader = player.leader();
-
                     if (pLeader != null)
                     {
                         foreach (TraitType eLoopTrait in pLeader.getTraits())
                         {
-                            iPercent = infos.utils().modify(iPercent, infos.trait(eLoopTrait).miWarModifier);
+                            iPercentMultiplier = infos.utils().modify(iPercentMultiplier, infos.trait(eLoopTrait).miWarModifier);
                         }
                     }
                 }
 
                 if (pOtherPlayer.isHuman())
                 {
-                    iPercent = infos.utils().modify(iPercent, game.opponentLevel().miWarModifier);
+                    iPercentMultiplier = infos.utils().modify(iPercentMultiplier, game.opponentLevel().miWarModifier);
+                }
 
-                    if (game.getTurn() > 20)
+                if (bPlayToWin && bCurrentPlayer)
+                {
+                    int iPlayToWinModifier;
+                    if (pOtherPlayer.isCloseToWinning(5))
+                    {
+                        iPlayToWinModifier = infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_5;
+                    }
+                    else if (pOtherPlayer.isCloseToWinning(10))
+                    {
+                        iPlayToWinModifier = infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_10;
+                    }
+                    else if (pOtherPlayer.isCloseToWinning(15))
+                    {
+                        iPlayToWinModifier = infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_15;
+                    }
+                    else if (pOtherPlayer.isCloseToWinning(20))
+                    {
+                        iPlayToWinModifier = infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_20;
+                    }
+                    else
+                    {
+                        iPlayToWinModifier = infos.Globals.PLAY_TO_WIN_WAR_PERCENT_MODIFIER_OTHER;
+                    }
+                    iPercentMultiplier = Math.Max(iPercentMultiplier, iPlayToWinModifier + 100);
+                }
+
+/*####### Better Old World AI - Base DLL #######
+  ### more precision for WarOffer      START ###
+  ##############################################*/
+                //int iPercent = infos.utils().modify(((BetterAIPlayer)pOtherPlayer).playerOpinionOfUs(eThisPlayer).miWarPercent, iPercentMultiplier - 100);
+                int iPercent = infos.utils().modify(((BetterAIPlayer)pOtherPlayer).playerOpinionOfUs(eThisPlayer).miWarPercent * 100, ((iPercentMultiplier + 50)/100) - 100);
+/*####### Better Old World AI - Base DLL #######
+  ### more precision for WarOffer        END ###
+  ##############################################*/
+
+                if (!bPlayToWin && bCurrentPlayer)
+                {
+                    if (pOtherPlayer.isHuman() && game.getTurn() > 20)
                     {
                         int iScore = game.getTeamWarScoreTotalAll(pOtherPlayer.getTeam());
 
@@ -7140,33 +7117,14 @@ namespace BetterAI
                         }
                         else if (iScore > 100)
                         {
-                            if (!bPlayToWin)
-                            {
-                                iPercent *= 4;
-                                iPercent /= 5;
-                            }
+                            iPercent *= 4;
+                            iPercent /= 5;
                         }
                     }
-                }
 
-                iPercent *= (5 + pOtherPlayer.countTeamWars());
-                iPercent /= (5 + 0);
-
-                iPercent /= (player.countTeamWars() + (getWarPreparingPlayer() != PlayerType.NONE ? 2 : 1));
-
-                if (game.hasTeamAlliance(pOtherPlayer.getTeam()))
-                {
-                    iPercent *= 4;
-                    iPercent /= 5;
-                }
-
-                if (!bPlayToWin)
-                {
-                    if (bDeclare)
-                    {
-                        iPercent *= 2;
-                        iPercent /= 3;
-                    }
+                    iPercent *= (5 + pOtherPlayer.countTeamWars());
+                    iPercent /= (5 + 0);
+                    iPercent /= (player.countTeamWars() + (getWarPreparingPlayer() != PlayerType.NONE ? 2 : 1));
 
                     for (TeamType eLoopTeam = 0; eLoopTeam < game.getNumTeams(); eLoopTeam++)
                     {
@@ -7183,21 +7141,34 @@ namespace BetterAI
                     }
                 }
 
-/*####### Better Old World AI - Base DLL #######
-  ### more precision for WarOffer      START ###
-  ##############################################*/
-                iPercent = (iPercent + iMultiHalf) / iMulti; //rounding
-/*####### Better Old World AI - Base DLL #######
-  ### more precision for WarOffer        END ###
-  ##############################################*/
+                if (game.hasTeamAlliance(pOtherPlayer.getTeam()))
+                {
+                    iPercent *= 4;
+                    iPercent /= 5;
+                }
+
+                if (bDeclare)
+                {
+                    iPercent *= 2;
+                    iPercent /= 3;
+                }
 
                 if (bCurrentPlayer && isWarPreparing(pOtherPlayer.getPlayer()) && getWarPreparingTurns() <= 0)
                 {
                     iPercent *= 2;
                 }
 
+/*####### Better Old World AI - Base DLL #######
+  ### more precision for WarOffer      START ###
+  ##############################################*/
+                iPercent = (iPercent + 50) / 100;
+/*####### Better Old World AI - Base DLL #######
+  ### more precision for WarOffer        END ###
+  ##############################################*/
+
                 return infos.utils().range(iPercent, 0, 100);
             }
+            //I should do Peace and Truce too
 
             public override int getWarOfferPercent(TribeType eTribe)
             {
