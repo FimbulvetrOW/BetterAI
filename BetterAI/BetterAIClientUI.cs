@@ -222,7 +222,6 @@ namespace BetterAI
         private const string YIELD_ARROW = "Sprites/GuitarPickUp";
         private const string YIELD_NORMAL = "Sprites/GuitarPick";
 
-        //copy-paste START
         //lines 9192-9436
         protected override void updateCitySelection(City pSelectedCity, bool bUpdateActions)
         {
@@ -551,7 +550,6 @@ namespace BetterAI
 
             //UnityEngine.Debug.Log("ClientUI.updateCitySelection - End");
         }
-        //copy-paste END
 
         //lines 10893-11081
         protected override void updateReligionSelection(ReligionType eReligion, bool bUpdateActions)
@@ -2808,7 +2806,6 @@ namespace BetterAI
         //lines 17022-17035
         protected override int CompareCultureLevels(int cityID, int otherCityID)
         {
-            //copy-paste start
             City city = Game.city(cityID);
             City otherCity = Game.city(otherCityID);
 
@@ -2843,7 +2840,6 @@ namespace BetterAI
             {
                 return city.getCulture() - otherCity.getCulture();
             }
-            //copy-paste end
         }
 
 

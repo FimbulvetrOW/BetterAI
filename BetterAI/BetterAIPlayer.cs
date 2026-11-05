@@ -1030,8 +1030,6 @@ namespace BetterAI
             }
         }
 
-
-        //copy-paste START
         //canBuildUnit: lines 17183-17222
         public virtual bool canContinueBuildUnit(UnitType eUnit)
         {
@@ -1084,8 +1082,6 @@ namespace BetterAI
 
             return true;
         }
-        //copy-paste END
-
 
         //public virtual bool canBuildUnit(UnitType eUnit)
         public virtual bool canEventuallyBuildUnit(UnitType eUnit)

@@ -440,12 +440,9 @@ namespace BetterAI
                 return iValue;
             }
         }
-
 /*####### Better Old World AI - Base DLL #######
   ### Improvement Extra Range            END ###
   ##############################################*/
-
-        //copy-pasted from Unit.cs START
 
         //lines 6143-6233
         // used by pathfinder
@@ -595,7 +592,6 @@ namespace BetterAI
                 return iCost;
             }
         }
-        //copy-pasted from Unit.cs END
 
 /*####### Better Old World AI - Base DLL #######
   ### Better bounce tile search        START ###

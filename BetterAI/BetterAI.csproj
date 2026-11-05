@@ -79,7 +79,14 @@
     <Compile Include="BetterAIEnums.cs" />
     <Compile Include="BetterAIGame.cs" />
     <Compile Include="BetterAIGameFactory.cs" />
-    <Compile Include="BetterAIHelpText.cs" />
+    <Compile Include="HelpText\BetterAIHelpText.Character.cs" />
+    <Compile Include="HelpText\BetterAIHelpText.Effect.cs" />
+    <Compile Include="HelpText\BetterAIHelpText.Unit.cs" />
+    <Compile Include="HelpText\BetterAIHelpText.Improvement.cs" />
+    <Compile Include="HelpText\BetterAIHelpText.Widget.cs" />
+    <Compile Include="HelpText\BetterAIHelpText.Game.cs" />
+    <Compile Include="HelpText\BetterAIHelpText.City.cs" />
+    <Compile Include="HelpText\BetterAIHelpText.cs" />
     <Compile Include="BetterAIInfoHelpers.cs" />
     <Compile Include="BetterAIInfos.cs" />
     <Compile Include="BetterAIMapBuilder.cs" />
@@ -99,8 +106,6 @@
       <Link>.editorconfig</Link>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="HelpText\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

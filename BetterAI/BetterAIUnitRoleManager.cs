@@ -324,7 +324,6 @@ namespace BetterAI
 
 
                 //line 5081-5189
-                //copy-paste START
                 protected override void getUnitCitySiteGuardValues(PathFinder pPathfinder, Unit pUnit, int iMaxSteps, int iMaxTargets)
                 {
                     //using var profileScope = new UnityProfileScope("UnitRoleManager.getUnitCitySiteGuardValues");
@@ -493,7 +492,6 @@ namespace BetterAI
                         }
                     }
                 }
-                //copy-paste END
 
                 protected virtual Unit assignUnitToBuyTile(Tile pTile, YieldType eYield, City pCity, bool bAllowCivilian)
                 {

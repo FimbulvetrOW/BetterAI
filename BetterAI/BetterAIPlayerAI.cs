@@ -6937,8 +6937,6 @@ namespace BetterAI
                 return iBestValue;
             }
 
-
-            //copy-paste START
             //lines 17008-17183
             // Chance that we will declare war on them
             //I should do Peace and Truce too
@@ -7200,8 +7198,6 @@ namespace BetterAI
 
                 return infos.utils().range(iPercent, 0, 100);
             }
-            //copy-paste END
-
 
             public override int getWarOfferPercent(TribeType eTribe)
             {

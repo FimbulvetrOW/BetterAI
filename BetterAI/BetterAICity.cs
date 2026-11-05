@@ -334,7 +334,6 @@ namespace BetterAI
 
 
         //lines 1056-1418
-        //copy-paste START
         public override void writeGameXML(XmlWriter pWriter)
         {
             pWriter.WriteStartElement("City");
@@ -686,7 +685,6 @@ namespace BetterAI
 
             pWriter.WriteEndElement();
         }
-        //copy-paste END
 
         //lines 1928-1948
         protected override void setGovernorID(int iNewValue)
@@ -1515,7 +1513,6 @@ namespace BetterAI
   ### City Biome                         END ###
   ##############################################*/
 
-        //copy-paste START
         //lines 7447-7544
         public override bool doDistantRaid(bool bTest = false)
         {
@@ -1614,7 +1611,6 @@ namespace BetterAI
 
             return true;
         }
-        //copy-paste END
 
 /*####### Better Old World AI - Base DLL #######
   ### Bonus adjacent Improvement       START ###
