@@ -14,7 +14,6 @@ using TenCrowns.GameCore;
 using TenCrowns.GameCore.Text;
 using UnityEngine;
 using UnityEngine.UI;
-using static BetterAI.BetterAIHelpText.CommaListVariableGenerator;
 using static TenCrowns.GameCore.Player;
 using static TenCrowns.GameCore.Text.TextExtensions;
 using Constants = TenCrowns.GameCore.Constants;
@@ -48,7 +47,7 @@ namespace BetterAI
             {
                 if (ImprovementTypes.Count > 0)
                 {
-                    CommaListVariableGenerator religiousImprovements = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.NONE, EncloseType.PARENTHESIS, TextManager);
+                    CommaListVariableGenerator religiousImprovements = new CommaListVariableGenerator(CommaListVariableGenerator.ListType.NONE, CommaListVariableGenerator.EncloseType.PARENTHESIS_OUTER, bEncloseSingleItem: true, TextManager);
                     foreach (ImprovementType eLoopImprovement in ImprovementTypes)
                     {
                         if (pCity.getImprovementCount(eLoopImprovement) > 0)
@@ -65,7 +64,7 @@ namespace BetterAI
                                 if (pCity.getImprovementCount(eLoopImprovement) > pCity.getActiveImprovementCount(eLoopImprovement))
                                 {
                                     int iUnfinishedImprovements = pCity.getImprovementCount(eLoopImprovement) - pCity.getActiveImprovementCount(eLoopImprovement);
-                                    name = name + "(" + iUnfinishedImprovements.ToStringCached() + ")";
+                                    name = name + "(+" + iUnfinishedImprovements.ToStringCached() + ")";
                                 }
                             }
                             else

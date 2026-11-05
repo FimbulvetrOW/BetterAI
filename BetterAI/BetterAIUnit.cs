@@ -160,6 +160,11 @@ namespace BetterAI
         public bool mbAmphibiousEmbark = false;
         public int miAmphibiousEmbarkCount = 0;
 
+
+        public virtual void changeEffectUnitDictionaryPublic(EffectUnitType eKey, int iChange)
+        {
+            changeEffectUnitDictionary(eKey, iChange);
+        }
         //lines 3989-4005
         protected override void changeEffectUnitDictionary(EffectUnitType eKey, int iChange)
         {
@@ -389,25 +394,28 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Improvement gives Unit Effect    START ###
   ##############################################*/
-                if (pTile.hasActiveImprovement() && pTile.isFriendly(getTeam(), getTribe()))
-                {
-                    BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(pTile.getActiveImprovement()));
-                    EffectUnitType eImprovementEffectUnit = pImprovementInfo.meApplyEffectUnit;
-                    if (eImprovementEffectUnit != EffectUnitType.NONE)
-                    {
-                        if (isEffectUnitValid(eImprovementEffectUnit))
-                        {
-                            if (bPreview)
-                            {
-                                changeEffectUnitDictionary(eImprovementEffectUnit, iChange);
-                            }
-                            else
-                            {
-                                changeEffectUnit(eImprovementEffectUnit, SourceEffectUnitType.ADJACENT, iChange);
-                            }
-                        }
-                    }
-                }
+                //replace with
+                ((BetterAITile)pTile).doImprovementUnitEffect(iChange: iChange, iUnit: getID(), bPreview: bPreview);
+
+                //if (pTile.hasActiveImprovement() && pTile.isFriendly(getTeam(), getTribe()))
+                //{
+                //    BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(pTile.getActiveImprovement()));
+                //    EffectUnitType eImprovementEffectUnit = pImprovementInfo.meApplyEffectUnit;
+                //    if (eImprovementEffectUnit != EffectUnitType.NONE)
+                //    {
+                //        if (isEffectUnitValid(eImprovementEffectUnit))
+                //        {
+                //            if (bPreview)
+                //            {
+                //                changeEffectUnitDictionary(eImprovementEffectUnit, iChange);
+                //            }
+                //            else
+                //            {
+                //                changeEffectUnit(eImprovementEffectUnit, SourceEffectUnitType.ADJACENT, iChange);
+                //            }
+                //        }
+                //    }
+                //}
 /*####### Better Old World AI - Base DLL #######
   ### Improvement gives Unit Effect      END ###
   ##############################################*/

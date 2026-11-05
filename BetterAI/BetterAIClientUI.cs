@@ -561,8 +561,30 @@ namespace BetterAI
             //UnityEngine.Debug.Log("ClientUI.updateReligionSelection - Start");
 
             //damn protection levels
-            int maxSelectedCharacterButtonsCount = (int)base.GetType().GetField("maxSelectedCharacterButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
-            int maxSelectedCityButtonsCount = (int)base.GetType().GetField("maxSelectedCityButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
+            //int maxSelectedCharacterButtonsCount = (int)base.GetType().GetField("maxSelectedCharacterButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
+            //int maxSelectedCityButtonsCount = (int)base.GetType().GetField("maxSelectedCityButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
+            System.Type tBaseType = typeof(ClientUI);
+            FieldInfo characterField = tBaseType.GetField("maxSelectedCharacterButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic);
+            FieldInfo cityField = tBaseType.GetField("maxSelectedCityButtonsCount", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            int maxSelectedCharacterButtonsCount;
+            int maxSelectedCityButtonsCount;
+            bool bWriteFieldsBack;
+
+            if (characterField == null || cityField == null)
+            {
+                UnityEngine.Debug.LogError($"updateReligionSelection: field lookup failed (maxSelectedCharacterButtonsCount={characterField != null}, maxSelectedCityButtonsCount={cityField != null})");
+
+                maxSelectedCharacterButtonsCount = 8;
+                maxSelectedCityButtonsCount = 5;
+                bWriteFieldsBack = false;
+            }
+            else
+            {
+                maxSelectedCharacterButtonsCount = (int)characterField.GetValue(this);
+                maxSelectedCityButtonsCount = (int)cityField.GetValue(this);
+                bWriteFieldsBack = true;
+            }
 
             if (eReligion != ReligionType.NONE)
             {
@@ -723,6 +745,7 @@ namespace BetterAI
                     if (numCharacters > maxSelectedCharacterButtonsCount)
                     {
                         maxSelectedCharacterButtonsCount = numCharacters;
+                        if (bWriteFieldsBack) characterField.SetValue(this, maxSelectedCharacterButtonsCount); //protection levels
                         mSelectedPanelMembers.SetInt("Characters-Count", numCharacters);
                     }
                     else
@@ -750,12 +773,12 @@ namespace BetterAI
 
                     for (ImprovementType eLoopImprovement = 0; eLoopImprovement < Infos.improvementsNum(); eLoopImprovement++)
                     {
-                        if ((Game?.getImprovementReligionSpread(eLoopImprovement) ?? Infos.improvement(eLoopImprovement).meReligionSpread) == eReligion || Infos.improvement(eLoopImprovement).meReligionPrereq == eReligion)
+                        if (Game.getImprovementReligionSpread(eLoopImprovement) == eReligion)
                         {
                             ImprovementTypes.Add(eLoopImprovement);
                             if (Infos.improvement(eLoopImprovement).meClass != ImprovementClassType.NONE)
                             {
-                                if (ImprovementClassCounts.ContainsKey(Infos.improvement(eLoopImprovement).meClass))
+                                if (!ImprovementClassCounts.ContainsKey(Infos.improvement(eLoopImprovement).meClass))
                                 {
                                     ImprovementClassCounts.Add(Infos.improvement(eLoopImprovement).meClass, 1);
                                 }
@@ -785,9 +808,14 @@ namespace BetterAI
 
                         //if there are multiple words separated by spaces in the name, use the last word. Shrine of Poseidon: "P"
                         int iStartSubString = 0;
-                        if (shortName.LastIndexOf(" ") != -1)
+                        if (string.IsNullOrEmpty(shortName))
                         {
-                            iStartSubString = shortName.LastIndexOf(" ") + 1;
+                            shortName = "?";
+                        }
+                        else if (shortName.LastIndexOf(" ") != -1)
+                        {
+                            shortName = shortName.Trim();
+                            iStartSubString = Math.Min(shortName.Length - 1, shortName.LastIndexOf(" ") + 1);
                         }
                         shortName = shortName.Substring(iStartSubString, 1);
 
@@ -806,7 +834,6 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Rel. Improvements in City list   START ###
   ##############################################*/
-                            //cityTag.SetTEXT("Name", TextManager, HelpText.buildCityLinkVariable(pCity, pActivePlayer, true, false));
                             //cityTag.SetTEXT("Label", TextManager, HelpText.buildCityTextVariable(pCity, pActivePlayer, true));
                             cityTag.SetTEXT("Label", TextManager, ((BetterAIHelpText)HelpText).buildCityLinkVariableWithReligiousImprovements(Game, pCity, pActivePlayer, eReligion, ImprovementTypes, ImprovementShortNames, bCrest: true, bAddColor: false));
 /*####### Better Old World AI - Base DLL #######
@@ -825,6 +852,7 @@ namespace BetterAI
                     if (numCities > maxSelectedCityButtonsCount)
                     {
                         maxSelectedCityButtonsCount = numCities;
+                        if (bWriteFieldsBack) cityField.SetValue(this, maxSelectedCityButtonsCount); //protection levels
                         mSelectedPanelMembers.SetInt("Cities-Count", numCities);
                     }
                     else

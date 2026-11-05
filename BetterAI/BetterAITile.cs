@@ -959,6 +959,150 @@ namespace BetterAI
   ### Bonus adjacent Improvement         END ###
   ##############################################*/
 
+
+
+        public virtual void doImprovementUnitEffect(int iChange, int iUnit = -1, List<int> unitList = null, bool bPreview = false)
+        {
+            ImprovementType eActiveImprovement = getActiveImprovement();
+            if (eActiveImprovement != ImprovementType.NONE)
+            {
+                BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(eActiveImprovement));
+                EffectUnitType eImprovementEffectUnit = pImprovementInfo.meApplyEffectUnit;
+                if (eImprovementEffectUnit != EffectUnitType.NONE)
+                {
+                    if (unitList == null)
+                    {
+                        unitList = CollectionCache.GetListScoped<int>().Value;
+                        if (iUnit == -1)
+                        {
+                            getAliveUnits(unitList);
+                        }
+                        else
+                        {
+                            unitList.Add(iUnit);
+                        }
+                    }
+                    
+                    foreach (int iUnitID in unitList)
+                    {
+                        BetterAIUnit pUnit = (BetterAIUnit)game().unit(iUnitID);
+                        if (pUnit != null && isFriendly(pUnit.getTeam(), pUnit.getTribe()) && pUnit.isEffectUnitValid(eImprovementEffectUnit))
+                        {
+                            if (bPreview)
+                            {
+                                pUnit.changeEffectUnitDictionaryPublic(eImprovementEffectUnit, iChange: iChange);
+                            }
+                            else
+                            {
+                                int iOldEffectCount = pUnit.getEffectUnitCount(eImprovementEffectUnit);
+                                if (iOldEffectCount + iOldEffectCount + iChange != 1) //allowed: 0+0 + 1 = 1 (effect applied), and 1+1 -1 = 1 (removed)
+                                {
+                                    UnityEngine.Debug.Log($"ImprovementUnitEffect invalid change: current effect number: {iOldEffectCount.ToStringCached()}, iChange: {iChange.ToStringCached()}");
+                                    UnityEngine.Debug.Log(System.Environment.StackTrace);
+                                }
+                                else
+                                {
+                                    pUnit.changeEffectUnit(eImprovementEffectUnit, SourceEffectUnitType.ADJACENT, iChange: iChange);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public override void setPillaged(bool bNewValue)
+        {
+            if (isPillaged() != bNewValue)
+            {
+                loadPillaged(bNewValue);
+                
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect    START ###
+  ##############################################*/
+                int iChange = (bNewValue) ? -1 : 1;
+                doImprovementUnitEffect(iChange);
+
+                //BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(getActiveImprovement()));
+                //EffectUnitType eImprovementEffectUnit = pImprovementInfo.meApplyEffectUnit;
+                //if (eImprovementEffectUnit != EffectUnitType.NONE)
+                //{
+                //    int iChange = (bNewValue) ? -1 : 1;
+
+                //    using (var unitListScoped = CollectionCache.GetListScoped<int>())
+                //    {
+                //        getAliveUnits(unitListScoped.Value);
+                //        foreach (int iUnitID in unitListScoped.Value)
+                //        {
+                //            Unit pUnit = game().unit(iUnitID);
+                //            if (pUnit != null && isFriendly(pUnit.getTeam(), pUnit.getTribe()) && pUnit.isEffectUnitValid(eImprovementEffectUnit))
+                //            {
+                //                pUnit.changeEffectUnit(eImprovementEffectUnit, SourceEffectUnitType.ADJACENT, iChange: iChange);
+                //            }
+                //        }
+                //    }
+                //}
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect      END ###
+  ##############################################*/
+
+                if (hasOwner() && hasResource() && isPillaged())
+                {
+                    owner().testLuxuryCount(getResource());
+                }
+
+                updateReligionOpinionAll();
+                updateFamilyOpinion();
+            }
+        }
+
+
+        public override void loadImprovement(ImprovementType eNewImprovement)
+        {
+            ImprovementType eOldImprovement = getImprovement();
+
+            if (eOldImprovement != eNewImprovement)
+            {
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect    START ###
+  ##############################################*/
+                //if an old improvement gets replaced, effects need to be removed too
+                if (!game().IsInitializing)
+                {
+                    doImprovementUnitEffect(-1);
+                }
+
+                //ImprovementType eOldActiveImprovement = getActiveImprovement();
+                //if (eOldActiveImprovement != ImprovementType.NONE && !game().IsInitializing)
+                //{
+                //    BetterAIInfoImprovement pImprovementInfo = (BetterAIInfoImprovement)(infos().improvement(eOldActiveImprovement));
+                //    EffectUnitType eImprovementEffectUnit = pImprovementInfo.meApplyEffectUnit;
+                //    if (eImprovementEffectUnit != EffectUnitType.NONE)
+                //    {
+                //        int iChange = -1;
+
+                //        using (var unitListScoped = CollectionCache.GetListScoped<int>())
+                //        {
+                //            getAliveUnits(unitListScoped.Value);
+                //            foreach (int iUnitID in unitListScoped.Value)
+                //            {
+                //                Unit pUnit = game().unit(iUnitID);
+                //                if (pUnit != null && isFriendly(pUnit.getTeam(), pUnit.getTribe()) && pUnit.isEffectUnitValid(eImprovementEffectUnit))
+                //                {
+                //                    pUnit.changeEffectUnit(eImprovementEffectUnit, SourceEffectUnitType.ADJACENT, iChange: iChange);
+                //                }
+                //            }
+                //        }
+                //    }
+                //}
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect    START ###
+  ##############################################*/
+
+                base.loadImprovement(eNewImprovement);
+            }
+        }
+
         //lines 5588-5784
         public override void doImprovementFinished()
         {
@@ -1182,6 +1326,31 @@ namespace BetterAI
   ### Units from improvement completion  END ###
   ##############################################*/
 
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect    START ###
+  ##############################################*/
+                doImprovementUnitEffect(1);
+
+                //EffectUnitType eImprovementEffectUnit = ((BetterAIInfoImprovement)improvement()).meApplyEffectUnit;
+                //if (eImprovementEffectUnit != EffectUnitType.NONE)
+                //{
+                //    using (var unitListScoped = CollectionCache.GetListScoped<int>())
+                //    {
+                //        getAliveUnits(unitListScoped.Value);
+                //        foreach (int iUnitID in unitListScoped.Value)
+                //        {
+                //            Unit pUnit = game().unit(iUnitID);
+                //            if (pUnit != null && isFriendly(pUnit.getTeam(), pUnit.getTribe()) && pUnit.isEffectUnitValid(eImprovementEffectUnit))
+                //            {
+                //                pUnit.changeEffectUnit(eImprovementEffectUnit, SourceEffectUnitType.ADJACENT, iChange: 1);
+                //            }
+                //        }
+                //    }
+                //}
+/*####### Better Old World AI - Base DLL #######
+  ### Improvement gives Unit Effect      END ###
+  ##############################################*/
+
                 owner().doEventTrigger(infos().Globals.IMPROVEMENT_FINISHED_EVENTTRIGGER, (int)getImprovement(), lTriggerSubjects: new() { cityTerritory(), this });
 
                 owner().incrementLeaderStat(infos().Globals.IMPROVEMENT_FINISHED_STAT);
@@ -1293,6 +1462,8 @@ namespace BetterAI
 
             using var hiddenUnitsScoped = CollectionCache.GetHashSetScoped<int>();
             using var tileUnits = CollectionCache.GetListScoped<int>();
+
+            doImprovementUnitEffect(iChange: -1, unitList: tileUnits.Value);
 
             foreach (int iUnitID in getUnits())
             {
@@ -1461,6 +1632,8 @@ namespace BetterAI
                     networkTiles.AddRange(viewTiles);
                 }
             }
+
+            doImprovementUnitEffect(iChange: 1, unitList: tileUnits.Value);
 
             foreach (int iUnitID in tileUnits.Value)
             {

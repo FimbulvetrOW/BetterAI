@@ -418,6 +418,21 @@ namespace BetterAI
             return iValue;
         }
 
+        //to remove later
+        public override Player player(PlayerType eIndex)
+        {
+            try
+            {
+                return mapPlayers[(int)eIndex];
+            }
+            catch
+            {
+                MohawkAssert.Assert(false, "Invalid player index: " + eIndex);
+                Debug.Log(System.Environment.StackTrace); //to see what's going on here
+                return null;
+            }
+        }
+
         //lines 12090-12154
         protected override void postStart()
         {
