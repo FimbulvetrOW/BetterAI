@@ -2518,6 +2518,11 @@ namespace BetterAI
         public override bool doWidgetAction(WidgetData pWidget)
         {
             //UnityEngine.Debug.Log("ClientUI.doWidgetAction - Start");
+            BetterAIInfoGlobals pBAI_InfoGlobals = Infos?.Globals as BetterAIInfoGlobals;
+            if (pBAI_InfoGlobals == null)
+            {
+                return base.doWidgetAction(pWidget);
+            }
 
             ItemType eType = pWidget.GetWidgetType();
             if (eType == ItemType.BUILD_QUEUE)
@@ -2526,7 +2531,7 @@ namespace BetterAI
 
                 if (pCity != null)
                 {
-                    if ((((BetterAIInfoGlobals)Infos.Globals).BAI_HURRY_COST_REDUCED > 0) && pCity.getBuildQueueNode(0) != null && pCity.getBuildQueueNode(0).mbHurried && (pCity.getBuildQueueNode(0).miProgress > 0))
+                    if ((pBAI_InfoGlobals.BAI_HURRY_COST_REDUCED > 0) && pCity.getBuildQueueNode(0) != null && pCity.getBuildQueueNode(0).mbHurried && (pCity.getBuildQueueNode(0).miProgress > 0))
                     {
                         if (pWidget.GetDataInt(1) == 1)
                         {
@@ -2551,7 +2556,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Alternative Hurry                  END ###
   ##############################################*/
-            else if (((BetterAIInfoGlobals)Infos.Globals).BAI_ALT_UNIT_FILTER > 0 && eType == ItemType.UNIT_LIST_FILTER)
+            else if (eType == ItemType.UNIT_LIST_FILTER && pBAI_InfoGlobals.BAI_ALT_UNIT_FILTER > 0)
             {
                 UnitListFilterType eFilter = (UnitListFilterType)pWidget.GetDataInt(0);
 
@@ -2594,7 +2599,7 @@ namespace BetterAI
                         {
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY])
                             {
-                                if (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_INFANTRY && eFilter == UnitListFilterType.SCOUT) //civilians are assumed to be infantry only
+                                if (pBAI_InfoGlobals.BAI_NO_SCOUT_IS_INFANTRY && eFilter == UnitListFilterType.SCOUT) //civilians are assumed to be infantry only
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_INFANTRY] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_INFANTRY).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_INFANTRY));
@@ -2603,7 +2608,7 @@ namespace BetterAI
 
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED])
                             {
-                                if (eFilter == UnitListFilterType.CIVILIAN || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_MOUNTED && eFilter == UnitListFilterType.SCOUT)) //civilians are assumed to not be mounted
+                                if (eFilter == UnitListFilterType.CIVILIAN || (pBAI_InfoGlobals.BAI_NO_SCOUT_IS_MOUNTED && eFilter == UnitListFilterType.SCOUT)) //civilians are assumed to not be mounted
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_MOUNTED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_MOUNTED));
@@ -2612,8 +2617,8 @@ namespace BetterAI
 
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER])
                             {
-                                if ((((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_CIVILIAN && eFilter == UnitListFilterType.CIVILIAN)
-                                    || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_SCOUT && eFilter == UnitListFilterType.SCOUT))
+                                if ((pBAI_InfoGlobals.BAI_NO_WATER_IS_CIVILIAN && eFilter == UnitListFilterType.CIVILIAN)
+                                    || (pBAI_InfoGlobals.BAI_NO_WATER_IS_SCOUT && eFilter == UnitListFilterType.SCOUT))
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_WATER).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_WATER));
@@ -2640,7 +2645,7 @@ namespace BetterAI
                         {
                             if (mabUnitFilters[(int)UnitListFilterType.CIVILIAN])
                             {
-                                if (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_CIVILIAN && eFilter == UnitListFilterType.MILITARY_WATER)
+                                if (pBAI_InfoGlobals.BAI_NO_WATER_IS_CIVILIAN && eFilter == UnitListFilterType.MILITARY_WATER)
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.CIVILIAN] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.CIVILIAN).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.CIVILIAN));
@@ -2649,9 +2654,9 @@ namespace BetterAI
                             
                             if (mabUnitFilters[(int)UnitListFilterType.SCOUT])
                             {
-                                if ( (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_INFANTRY && eFilter == UnitListFilterType.MILITARY_INFANTRY)
-                                    || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_SCOUT_IS_MOUNTED && eFilter == UnitListFilterType.MILITARY_MOUNTED)
-                                    || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_SCOUT && eFilter == UnitListFilterType.MILITARY_WATER) )
+                                if ( (pBAI_InfoGlobals.BAI_NO_SCOUT_IS_INFANTRY && eFilter == UnitListFilterType.MILITARY_INFANTRY)
+                                    || (pBAI_InfoGlobals.BAI_NO_SCOUT_IS_MOUNTED && eFilter == UnitListFilterType.MILITARY_MOUNTED)
+                                    || (pBAI_InfoGlobals.BAI_NO_WATER_IS_SCOUT && eFilter == UnitListFilterType.MILITARY_WATER) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.SCOUT] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.SCOUT).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.SCOUT));
@@ -2670,7 +2675,7 @@ namespace BetterAI
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER])
                             {
                                 if (eFilter == UnitListFilterType.MILITARY_SIEGE || eFilter == UnitListFilterType.MILITARY_MOUNTED || eFilter == UnitListFilterType.MILITARY_INFANTRY
-                                || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_RANGED && eFilter == UnitListFilterType.MILITARY_RANGED) )
+                                || (pBAI_InfoGlobals.BAI_NO_WATER_IS_RANGED && eFilter == UnitListFilterType.MILITARY_RANGED) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_WATER] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_WATER).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_WATER));
@@ -2688,8 +2693,8 @@ namespace BetterAI
 
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED])
                             {
-                                if ( (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_WATER_IS_RANGED && eFilter == UnitListFilterType.MILITARY_WATER)
-                                || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED && eFilter == UnitListFilterType.MILITARY_MOUNTED) )
+                                if ( (pBAI_InfoGlobals.BAI_NO_WATER_IS_RANGED && eFilter == UnitListFilterType.MILITARY_WATER)
+                                || (pBAI_InfoGlobals.BAI_NO_MOUNTED_IS_RANGED && eFilter == UnitListFilterType.MILITARY_MOUNTED) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_RANGED] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_RANGED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_RANGED));
@@ -2699,7 +2704,7 @@ namespace BetterAI
                             if (mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED])
                             {
                                 if (eFilter == UnitListFilterType.MILITARY_INFANTRY || eFilter == UnitListFilterType.MILITARY_WATER || eFilter == UnitListFilterType.MILITARY_SIEGE
-                                    || (((BetterAIInfoGlobals)Infos.Globals).BAI_NO_MOUNTED_IS_RANGED && eFilter == UnitListFilterType.MILITARY_RANGED) )
+                                    || (pBAI_InfoGlobals.BAI_NO_MOUNTED_IS_RANGED && eFilter == UnitListFilterType.MILITARY_RANGED) )
                                 {
                                     mabUnitFilters[(int)UnitListFilterType.MILITARY_MOUNTED] = false;
                                     mUnits.GetSubTag("-Filter", (int)UnitListFilterType.MILITARY_MOUNTED).SetKey("Icon", GetUnitListFilterIcon(UnitListFilterType.MILITARY_MOUNTED));

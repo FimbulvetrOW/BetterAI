@@ -2000,7 +2000,7 @@ namespace BetterAI
   ### Enlist Replacement Attack Heal   START ###
   ##############################################*/
                 EffectUnitType eApplyEffectUnit = pEffectUnitInfo.mzAttackApplyEffectUnitTurns.Item1;
-                if (eApplyEffectUnit != EffectUnitType.NONE && pEffectUnitInfo.bAIIgnoreApplyValue)
+                if (eApplyEffectUnit != EffectUnitType.NONE && pEffectUnitInfo.mbAIIgnoreApplyValue)
                 {
                     //iValue -= calculateEffectUnitValue(eApplyEffectUnit, UnitType.NONE, false) * pEffectUnitInfo.mzAttackApplyEffectUnitTurns.Item2 / AI_TURNS_BETWEEN_KILLS;
                     iValue += calculateEffectUnitValue(eApplyEffectUnit, UnitType.NONE, false) * pEffectUnitInfo.mzAttackApplyEffectUnitTurns.Item2 / AI_TURNS_BETWEEN_KILLS;

@@ -1829,30 +1829,59 @@ namespace BetterAI
                 return false;
             }
 
-            for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
-            {
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement         START ###
   ##############################################*/
-                //if (bIgnoreRiver || !isRiver(eLoopDirection))
+            //for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+            //{
+            //    if (bIgnoreRiver || !isRiver(eLoopDirection))
+            //    {
+            //        if (zocMap == null || !zocMap.TryGetValue((getID(), eLoopDirection), out bool bZoc))
+            //        {
+            //            bZoc = isDirectionHostileZOC(eLoopDirection, pUnit, eTeamVisibility);
+            //            zocMap?.Add((getID(), eLoopDirection), bZoc);
+            //        }
+            //        if (bZoc)
+            //        {
+            //            return true;
+            //        }
+            //    }
+            //}
+
+            if (zocMap != null)
+            {
+                int iNumTiles = game().getNumTiles();
+                int iKey = getID() + (bIgnoreRiver ? 0 : iNumTiles);
+                int iKeyOther = getID() + (bIgnoreRiver ? iNumTiles : 0);
+
+                for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
                 {
-                    if (zocMap == null || !zocMap.TryGetValue((getID(), eLoopDirection), out bool bZoc))
+                    if (!zocMap.TryGetValue((iKey, eLoopDirection), out bool bZoc))
                     {
                         bZoc = isDirectionHostileZOC(eLoopDirection, pUnit, eTeamVisibility, bIgnoreRiver);
-                        if (bZoc || bIgnoreRiver || !isRiver(eLoopDirection))
-                        {
-                            zocMap?.Add((getID(), eLoopDirection), bZoc);
-                        }
-/*####### Better Old World AI - Base DLL #######
-  ### Land Unit Water Movement           END ###
-  ##############################################*/
+                        zocMap.Add((iKey, eLoopDirection), bZoc);
+                        zocMap.Add((iKeyOther, eLoopDirection), (!isRiver(eLoopDirection) || bIgnoreRiver != bZoc) ? bZoc : isDirectionHostileZOC(eLoopDirection, pUnit, eTeamVisibility, !bIgnoreRiver));
                     }
+
                     if (bZoc)
                     {
                         return true;
                     }
                 }
             }
+            else
+            {
+                for (DirectionType eLoopDirection = 0; eLoopDirection < DirectionType.NUM_TYPES; eLoopDirection++)
+                {
+                    if (isDirectionHostileZOC(eLoopDirection, pUnit, eTeamVisibility, bIgnoreRiver))
+                    {
+                        return true;
+                    }
+                }
+            }
+/*####### Better Old World AI - Base DLL #######
+  ### Land Unit Water Movement           END ###
+  ##############################################*/
 
             return false;
         }

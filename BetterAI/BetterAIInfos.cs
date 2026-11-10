@@ -1307,7 +1307,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal   START ###
   ##############################################*/
-        public bool bAIIgnoreApplyValue = false;
+        public bool mbAIIgnoreApplyValue = false;
         public int miHealAttack = 0;
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal     END ###
@@ -1344,6 +1344,8 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Land Unit Water Movement           END ###
   ##############################################*/
+
+            infos.readBool(ctx, "bAIIgnoreApplyValue", ref mbAIIgnoreApplyValue);
 
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal   START ###

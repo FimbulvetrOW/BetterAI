@@ -167,7 +167,7 @@ namespace BetterAI
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal   START ###
   ##############################################*/
-                    if (((BetterAIInfoEffectUnit)infos.effectUnit(eLoopEffectUnit)).bAIIgnoreApplyValue) continue;
+                    if (((BetterAIInfoEffectUnit)infos.effectUnit(eLoopEffectUnit)).mbAIIgnoreApplyValue) continue;
 /*####### Better Old World AI - Base DLL #######
   ### Enlist Replacement Attack Heal     END ###
   ##############################################*/
